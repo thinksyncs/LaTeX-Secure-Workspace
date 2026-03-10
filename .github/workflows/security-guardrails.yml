@@ -52,9 +52,3 @@ jobs:
             grep -q 'sha512' "$file" || { echo "Missing checksum verification in $file"; exit 1; }
             grep -q 'gpg' "$file" || { echo "Missing signature verification in $file"; exit 1; }
           done
-
-      - name: Ensure pull request installs disable npm lifecycle scripts
-        run: |
-          for file in .github/workflows/texlive_on_linux.yml .github/workflows/texlive_on_mac.yml .github/workflows/texlive_on_win.yml; do
-            grep -q 'npm ci --ignore-scripts' "$file" || { echo "Missing npm --ignore-scripts hardening in $file"; exit 1; }
-          done

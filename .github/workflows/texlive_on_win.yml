@@ -72,14 +72,8 @@ jobs:
     - run: |
         latex -v
         latexmk -v
-    - name: Install Node dependencies and compile
-      shell: pwsh
-      run: |
-        if ('${{ github.event_name }}' -eq 'pull_request') {
-          npm ci --ignore-scripts
-        } else {
-          npm ci
-        }
+    - run: |
+        npm ci
         npm run compile
     - name: Run tests
       run: npm run test:ci

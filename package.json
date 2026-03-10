@@ -3,7 +3,7 @@
   "displayName": "LaTeX-Secure-Workspace",
   "description": "Subtractive, privacy-first, security-maintained TeX Workspace for enterprise use cases.",
   "icon": "icons/icon.png",
-  "version": "10.13.3",
+  "version": "10.13.2",
   "publisher": "thinksyncs",
   "license": "MIT",
   "homepage": "https://github.com/thinksyncs/LaTeX-Secure-Workspace",
@@ -63,7 +63,6 @@
         "latex-workshop.latex.rootFile.indicator",
         "latex-workshop.latex.search.rootFiles.include",
         "latex-workshop.latex.search.rootFiles.exclude",
-        "latex-workshop.intellisense.package.dirs",
         "latex-workshop.view.pdf.viewer",
         "latex-workshop.view.pdf.external.viewer.command",
         "latex-workshop.view.pdf.external.viewer.args",
@@ -235,18 +234,6 @@
             "LaTeX-Secure-Workspace log"
           ],
           "configuration": "./syntax/latex-workshop-log-language-configuration.json"
-        }
-      ],
-      "customEditors": [
-        {
-          "viewType": "tex-workspace-secure.pdf-preview",
-          "displayName": "LaTeX-Secure PDF Preview",
-          "selector": [
-            {
-              "filenamePattern": "*.pdf"
-            }
-          ],
-          "priority": "option"
         }
       ],
       "grammars": [
