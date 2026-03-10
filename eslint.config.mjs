@@ -21,6 +21,7 @@ export default [{
         "resources/**/*.js",
         "**/out",
         "**/node_modules",
+        "viewer/bootstrap.js",
         "viewer/viewer.mjs",
         "viewer/wasm/*.js",
         "**/.idea/",
@@ -188,7 +189,7 @@ export default [{
         }],
     },
 }, {
-    files: ["viewer/**/*.ts"],
+    files: ["viewer/**/*.ts", "viewer/**/*.js"],
 
     languageOptions: {
         ecmaVersion: 2018,
