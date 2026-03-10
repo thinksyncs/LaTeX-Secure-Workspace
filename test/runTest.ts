@@ -25,7 +25,8 @@ async function runTestSuites(fixture: 'testground' | 'multiroot' | 'unittest') {
                 'test/fixtures/' + fixture + (fixture === 'multiroot' ? '/resource.code-workspace' : ''),
                 '--user-data-dir=' + tmpFile.dirSync({ unsafeCleanup: true }).name,
                 '--extensions-dir=' + tmpFile.dirSync({ unsafeCleanup: true }).name,
-                '--disable-gpu'
+                '--disable-gpu',
+                '--use-inmemory-secretstorage'
             ],
             extensionTestsEnv: {
                 LATEXWORKSHOP_CITEST: '1'
