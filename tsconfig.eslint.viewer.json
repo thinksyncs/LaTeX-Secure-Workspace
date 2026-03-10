@@ -1,7 +1,8 @@
 {
     "extends": "./viewer/tsconfig.json",
     "include": [
-      "viewer/**/*.ts"
+      "viewer/**/*.ts",
+      "viewer/**/*.js"
     ],
     "exclude": [
       "src/**",

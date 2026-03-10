@@ -22,6 +22,7 @@ lw.parser = parser
 import { compile } from './compile'
 lw.compile = compile
 import { preview, server, viewer } from './preview'
+import { SecurePdfCustomEditorProvider } from './preview/pdfcustomeditor'
 lw.server = server
 lw.viewer = viewer
 lw.preview = preview
@@ -59,6 +60,14 @@ export function activate(extensionContext: vscode.ExtensionContext) {
     log.logDeprecatedConfig()
 
     lw.onDispose(undefined, extensionContext.subscriptions)
+
+    extensionContext.subscriptions.push(
+        vscode.window.registerCustomEditorProvider(
+            SecurePdfCustomEditorProvider.viewType,
+            new SecurePdfCustomEditorProvider(),
+            { webviewOptions: { retainContextWhenHidden: true } }
+        )
+    )
 
     registerLatexWorkshopCommands(extensionContext)
 

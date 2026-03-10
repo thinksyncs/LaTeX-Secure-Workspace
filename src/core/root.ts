@@ -399,8 +399,9 @@ async function findInWorkspace(): Promise<string | undefined> {
             logger.log(`Found files that might be root including the current root: ${candidates} .`)
             return root.file.path
         } else if (candidates.length > 0) {
-            logger.log(`Found files that might be root, choose the first one: ${candidates} .`)
-            return candidates[0]
+            const best = selectBestCandidate(candidates)
+            logger.log(`Found files that might be root, choose the closest one: ${best} from ${candidates} .`)
+            return best
         }
     } catch (err) {
         logger.logError('Error finding root file in workspace', err)
@@ -446,11 +447,52 @@ async function findSecurityInWorkspace(): Promise<string | undefined> {
             return root.file.path
         }
         if (candidates.length > 0) {
-            logger.log(`Found files that might be secure roots, choose the first one: ${candidates} .`)
-            return candidates[0]
+            const best = selectBestCandidate(candidates)
+            logger.log(`Found files that might be secure roots, choose the closest one: ${best} from ${candidates} .`)
+            return best
         }
     } catch (err) {
         logger.logError('Error finding secure root file in workspace', err)
     }
     return
+}
+
+function selectBestCandidate(candidates: string[]): string {
+    const activeFilePath = vscode.window.activeTextEditor?.document.fileName
+    if (!activeFilePath) {
+        return candidates[0]
+    }
+    let best = candidates[0]
+    let bestScore = scoreCandidate(best, activeFilePath)
+    for (const candidate of candidates.slice(1)) {
+        const score = scoreCandidate(candidate, activeFilePath)
+        if (score > bestScore) {
+            bestScore = score
+            best = candidate
+        }
+    }
+    return best
+}
+
+function scoreCandidate(candidatePath: string, activeFilePath: string): number {
+    let score = 0
+    const candidateDir = path.dirname(candidatePath)
+    const relative = path.relative(candidateDir, activeFilePath)
+    const isParent = relative !== '' && !relative.startsWith('..') && !path.isAbsolute(relative)
+    if (isParent) {
+        // Strongly prefer candidates that can contain the active file.
+        score += 1000
+    }
+    const candidateParts = candidatePath.split(path.sep)
+    const activeParts = activeFilePath.split(path.sep)
+    const commonLength = Math.min(candidateParts.length, activeParts.length)
+    let common = 0
+    for (let i = 0; i < commonLength; i++) {
+        if (candidateParts[i] !== activeParts[i]) {
+            break
+        }
+        common++
+    }
+    score += common
+    return score
 }
