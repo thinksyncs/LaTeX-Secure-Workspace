@@ -14,8 +14,6 @@ types/
 viewer/**/*.ts
 .devcontainer/
 .github/
-.beads/
-AGENTS.md
 .gitignore
 tsconfig.json
 tsconfig.eslint.json
