@@ -3,7 +3,7 @@
   "displayName": "LaTeX-Secure-Workspace",
   "description": "Subtractive, privacy-first, security-maintained TeX Workspace for enterprise use cases.",
   "icon": "icons/icon.png",
-  "version": "10.13.2",
+  "version": "10.13.3",
   "publisher": "thinksyncs",
   "license": "MIT",
   "homepage": "https://github.com/thinksyncs/LaTeX-Secure-Workspace",
@@ -27,7 +27,8 @@
     "hint"
   ],
   "activationEvents": [
-    "onCommand:latex-workshop.activate"
+    "onCommand:latex-workshop.activate",
+    "onCustomEditor:tex-workspace-secure.pdf-preview"
   ],
   "main": "./out/src/main.js",
   "capabilities": {
@@ -37,7 +38,7 @@
     },
     "untrustedWorkspaces": {
       "supported": "limited",
-      "description": "Editing, navigation, log viewing, and the internal tab PDF viewer remain available in restricted mode. Build, clean, command execution, and workspace-controlled execution settings are disabled until the workspace is trusted.",
+      "description": "Editing, navigation, log viewing, and the internal PDF tab viewer remain available in restricted mode. Build, clean, command execution, and workspace-controlled execution settings are disabled until the workspace is trusted.",
       "restrictedConfigurations": [
         "latex-workshop.latex.autoBuild.run",
         "latex-workshop.latex.autoBuild.interval",
@@ -63,6 +64,7 @@
         "latex-workshop.latex.rootFile.indicator",
         "latex-workshop.latex.search.rootFiles.include",
         "latex-workshop.latex.search.rootFiles.exclude",
+        "latex-workshop.intellisense.package.dirs",
         "latex-workshop.view.pdf.viewer",
         "latex-workshop.view.pdf.external.viewer.command",
         "latex-workshop.view.pdf.external.viewer.args",
@@ -72,6 +74,18 @@
     }
   },
   "contributes": {
+    "customEditors": [
+      {
+        "viewType": "tex-workspace-secure.pdf-preview",
+        "displayName": "LaTeX Secure PDF Viewer",
+        "selector": [
+          {
+            "filenamePattern": "*.pdf"
+          }
+        ],
+        "priority": "default"
+      }
+    ],
     "languages": [
       {
         "id": "tex",
@@ -580,6 +594,12 @@
         "title": "%command.build%",
         "category": "LaTeX-Secure-Workspace",
         "icon": "$(debug-start)",
+        "enablement": "!virtualWorkspace && isWorkspaceTrusted"
+      },
+      {
+        "command": "latex-workshop.build-recipe",
+        "title": "%command.buildRecipe%",
+        "category": "LaTeX-Secure-Workspace",
         "enablement": "!virtualWorkspace && isWorkspaceTrusted"
       },
       {
@@ -1630,11 +1650,13 @@
           "type": "string",
           "default": "tab",
           "enum": [
-            "tab"
+            "tab",
+            "external"
           ],
-          "markdownDescription": "In this secure build, only the tab-based local PDF viewer is available.",
+          "markdownDescription": "Open built PDFs in the internal VS Code tab viewer. The `external` value is retained for compatibility and also opens the internal tab viewer in this build.",
           "enumDescriptions": [
-            "Open the built PDF in the local tab-based viewer."
+            "Open the built PDF in the internal tab viewer.",
+            "Compatibility mode. Opens the built PDF in the internal tab viewer."
           ]
         },
         "latex-workshop.view.pdf.tab.editorGroup": {
@@ -2851,7 +2873,7 @@
   },
   "scripts": {
     "clean": "rimraf out/ .eslintcache",
-    "compile": "tsc -p tsconfig.json && tsc -p viewer/tsconfig.json",
+    "compile": "tsc -p tsconfig.json",
     "coverage": "c8 --check-coverage npm run test --src out/src/",
     "extension:cleanup-local": "node ./dev/cleanupLocalExtensions.mjs",
     "extension:package-local": "node ./dev/manageLocalExtension.mjs package",
@@ -2863,7 +2885,6 @@
     "test": "node ./out/test/runTest.js",
     "test:ci": "node ./dev/runTestCi.mjs",
     "watch-src": "tsc -watch -p tsconfig.json",
-    "watch-viewer": "tsc -watch -p viewer/tsconfig.json",
     "update-grammar": "node ./dev/update-grammar.mjs"
   },
   "dependencies": {

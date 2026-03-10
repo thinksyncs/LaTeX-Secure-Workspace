@@ -3,9 +3,8 @@ import ws from 'ws'
 import * as path from 'path'
 import { lw } from '../lw'
 import type { SyncTeXRecordToPDF, SyncTeXRecordToPDFAll } from '../types'
-import * as manager from './viewer/pdfviewermanager'
 import type { PdfViewerParams, PdfViewerState } from '../../types/latex-workshop-protocol-types/index'
-import { populate } from './viewer/pdfviewerpanel'
+import { getCustomEditorStates, securePdfCustomEditorViewType } from './pdfcustomeditor'
 
 const logger = lw.log('Viewer')
 
@@ -19,8 +18,6 @@ export {
     refresh,
     view
 }
-export { serializer } from './viewer/pdfviewerpanel'
-export { hook } from './viewer/pdfviewerhook'
 
 lw.watcher.pdf.onChange(pdfUri => {
     if (lw.compile.compiledPDFWriting === 0 || path.relative(lw.compile.compiledPDFPath, pdfUri.fsPath) !== '') {
@@ -31,12 +28,10 @@ lw.onConfigChange(['view.pdf.toolbar.hide.timeout', 'view.pdf.invert', 'view.pdf
     reload()
 })
 
-const isViewing = (fileUri: vscode.Uri) => manager.getPanels(fileUri) !== undefined
+const isViewing = (fileUri: vscode.Uri) => getViewerState(fileUri).length > 0
 
 function reload(): void {
-    manager.getPanelsForAll().forEach(panel => {
-        void panel.webviewPanel.webview.postMessage({ type: 'reload-viewer' })
-    })
+    logger.log('PDF tab viewer parameters changed. Open editors will pick up new settings on reload.')
 }
 
 /**
@@ -46,37 +41,20 @@ function reload(): void {
  * refreshes all the PDF viewers.
  */
 function refresh(pdfUri?: vscode.Uri): void {
-    if (pdfUri) {
-        manager.getPanels(pdfUri)?.forEach(panel => panel.webviewPanel.webview.postMessage({ type: 'reload-viewer' }))
-        return
-    }
-    manager.getPanelsForAll().forEach(panel => panel.webviewPanel.webview.postMessage({ type: 'reload-viewer' }))
+    void pdfUri
 }
 
 async function view(pdfUri: vscode.Uri, mode?: 'tab' | 'browser' | 'external'): Promise<void> {
     if (mode && mode !== 'tab') {
-        void vscode.window.showWarningMessage('Only tab-based PDF preview is available in this secure build.')
+        logger.log(`Viewer mode "${mode}" maps to the internal tab preview in this build.`)
     }
-    return viewInWebviewPanel(pdfUri, 'right', false)
+    const configuration = vscode.workspace.getConfiguration('latex-workshop')
+    const tabEditorGroup = configuration.get('view.pdf.tab.editorGroup', 'right') as string
+    await openPdfInTab(pdfUri, tabEditorGroup, false)
 }
 
 async function viewInWebviewPanel(pdfUri: vscode.Uri, tabEditorGroup: string, preserveFocus: boolean): Promise<void> {
-    const existing = manager.getPanels(pdfUri)?.values().next().value
-    if (existing) {
-        existing.webviewPanel.reveal(tabEditorGroup === 'current' ? vscode.ViewColumn.Active : vscode.ViewColumn.Beside, preserveFocus)
-        return
-    }
-    const panel = vscode.window.createWebviewPanel(
-        'latex-workshop-pdf-preview',
-        path.basename(pdfUri.fsPath) || 'PDF Preview',
-        tabEditorGroup === 'current' ? vscode.ViewColumn.Active : vscode.ViewColumn.Beside,
-        {
-            enableScripts: true,
-            retainContextWhenHidden: true
-        }
-    )
-    const pdfPanel = await populate(pdfUri, panel)
-    manager.insert(pdfPanel)
+    await openPdfInTab(pdfUri, tabEditorGroup, preserveFocus)
 }
 
 /**
@@ -88,7 +66,7 @@ async function viewInWebviewPanel(pdfUri: vscode.Uri, tabEditorGroup: string, pr
 function handler(websocket: ws, msg: string): void {
     void websocket
     void msg
-    logger.log('Ignoring viewer websocket message because preview is disabled.')
+    logger.log('Ignoring viewer websocket message because the tab viewer uses postMessage transport.')
 }
 
 function getParams(): PdfViewerParams {
@@ -149,7 +127,7 @@ function getParams(): PdfViewerParams {
 function locate(pdfUri: vscode.Uri, record: SyncTeXRecordToPDF | SyncTeXRecordToPDFAll[]): Promise<void> {
     void pdfUri
     void record
-    logger.log('Ignoring SyncTeX locate request because preview is disabled.')
+    logger.log('Ignoring SyncTeX locate request because reverse SyncTeX is not wired for the tab viewer.')
     return Promise.resolve()
 }
 
@@ -160,9 +138,22 @@ function locate(pdfUri: vscode.Uri, record: SyncTeXRecordToPDF | SyncTeXRecordTo
  * @param pdfUri The path of a PDF file.
  */
 function getViewerState(pdfUri: vscode.Uri): (PdfViewerState | undefined)[] {
-    const panelSet = manager.getPanels(pdfUri)
-    if (!panelSet) {
-        return []
+    return getCustomEditorStates(pdfUri)
+}
+
+async function openPdfInTab(pdfUri: vscode.Uri, tabEditorGroup: string, preserveFocus: boolean): Promise<void> {
+    const viewColumn = resolveViewColumn(tabEditorGroup)
+    logger.log(`Open PDF in internal tab viewer for ${pdfUri.toString(true)}`)
+    await vscode.commands.executeCommand('vscode.openWith', pdfUri, securePdfCustomEditorViewType, {
+        preview: false,
+        preserveFocus,
+        viewColumn
+    })
+}
+
+function resolveViewColumn(tabEditorGroup: string): vscode.ViewColumn {
+    if (tabEditorGroup === 'current') {
+        return vscode.ViewColumn.Active
     }
-    return Array.from(panelSet).map( e => e.state )
+    return vscode.ViewColumn.Beside
 }

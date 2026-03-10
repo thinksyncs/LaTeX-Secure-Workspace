@@ -8,7 +8,7 @@ import type { watcher } from './core/watcher'
 import type { cache } from './core/cache'
 import type { root } from './core/root'
 import type { compile } from './compile'
-import type { preview, server, viewer } from './preview'
+import type { preview, viewer } from './preview'
 import type { locate } from './locate'
 import type { completion } from './completion'
 import type { language } from './language'
@@ -37,7 +37,6 @@ export const lw = {
     parser: {} as typeof parser,
     compile: {} as typeof compile,
     viewer: {} as typeof viewer,
-    server: {} as typeof server,
     preview: {} as typeof preview,
     locate: {} as typeof locate,
     completion: {} as typeof completion,
@@ -70,9 +69,9 @@ const constant = {
     MAGIC_PROGRAM_ARGS_SUFFIX: '_WITH_ARGS',
     MAX_PRINT_LINE: '10000',
     /**
-     * Prefix that server.ts uses to distinguish requests on pdf files from
-     * others. We use '.' because it is not converted by encodeURIComponent and
-     * other functions.
+     * Prefix used when encoding PDF resource URLs for the bundled viewer. We
+     * use '.' because it is not converted by encodeURIComponent and other
+     * functions.
      * See https://stackoverflow.com/questions/695438/safe-characters-for-friendly-url
      * See https://tools.ietf.org/html/rfc3986#section-2.3
      */

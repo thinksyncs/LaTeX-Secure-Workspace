@@ -116,6 +116,9 @@ export type PanelManagerResponse = {
 export type PanelRequest = {
     type: 'initialized'
 } | {
+    type: 'log',
+    message: string
+} | {
     type: 'keyboard_event',
     event: KeyboardEventInit
 } | {

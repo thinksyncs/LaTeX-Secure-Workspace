@@ -52,7 +52,17 @@ export function parseURL(): { encodedPath: string, pdfFileUri: string, docTitle:
         const encodedPath = encoded.replace(pdfFilePrefix, '')
         const pdfFileUri = decodePath(encodedPath)
         const docTitle = title ?? pdfFileUri.split(/[\\/]/).pop() ?? 'Untitled PDF'
+        console.log(`[viewer] parseURL ok: ${docTitle}`)
         urlComponents = { encodedPath, pdfFileUri, docTitle }
+        return urlComponents
+    }
+
+    const globalPdfUri = (globalThis as any).lwPdfUri as string | undefined
+    if (globalPdfUri) {
+        const encodedPath = encodePath(globalPdfUri)
+        const docTitle = (globalThis as any).lwDocTitle as string | undefined ?? globalPdfUri.split(/[\\/]/).pop() ?? 'Untitled PDF'
+        console.log(`[viewer] parseURL via global: ${docTitle}`)
+        urlComponents = { encodedPath, pdfFileUri: globalPdfUri, docTitle }
         return urlComponents
     }
 

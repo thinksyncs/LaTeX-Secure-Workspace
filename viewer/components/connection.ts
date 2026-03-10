@@ -10,6 +10,10 @@ export function send(message: ClientRequest) {
 }
 
 export function sendLog(message: string) {
+    if (utils.isEmbedded()) {
+        sendPanel({ type: 'log', message })
+        return
+    }
     console.warn(message)
 }
 
@@ -19,4 +23,3 @@ export function sendPanel(msg: PanelRequest) {
     }
     window.parent?.postMessage(msg, '*')
 }
-
