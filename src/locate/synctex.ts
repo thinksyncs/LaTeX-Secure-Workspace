@@ -288,7 +288,8 @@ function toPDF(pdfUri?: vscode.Uri, args?: {line: number, filePath: string}, for
         active.document.lineAt(line - 1).text === '') {
             line -= 1
     }
-    if (forcedViewer === 'external' || (forcedViewer === 'auto' && configuration.get('view.pdf.viewer') === 'external') ) {
+    const pdfViewerMode = configuration.get('view.pdf.viewer')
+    if (forcedViewer === 'external' || forcedViewer === 'tabOrBrowser' || (forcedViewer === 'auto' && (pdfViewerMode === 'external' || pdfViewerMode === 'tab')) ) {
         void syncTeXExternal(line, targetPdfFile, rootFile)
         return
     }
