@@ -18,7 +18,7 @@ export {
 class PdfViewerPanel {
     readonly webviewPanel: vscode.WebviewPanel
     readonly pdfUri: vscode.Uri
-    private readonly viewerState: PdfViewerState | undefined
+    private viewerState: PdfViewerState | undefined
     private viewerReady = false
     private readonly startupTimeout: NodeJS.Timeout
     private attemptedInlineFallback = false
@@ -40,12 +40,9 @@ class PdfViewerPanel {
             void vscode.window.showWarningMessage('Internal PDF.js viewer failed to initialize. Switching to lightweight PDF tab mode.')
             this.showInlinePdfFallback()
         }, 2500)
-        panel.webview.onDidReceiveMessage((message: { type?: string }) => {
-            if (message.type === 'viewer-loaded' && this.viewerState) {
-                this.viewerReady = true
-                clearTimeout(this.startupTimeout)
-                lw.event.fire(lw.event.ViewerPageLoaded)
-                lw.event.fire(lw.event.ViewerStatusChanged, this.viewerState)
+        panel.webview.onDidReceiveMessage((message: { type?: string, message?: unknown, state?: PdfViewerState }) => {
+            if (message.type === 'viewer-loaded' || message.type === 'initialized') {
+                this.markViewerReady()
                 return
             }
             if (message.type === 'viewer-inline-loaded') {
@@ -56,8 +53,16 @@ class PdfViewerPanel {
                 }
                 return
             }
-            if (message.type === 'viewer-log' && typeof (message as { message?: unknown }).message === 'string') {
-                logger.log((message as { message: string }).message)
+            if (message.type === 'state' && message.state) {
+                this.viewerState = {
+                    ...this.viewerState,
+                    ...message.state
+                }
+                lw.event.fire(lw.event.ViewerStatusChanged, this.viewerState)
+                return
+            }
+            if ((message.type === 'viewer-log' || message.type === 'log') && typeof message.message === 'string') {
+                logger.log(message.message)
             }
         })
         panel.onDidDispose(() => {
@@ -125,6 +130,18 @@ class PdfViewerPanel {
 
     get state() {
         return this.viewerState
+    }
+
+    private markViewerReady() {
+        if (this.viewerReady) {
+            return
+        }
+        this.viewerReady = true
+        clearTimeout(this.startupTimeout)
+        lw.event.fire(lw.event.ViewerPageLoaded)
+        if (this.viewerState) {
+            lw.event.fire(lw.event.ViewerStatusChanged, this.viewerState)
+        }
     }
 
 }

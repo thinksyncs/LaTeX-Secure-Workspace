@@ -1,6 +1,6 @@
 import { patchViewerUI, registerKeyBind, registerPersistentState, repositionAnnotation } from './components/gui.js'
 import * as utils from './components/utils.js'
-import { sendLog } from './components/connection.js'
+import { sendLog, sendPanel } from './components/connection.js'
 
 import type { PdfjsEventName, PDFViewerApplicationType, PDFViewerApplicationOptionsType } from './components/interface.js'
 import { initTrim, setTrimCSS } from './components/trimming.js'
@@ -133,6 +133,9 @@ try {
     // @ts-ignore Must import viewer.mjs here, otherwise some config won't work. #4096
     await import('../../viewer/viewer.mjs')
     sendLog('[viewer] import:viewer.mjs:done')
+    await PDFViewerApplication.initializedPromise
+    sendPanel({ type: 'initialized' })
+    sendLog('[viewer] app:initialized')
 } catch (error) {
     const message = error instanceof Error ? (error.stack || error.message) : String(error)
     sendLog(`[viewer] import:viewer.mjs:error ${message}`)

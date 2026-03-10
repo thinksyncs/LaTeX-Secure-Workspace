@@ -23,12 +23,12 @@ export function sendLog(message: string) {
 }
 
 export function sendPanel(msg: PanelRequest) {
+    if (utils.isEmbedded()) {
+        window.parent?.postMessage(msg, '*')
+        return
+    }
     const vscodeApi = (globalThis as ViewerGlobal).acquireVsCodeApi?.()
     if (vscodeApi) {
         vscodeApi.postMessage(msg)
-        return
-    }
-    if (utils.isEmbedded()) {
-        window.parent?.postMessage(msg, '*')
     }
 }

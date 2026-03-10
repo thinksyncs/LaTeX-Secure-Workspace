@@ -1,12 +1,12 @@
 const postLog = (message) => {
   try {
+    if (window.parent && window.parent !== window) {
+      window.parent.postMessage({ type: 'log', message }, '*');
+      return;
+    }
     const vscodeApi = globalThis.acquireVsCodeApi?.();
     if (vscodeApi && typeof vscodeApi.postMessage === 'function') {
       vscodeApi.postMessage({ type: 'log', message });
-      return;
-    }
-    if (window.parent && window.parent !== window) {
-      window.parent.postMessage({ type: 'log', message }, '*');
     }
   } catch (_) {
     // Ignore cross-window messaging failures.
