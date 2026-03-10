@@ -21,10 +21,10 @@ void parser.parse.reset()
 lw.parser = parser
 import { compile } from './compile'
 lw.compile = compile
-import { preview, viewer } from './preview'
+import { preview, server, viewer } from './preview'
+lw.server = server
 lw.viewer = viewer
 lw.preview = preview
-import { SecurePdfCustomEditorProvider } from './preview/pdfcustomeditor'
 import { locate } from './locate'
 lw.locate = locate
 import { completion } from './completion'
@@ -162,7 +162,6 @@ function registerLatexWorkshopCommands(extensionContext: vscode.ExtensionContext
         vscode.commands.registerCommand('latex-workshop.hostPort', () => lw.commands.hostPort()),
         vscode.commands.registerCommand('latex-workshop.saveWithoutBuilding', () => lw.commands.saveActive()),
         vscode.commands.registerCommand('latex-workshop.build', () => lw.commands.build()),
-        vscode.commands.registerCommand('latex-workshop.build-recipe', () => lw.commands.buildRecipe()),
         vscode.commands.registerCommand('latex-workshop.view', (mode?: 'tab' | 'browser' | 'external' | vscode.Uri) => lw.commands.view(mode)),
         vscode.commands.registerCommand('latex-workshop.refresh-viewer', () => lw.commands.refresh()),
         vscode.commands.registerCommand('latex-workshop.recipes', (recipe: string | undefined) => lw.commands.recipes(recipe)),
@@ -233,10 +232,6 @@ function registerProviders(extensionContext: vscode.ExtensionContext) {
     const bibtexSelector = selectDocumentsWithId(['bibtex'])
 
     extensionContext.subscriptions.push(
-        vscode.window.registerCustomEditorProvider(
-            SecurePdfCustomEditorProvider.viewType,
-            new SecurePdfCustomEditorProvider()
-        ),
         vscode.languages.registerHoverProvider(latexSymbolSelector, lw.preview.provider),
         vscode.languages.registerDefinitionProvider(latexSymbolSelector, lw.language.definition),
         vscode.languages.registerDocumentSymbolProvider(latexSymbolSelector, lw.language.docSymbol),

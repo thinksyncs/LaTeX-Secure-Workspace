@@ -1,6 +1,5 @@
 import { patchViewerUI, registerKeyBind, registerPersistentState, repositionAnnotation } from './components/gui.js'
 import * as utils from './components/utils.js'
-import { sendLog, sendPanel } from './components/connection.js'
 
 import type { PdfjsEventName, PDFViewerApplicationType, PDFViewerApplicationOptionsType } from './components/interface.js'
 import { initTrim, setTrimCSS } from './components/trimming.js'
@@ -43,68 +42,36 @@ function onPDFViewerEvent(event: PdfjsEventName, cb: (evt?: any) => unknown, opt
 }
 
 async function initialization() {
-    sendLog('[viewer] initialization:start')
-    const viewerTarget = utils.parseURL()
-    document.title = viewerTarget.docTitle
+    document.title = utils.parseURL().docTitle
 
     const params = await utils.getParams()
-    sendLog('[viewer] params:loaded')
     document.addEventListener('webviewerloaded', () => {
         const color = utils.isPrefersColorSchemeDark(params.codeColorTheme) ? params.color.dark : params.color.light
         const options = {
             annotationEditorMode: -1,
             disablePreferences: true,
             enableScripting: false,
-            // Resolve assets from bundled pdfjs-dist in extension node_modules.
-            cMapUrl: '../node_modules/pdfjs-dist/cmaps/',
-            standardFontDataUrl: '../node_modules/pdfjs-dist/standard_fonts/',
-            wasmUrl: '../node_modules/pdfjs-dist/wasm/',
+            // The following paths are requested from ./build/cmaps/, ./build/standard_fonts/, and ./build/wasm/
+            cMapUrl: '../cmaps/',
+            standardFontDataUrl: '../standard_fonts/',
+            wasmUrl: '../wasm/',
             sidebarViewOnLoad: 0,
-            workerSrc: '../node_modules/pdfjs-dist/build/pdf.worker.mjs',
-            sandboxBundleSrc: '../node_modules/pdfjs-dist/build/pdf.sandbox.mjs',
+            workerSrc: './build/pdf.worker.mjs',
             forcePageColors: true,
             // The following allow clear display with large zoom values. This is necessary to enable trimming.
             maxCanvasPixels: -1,
             maxCanvasDim: -1,
             enableDetailCanvas: false,
-            defaultUrl: viewerTarget.pdfFileUri,
             ...color
         }
         PDFViewerApplicationOptions.setAll(options)
     })
     await patchViewerUI()
-    sendLog('[viewer] ui:patched')
     registerKeyBind()
-    sendLog('[viewer] keybind:registered')
 }
-
-function errorToMessage(error: unknown, fallback: string): string {
-    if (error instanceof Error) {
-        return error.stack || error.message
-    }
-    if (typeof error === 'string') {
-        return error
-    }
-    if (error && typeof error === 'object' && 'message' in error && typeof error.message === 'string') {
-        return error.message
-    }
-    return fallback
-}
-
-window.addEventListener('error', (event) => {
-    const message = errorToMessage(event.error, event.message || 'unknown viewer error')
-    sendLog(`[viewer:error] ${message}`)
-})
-
-window.addEventListener('unhandledrejection', (event) => {
-    const message = errorToMessage(event.reason, 'unknown rejection')
-    sendLog(`[viewer:unhandledrejection] ${message}`)
-})
 
 await initialization()
-sendLog('[viewer] initialization:done')
 onPDFViewerEvent('documentloaded', () => {
-    sendLog('[viewer] event:documentloaded')
     void setParams()
     initUploadState()
     void getViewerEventBus().then(eventbus => {
@@ -115,13 +82,11 @@ onPDFViewerEvent('documentloaded', () => {
     })
 }, { once: true })
 onPDFViewerEvent('pagesinit', () => {
-    sendLog('[viewer] event:pagesinit')
     initTrim()
     void restoreState()
     registerPersistentState()
 })
 onPDFViewerEvent('pagesloaded', () => {
-    sendLog('[viewer] event:pagesloaded')
     initTrim()
     void restoreState()
         .then(() => uploadState())
@@ -130,16 +95,5 @@ onPDFViewerEvent('pagesloaded', () => {
 })
 onPDFViewerEvent('rotationchanging', () => setTrimCSS())
 
-try {
-    sendLog('[viewer] import:viewer.mjs:start')
-    // @ts-ignore Must import viewer.mjs here, otherwise some config won't work. #4096
-    await import('../../viewer/viewer.mjs')
-    sendLog('[viewer] import:viewer.mjs:done')
-    await PDFViewerApplication.initializedPromise
-    sendPanel({ type: 'initialized' })
-    sendLog('[viewer] app:initialized')
-} catch (error) {
-    const message = error instanceof Error ? (error.stack || error.message) : String(error)
-    sendLog(`[viewer] import:viewer.mjs:error ${message}`)
-    throw error
-}
+// @ts-expect-error Must import viewer.mjs here, otherwise some config won't work. #4096
+await import('../../viewer/viewer.mjs')

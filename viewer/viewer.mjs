@@ -17575,32 +17575,16 @@ initCom(PDFViewerApplication);
 }
 {
   const HOSTED_VIEWER_ORIGINS = new Set(["null", "http://mozilla.github.io", "https://mozilla.github.io"]);
-  const parseOrigin = function (raw, base) {
-    try {
-      return new URL(raw, base).origin;
-    } catch (_) {
-      return undefined;
-    }
-  };
-  const isVsCodeResourceOrigin = function (origin) {
-    if (!origin) {
-      return false;
-    }
-    return /vscode-resource\.vscode-cdn\.net$/i.test(origin) || /vscode-webview\.net$/i.test(origin);
-  };
   var validateFileURL = function (file) {
     if (!file) {
       return;
     }
-    const viewerOrigin = parseOrigin(window.location.href) || "null";
+    const viewerOrigin = URL.parse(window.location)?.origin || "null";
     if (HOSTED_VIEWER_ORIGINS.has(viewerOrigin)) {
       return;
     }
-    const fileOrigin = parseOrigin(file, window.location.href);
+    const fileOrigin = URL.parse(file, window.location)?.origin;
     if (fileOrigin === viewerOrigin) {
-      return;
-    }
-    if (isVsCodeResourceOrigin(fileOrigin) && isVsCodeResourceOrigin(viewerOrigin)) {
       return;
     }
     const ex = new Error("file origin does not match viewer's");

@@ -130,13 +130,24 @@ function clearCache() {
     state.prevMacros = undefined
 }
 
+let serverHandlerInserted = false
 async function getHtml() {
-    const scriptUri = state.panel?.webview.asWebviewUri(vscode.Uri.joinPath(resourcesFolder(lw.extensionRoot), 'mathpreview.js')).toString()
-    const cspSource = state.panel?.webview.cspSource ?? ''
+    if (serverHandlerInserted === false) {
+        lw.server.setHandler((url: string) => {
+            if (url.startsWith('/mathpreviewpanel/')) {
+                return path.resolve(lw.extensionRoot, 'resources')
+            }
+            return undefined
+        })
+        serverHandlerInserted = true
+    }
+    const serverUrl = (await lw.server.getUrl()).url
+    const serverUri = vscode.Uri.parse(serverUrl, true)
+    const scriptOrigin = `${serverUri.scheme}://${serverUri.authority}`
     return `<!DOCTYPE html>
     <html lang="en">
     <head>
-        <meta http-equiv="Content-Security-Policy" content="default-src 'none'; base-uri 'none'; script-src ${cspSource}; img-src data:; style-src 'unsafe-inline';">
+        <meta http-equiv="Content-Security-Policy" content="default-src 'none'; base-uri 'none'; script-src 'self' ${scriptOrigin}; img-src data:; style-src 'unsafe-inline';">
         <meta charset="UTF-8">
         <style>
             body {
@@ -148,7 +159,7 @@ async function getHtml() {
                 padding-left: 50px;
             }
         </style>
-        <script src='${scriptUri}' defer></script>
+        <script src='${serverUrl}/mathpreviewpanel/mathpreview.js' defer></script>
     </head>
     <body>
         <div id="mathBlock"><img src="" id="math" /></div>

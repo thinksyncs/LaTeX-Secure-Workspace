@@ -31,26 +31,6 @@ export async function build(skipSelection: boolean = false, rootFile: string | u
     await lw.compile.build(skipSelection, rootFile, languageId, recipe)
 }
 
-export async function buildRecipe() {
-    logger.log('BUILD RECIPE command invoked.')
-    if (!requireTrustedWorkspace('Build')) {
-        return
-    }
-    const configuration = vscode.workspace.getConfiguration('latex-workshop', lw.root.getWorkspace())
-    const recipes = configuration.get('latex.recipes', []) as {name: string}[]
-    if (recipes.length === 0) {
-        void vscode.window.showWarningMessage('No LaTeX recipes are configured.')
-        return
-    }
-    const picked = await vscode.window.showQuickPick(recipes.map(recipe => recipe.name), {
-        placeHolder: 'Select a recipe to build the current LaTeX project'
-    })
-    if (!picked) {
-        return
-    }
-    await build(false, undefined, undefined, picked)
-}
-
 export async function revealOutputDir() {
     if (!requireTrustedWorkspace('Reveal output directory')) {
         return
@@ -81,34 +61,17 @@ export async function view(mode?: 'tab' | 'browser' | 'external' | vscode.Uri) {
         await lw.viewer.view(mode, 'tab')
         return
     }
-    const currentRoot = lw.root.file.path
-    const resolvedRoot = await lw.root.resolveSecurityRoot()
-    if (!resolvedRoot && !currentRoot && !lw.compile.compiledPDFPath) {
-        logger.log('Cannot view PDF because no root file or compiled PDF is available.')
+    const rootFile = await lw.root.resolveSecurityRoot()
+    if (!rootFile) {
+        logger.log('Cannot view PDF because no root file is available.')
         return
     }
-
-    const candidates = [
-        lw.compile.compiledPDFPath,
-        currentRoot ? lw.file.getSecurityPdfPath(currentRoot) : undefined,
-        resolvedRoot ? lw.file.getSecurityPdfPath(resolvedRoot) : undefined
-    ].filter((p): p is string => !!p)
-
-    const visited = new Set<string>()
-    for (const candidate of candidates) {
-        const normalized = path.normalize(candidate)
-        if (visited.has(normalized)) {
-            continue
-        }
-        visited.add(normalized)
-        if (await lw.file.exists(candidate)) {
-            await lw.viewer.view(vscode.Uri.file(candidate), mode === 'browser' || mode === 'external' ? mode : 'tab')
-            return
-        }
+    const pdfPath = lw.file.getSecurityPdfPath(rootFile)
+    if (!await lw.file.exists(pdfPath)) {
+        void vscode.window.showWarningMessage(`PDF file not found: ${pdfPath}`)
+        return
     }
-
-    const notFound = resolvedRoot ? lw.file.getSecurityPdfPath(resolvedRoot) : (candidates[0] ?? '')
-    void vscode.window.showWarningMessage(`PDF file not found: ${notFound}`)
+    await lw.viewer.view(vscode.Uri.file(pdfPath), mode === 'browser' || mode === 'external' ? mode : 'tab')
 }
 
 export function refresh() {

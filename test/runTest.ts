@@ -3,15 +3,6 @@ import * as process from 'process'
 import * as tmpFile from 'tmp'
 import { runTests } from '@vscode/test-electron'
 
-// Integrated terminals inherit host-editor variables that break nested Electron launches.
-function stripHostEditorEnv() {
-    for (const key of Object.keys(process.env)) {
-        if (key === 'ELECTRON_RUN_AS_NODE' || key.startsWith('VSCODE_')) {
-            delete process.env[key]
-        }
-    }
-}
-
 async function runTestSuites(fixture: 'testground' | 'multiroot' | 'unittest') {
     try {
         const extensionDevelopmentPath = path.resolve(__dirname, '../../')
@@ -25,8 +16,7 @@ async function runTestSuites(fixture: 'testground' | 'multiroot' | 'unittest') {
                 'test/fixtures/' + fixture + (fixture === 'multiroot' ? '/resource.code-workspace' : ''),
                 '--user-data-dir=' + tmpFile.dirSync({ unsafeCleanup: true }).name,
                 '--extensions-dir=' + tmpFile.dirSync({ unsafeCleanup: true }).name,
-                '--disable-gpu',
-                '--use-inmemory-secretstorage'
+                '--disable-gpu'
             ],
             extensionTestsEnv: {
                 LATEXWORKSHOP_CITEST: '1'
@@ -41,7 +31,6 @@ async function runTestSuites(fixture: 'testground' | 'multiroot' | 'unittest') {
 
 async function main() {
     try {
-        stripHostEditorEnv()
         await runTestSuites('unittest')
         await runTestSuites('testground')
         await runTestSuites('multiroot')
