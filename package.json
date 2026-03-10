@@ -63,6 +63,7 @@
         "latex-workshop.latex.rootFile.indicator",
         "latex-workshop.latex.search.rootFiles.include",
         "latex-workshop.latex.search.rootFiles.exclude",
+        "latex-workshop.intellisense.package.dirs",
         "latex-workshop.view.pdf.viewer",
         "latex-workshop.view.pdf.external.viewer.command",
         "latex-workshop.view.pdf.external.viewer.args",
