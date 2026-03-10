@@ -25,7 +25,6 @@ const action = process.argv[2]
 
 switch (action) {
     case 'package': {
-        run('npm', ['run', 'compile'])
         run('npx', ['vsce', 'package'])
         break
     }
@@ -40,7 +39,6 @@ switch (action) {
     }
     case 'reinstall': {
         run('node', ['./dev/cleanupLocalExtensions.mjs'])
-        run('npm', ['run', 'compile'])
         run('npx', ['vsce', 'package'])
         run('code', ['--install-extension', vsixPath, '--force'])
         break

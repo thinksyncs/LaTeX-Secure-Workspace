@@ -2,7 +2,6 @@ import * as vscode from 'vscode'
 import ws from 'ws'
 import * as path from 'path'
 import { lw } from '../lw'
-import { securePdfCustomEditorViewType } from './pdfcustomeditor'
 import type { SyncTeXRecordToPDF, SyncTeXRecordToPDFAll } from '../types'
 import * as manager from './viewer/pdfviewermanager'
 import type { PdfViewerParams, PdfViewerState } from '../../types/latex-workshop-protocol-types/index'
@@ -55,18 +54,10 @@ function refresh(pdfUri?: vscode.Uri): void {
 }
 
 async function view(pdfUri: vscode.Uri, mode?: 'tab' | 'browser' | 'external'): Promise<void> {
-    if (mode === 'browser' || mode === 'external') {
-        logger.log(`Open PDF in system viewer for ${pdfUri.toString(true)}`)
-        await vscode.env.openExternal(pdfUri)
-        return
+    if (mode && mode !== 'tab') {
+        void vscode.window.showWarningMessage('Only tab-based PDF preview is available in this secure build.')
     }
-    logger.log(`Open PDF with custom editor ${securePdfCustomEditorViewType} for ${pdfUri.toString(true)}`)
-    try {
-        await vscode.commands.executeCommand('vscode.openWith', pdfUri, securePdfCustomEditorViewType)
-    } catch (err) {
-        logger.logError('Failed to open custom PDF editor. Falling back to system viewer.', err)
-        await vscode.env.openExternal(pdfUri)
-    }
+    return viewInWebviewPanel(pdfUri, 'right', false)
 }
 
 async function viewInWebviewPanel(pdfUri: vscode.Uri, tabEditorGroup: string, preserveFocus: boolean): Promise<void> {
