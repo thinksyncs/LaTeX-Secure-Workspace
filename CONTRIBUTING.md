@@ -1,4 +1,4 @@
-# Contributing to LaTeX-Workshop
+# Contributing to LaTeX-Secure-Workspace
 
 Typo fixes and other documentation improvements are welcome.
 Please note that pull requests that change default setting values or add additional recipes to the default settings are generally not accepted.
@@ -6,8 +6,8 @@ Please note that pull requests that change default setting values or add additio
 ## Quickstart
 
 ```bash
-git clone https://github.com/James-Yu/LaTeX-Workshop.git
-cd ./LaTeX-Workshop
+git clone https://github.com/thinksyncs/LaTeX-Secure-Workspace.git
+cd ./LaTeX-Secure-Workspace
 cp ./dev/githooks/pre-commit .git/hooks/
 npm ci
 code -n .
@@ -59,10 +59,13 @@ In VS Code, run `Debug: Select and Start Debugging` from the Command Palette, an
 
 You can refer to:
 
+- ./README.md
+- ./docs/manual/README.md
+- ./docs/manual/repository-layout.md
+- ./docs/security-hardening.md
+- ./src/README.md
+- ./data/README.md
+- ./resources/snippetview/README.md
+- ./test/README.md
+- ./.github/workflows/README.md
 - https://github.com/James-Yu/LaTeX-Workshop/wiki
-- https://github.com/James-Yu/LaTeX-Workshop/blob/master/src/README.md
-- https://github.com/James-Yu/LaTeX-Workshop/blob/master/viewer/README.md
-- https://github.com/James-Yu/LaTeX-Workshop/blob/master/data/README.md
-- https://github.com/James-Yu/LaTeX-Workshop/blob/master/resources/snippetview/README.md
-- https://github.com/James-Yu/LaTeX-Workshop/blob/master/test/README.md
-- https://github.com/James-Yu/LaTeX-Workshop/blob/master/.github/workflows/README.md

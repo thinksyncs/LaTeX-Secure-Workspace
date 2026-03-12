@@ -1,6 +1,7 @@
 out/
 .vscode-test/
 node_modules/
+artifacts/
 dev/expl3.cwl
 dev/unimathsymbols.txt
 dev/cwl/
@@ -20,6 +21,11 @@ test/fixtures/**/*.synctex*
 test/fixtures/**/*.fdb_latexmk
 test/fixtures/**/*.blg
 test/fixtures/**/*.out
+samples/sample/*.aux
+samples/sample/*.fdb_latexmk
+samples/sample/*.fls
+samples/sample/*.log
+samples/sample/*.pdf
 test/log/
 /*.vsix
 .DS_Store

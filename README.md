@@ -43,9 +43,13 @@ Thank you so much!
 
 ## Manual
 
-The upstream manual is maintained as a [wiki](https://github.com/James-Yu/LaTeX-Workshop/wiki).
+Start with the local secure-fork manual in [docs/manual/README.md](./docs/manual/README.md).
 
-For this secure build, the following upstream pages are the most relevant:
+For repository organization and cleanup rules, see [Repository Layout](./docs/manual/repository-layout.md).
+
+For a concise summary of the security controls in this fork, see [Security Hardening Summary](./docs/security-hardening.md) or [in Japanese](./docs/security-hardening.ja.md).
+
+The upstream manual is still maintained as a [wiki](https://github.com/James-Yu/LaTeX-Workshop/wiki). The following upstream pages remain the most useful when you need shared editing concepts that still exist in this secure build:
 
 - [Installation and basic settings](https://github.com/James-Yu/LaTeX-Workshop/wiki/Install)
 - [Compiling](https://github.com/James-Yu/LaTeX-Workshop/wiki/Compile)
@@ -89,6 +93,31 @@ The following upstream features are intentionally disabled or not exposed in thi
 - Texdoc, word count, and math preview panel workflows.
 - External formatter or linter command overrides from workspace settings without an explicit confirmation prompt.
 - Other convenience integrations that expand the executable or network-facing surface without being required for core authoring and compilation.
+
+## Diagram Migration
+
+This secure build does not provide PlantUML integration. PlantUML commonly depends on a remote rendering server or a separate local Java toolchain, which is a poor fit for privacy-first and offline-first positioning.
+
+Mermaid is the recommended replacement because it renders locally, works offline in modern tooling, and avoids a server round-trip for basic authoring workflows.
+
+PlantUML to Mermaid quick conversions:
+
+| PlantUML | Mermaid |
+| --- | --- |
+| `@startuml` / `@enduml` | `````mermaid` / closing fence |
+| `Alice -> Bob: Hello` | `Alice --> Bob: Hello` |
+| `participant Alice` | `participant Alice` |
+| `actor User` | `actor User` |
+| `alt` / `else` / `end` | `alt` / `else` / `end` |
+| `loop 3 times` | `loop 3 times` |
+| `class Foo` | `class Foo` |
+| `Foo --> Bar` | `Foo --> Bar` |
+
+Migration guidance:
+
+1. Replace PlantUML code blocks with Mermaid fenced blocks.
+2. Prefer Mermaid sequence, flowchart, class, and state diagrams for documents that must render offline.
+3. If you still need PlantUML for legacy documents, render it outside the extension and commit the generated artifact instead of depending on a runtime server.
 
 ## GitHub
 
