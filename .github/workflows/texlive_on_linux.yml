@@ -1,6 +1,6 @@
-name: TeX Live on Linux
+name: TeX Live (current) on Linux
 env:
-  cache-version: v12
+  cache-version: tl-current-v1
   TEXLIVE_KEY_FINGERPRINT: C78B82D8C79512F79CC0D7C80D5E5D9106BAB6BC
 on: [push, pull_request]
 
@@ -67,8 +67,13 @@ jobs:
     - run: |
         latex -v
         latexmk -v
-    - run: |
-        npm ci
+    - name: Install Node dependencies and compile
+      run: |
+        if [ "${{ github.event_name }}" = "pull_request" ]; then
+          npm ci --ignore-scripts
+        else
+          npm ci
+        fi
         npm run compile
     - name: Run tests
       run: CI_USE_XVFB=1 npm run test:ci
