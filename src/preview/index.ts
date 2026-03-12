@@ -1,6 +1,5 @@
 import { graph2md, provider, ref2svg, tex2svg } from './hover'
 import { mathjax } from './mathjax'
-import * as mathpreview from './math-preview-panel'
 
 export * as viewer from './viewer'
 
@@ -11,6 +10,5 @@ export const preview = {
         ref2svg,
         tex2svg,
         typeset: mathjax.typeset
-    },
-    mathpreview
+    }
 }
