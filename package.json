@@ -2873,7 +2873,8 @@
   },
   "scripts": {
     "clean": "rimraf out/ .eslintcache",
-    "compile": "tsc -p tsconfig.json",
+    "build:pdfviewer-secure": "node ./dev/build-pdfviewer-secure.mjs",
+    "compile": "tsc -p tsconfig.json && npm run build:pdfviewer-secure",
     "coverage": "c8 --check-coverage npm run test --src out/src/",
     "extension:cleanup-local": "node ./dev/cleanupLocalExtensions.mjs",
     "extension:package-local": "node ./dev/manageLocalExtension.mjs package",

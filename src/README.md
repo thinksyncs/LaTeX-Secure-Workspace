@@ -53,7 +53,7 @@ flowchart LR
   click MathJaxWorkers "https://github.com/James-Yu/LaTeX-Workshop/blob/master/src/providers/preview/mathjaxpool_worker.ts"
 ```
 
-PDF files are opened with the OS default viewer. The historical internal tab-based viewer is no longer part of the active extension architecture.
+PDF files are opened in a VS Code custom editor backed by the vendored `vscode-pdfviewer-secure` runtime.
 
 ## flowchart
 
