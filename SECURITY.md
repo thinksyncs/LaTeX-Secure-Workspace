@@ -24,7 +24,7 @@ Out of scope (non-exhaustive):
 ## Reporting a Vulnerability
 
 Please report vulnerabilities to:
-`develop@toppymicros.com`
+`security@toppymicros.com`
 
 Use the subject line:
 `[SECURITY] <short summary>`
