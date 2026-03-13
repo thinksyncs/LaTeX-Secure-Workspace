@@ -18,6 +18,9 @@ We have a `Run Tests` launch configuration in `.vscode/launch.json`.
 In the config item, the first `args` passed to `code` defines the workspace to open: `testground` typically, and `multiroot/resource.code-workspace` for the multi-root workspace tests.
 Additionally, the `LATEXWORKSHOP_SUITE` envvar defines the suites to be executed, separated by commas and all if left empty.
 
+If you do not need breakpoints, prefer `Run > Start Without Debugging` when using these launch configurations.
+This reduces debugger-driven focus changes, though macOS may still briefly foreground the `Extension Development Host` window when VS Code starts the test instance.
+
 
 ## Executing Tests on GitHub Actions
 
