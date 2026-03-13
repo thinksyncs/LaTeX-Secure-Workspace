@@ -1,13 +1,12 @@
 {
   "name": "tex-workspace-secure",
   "displayName": "LaTeX Workspace Security",
-  "description": "Security-hardened TeX Workspace for local and enterprise use.",
+  "description": "Secure LaTeX tools for VS Code with IntelliSense, manual build, diagnostics, and a local PDF tab viewer.",
   "icon": "icons/icon.png",
   "version": "10.13.3",
   "publisher": "ToppyMicroServices",
   "license": "MIT",
   "homepage": "https://github.com/thinksyncs/LaTeX-Secure-Workspace",
-  "maintainerNote": "Published under ToppyMicroServices; source repository is maintained at thinksyncs/LaTeX-Secure-Workspace.",
   "repository": {
     "type": "git",
     "url": "https://github.com/thinksyncs/LaTeX-Secure-Workspace.git"
@@ -18,19 +17,20 @@
   "categories": [
     "Programming Languages",
     "Snippets",
-    "Linters",
     "Formatters"
   ],
   "keywords": [
     "latex",
     "tex",
-    "workspace",
-    "security",
-    "secure",
-    "privacy",
+    "build",
+    "diagnostics",
+    "formatter",
+    "pdf",
     "pdf viewer",
     "intellisense",
-    "enterprise"
+    "secure",
+    "snippets",
+    "workspace"
   ],
   "activationEvents": [
     "onCommand:latex-workshop.activate",
