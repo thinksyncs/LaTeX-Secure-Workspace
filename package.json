@@ -1,12 +1,13 @@
 {
   "name": "tex-workspace-secure",
-  "displayName": "LaTeX-Secure-Workspace",
-  "description": "Subtractive, privacy-first, security-maintained TeX Workspace for enterprise use cases.",
+  "displayName": "LaTeX Workspace Security",
+  "description": "Security-hardened TeX Workspace for local and enterprise use.",
   "icon": "icons/icon.png",
   "version": "10.13.3",
-  "publisher": "thinksyncs",
+  "publisher": "ToppyMicroServices",
   "license": "MIT",
   "homepage": "https://github.com/thinksyncs/LaTeX-Secure-Workspace",
+  "maintainerNote": "Published under ToppyMicroServices; source repository is maintained at thinksyncs/LaTeX-Secure-Workspace.",
   "repository": {
     "type": "git",
     "url": "https://github.com/thinksyncs/LaTeX-Secure-Workspace.git"
@@ -23,8 +24,13 @@
   "keywords": [
     "latex",
     "tex",
-    "compile",
-    "hint"
+    "workspace",
+    "security",
+    "secure",
+    "privacy",
+    "pdf viewer",
+    "intellisense",
+    "enterprise"
   ],
   "activationEvents": [
     "onCommand:latex-workshop.activate",
