@@ -25,12 +25,22 @@ To avoid install TeX Live each time, we use a caching feature, [actions/cache](h
 
 Because these caches contain executable toolchains, any cache-key changes should be treated as a trust-boundary change and reviewed carefully.
 
+The TeX Live workflows intentionally track the current TeX Live network repository at `mirror.ctan.org`. Because that source rolls forward over time, the workflow name and cache key avoid baking in a year. For example:
+
+```yaml
+name: TeX Live (current) on Linux
+env:
+  cache-version: tl-current-v1
+```
+
+When we want to refresh the cached toolchain, bump the trailing revision in `cache-version`. If we later switch these workflows to a year-pinned historic TeX Live repository, update the workflow names and this documentation at the same time.
+
 The caches are removed if they have not been accessed in over 7 days.
-When we want to remove the caches manually, increase the number of `cache-version` on each YAML file.
+When we want to remove the caches manually, increase the trailing revision in `cache-version`.
 
 ```yaml
 env:
-  cache-version: v2
+  cache-version: tl-current-v2
 ```
 
 ## References

@@ -19,6 +19,8 @@ export default [{
         "dev/*.js",
         "types/**/*.ts",
         "resources/**/*.js",
+        "viewer/lib/**",
+        "vendor/pdfviewer-secure/**",
         "**/out",
         "**/node_modules",
         "viewer/viewer.mjs",

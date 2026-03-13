@@ -1,0 +1,14 @@
+/* Keep upstream viewer.html intact and hide actions that don't make sense in VS Code. */
+#secondaryOpenFile,
+#secondaryPrint,
+#secondaryDownload,
+#presentationMode,
+#viewBookmark,
+#openFile,
+#print,
+#download,
+#editorModeButtons,
+#editorModeSeparator,
+#fileInput {
+  display: none !important;
+}

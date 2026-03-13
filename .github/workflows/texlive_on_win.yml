@@ -1,6 +1,6 @@
-name: TeX Live on Windows
+name: TeX Live (current) on Windows
 env:
-  cache-version: v12
+  cache-version: tl-current-v1
   TEXLIVE_KEY_FINGERPRINT: C78B82D8C79512F79CC0D7C80D5E5D9106BAB6BC
 on: [push, pull_request]
 
@@ -51,6 +51,7 @@ jobs:
       shell: cmd
     - name: Run tlmgr install
       run: |
+        tlmgr update --self
         tlmgr install collection-latex
         tlmgr install import subfiles latexmk makeindex
         tlmgr install chktex lacheck latexindent
@@ -72,8 +73,14 @@ jobs:
     - run: |
         latex -v
         latexmk -v
-    - run: |
-        npm ci
+    - name: Install Node dependencies and compile
+      shell: pwsh
+      run: |
+        if ('${{ github.event_name }}' -eq 'pull_request') {
+          npm ci --ignore-scripts
+        } else {
+          npm ci
+        }
         npm run compile
     - name: Run tests
       run: npm run test:ci

@@ -1,10 +1,10 @@
 {
   "name": "tex-workspace-secure",
-  "displayName": "LaTeX-Secure-Workspace",
-  "description": "Subtractive, privacy-first, security-maintained TeX Workspace for enterprise use cases.",
+  "displayName": "LaTeX Workspace Security",
+  "description": "Secure LaTeX tools for VS Code with IntelliSense, manual build, diagnostics, and a local PDF tab viewer.",
   "icon": "icons/icon.png",
   "version": "10.13.3",
-  "publisher": "thinksyncs",
+  "publisher": "ToppyMicroServices",
   "license": "MIT",
   "homepage": "https://github.com/thinksyncs/LaTeX-Secure-Workspace",
   "repository": {
@@ -17,14 +17,20 @@
   "categories": [
     "Programming Languages",
     "Snippets",
-    "Linters",
     "Formatters"
   ],
   "keywords": [
     "latex",
     "tex",
-    "compile",
-    "hint"
+    "build",
+    "diagnostics",
+    "formatter",
+    "pdf",
+    "pdf viewer",
+    "intellisense",
+    "secure",
+    "snippets",
+    "workspace"
   ],
   "activationEvents": [
     "onCommand:latex-workshop.activate",
@@ -2873,7 +2879,8 @@
   },
   "scripts": {
     "clean": "rimraf out/ .eslintcache",
-    "compile": "tsc -p tsconfig.json",
+    "build:pdfviewer-secure": "node ./dev/build-pdfviewer-secure.mjs",
+    "compile": "tsc -p tsconfig.json && npm run build:pdfviewer-secure",
     "coverage": "c8 --check-coverage npm run test --src out/src/",
     "extension:cleanup-local": "node ./dev/cleanupLocalExtensions.mjs",
     "extension:package-local": "node ./dev/manageLocalExtension.mjs package",

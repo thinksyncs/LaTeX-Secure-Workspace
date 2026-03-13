@@ -4,7 +4,7 @@ import * as path from 'path'
 import { lw } from '../lw'
 import type { SyncTeXRecordToPDF, SyncTeXRecordToPDFAll } from '../types'
 import type { PdfViewerParams, PdfViewerState } from '../../types/latex-workshop-protocol-types/index'
-import { getCustomEditorStates, securePdfCustomEditorViewType } from './pdfcustomeditor'
+import { getCustomEditorStates, reloadCustomEditorPanels, securePdfCustomEditorViewType } from './pdfcustomeditor'
 
 const logger = lw.log('Viewer')
 
@@ -24,14 +24,15 @@ lw.watcher.pdf.onChange(pdfUri => {
         refresh(pdfUri)
     }
 })
-lw.onConfigChange(['view.pdf.toolbar.hide.timeout', 'view.pdf.invert', 'view.pdf.invertMode', 'view.pdf.color', 'view.pdf.internal', 'view.pdf.reload.transition'], () => {
+lw.onConfigChange('view.pdf', () => {
     reload()
 })
 
 const isViewing = (fileUri: vscode.Uri) => getViewerState(fileUri).length > 0
 
 function reload(): void {
-    logger.log('PDF tab viewer parameters changed. Open editors will pick up new settings on reload.')
+    logger.log('PDF tab viewer parameters changed. Reloading open editors.')
+    void reloadCustomEditorPanels()
 }
 
 /**

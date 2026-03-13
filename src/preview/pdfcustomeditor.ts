@@ -1,8 +1,6 @@
-import * as fs from 'fs/promises'
-import * as path from 'path'
 import * as vscode from 'vscode'
 
-import { configurePdfViewerWebview } from './viewer/pdfviewerpanel'
+import { getSecurePdfViewerHtml, configureSecurePdfViewerWebview } from './viewer/securepdfviewer'
 import { lw } from '../lw'
 import type { PdfViewerState } from '../../types/latex-workshop-protocol-types/index'
 
@@ -29,7 +27,7 @@ export class SecurePdfCustomEditorProvider implements vscode.CustomReadonlyEdito
             path: pdfUri.fsPath,
             pdfFileUri: pdfUri.toString(true)
         }
-        configurePdfViewerWebview(webviewPanel.webview, pdfUri)
+        configureSecurePdfViewerWebview(webviewPanel.webview, pdfUri)
         updateViewerState(pdfUri, webviewPanel, baseState)
         webviewPanel.webview.html = await getPdfViewerCustomEditorHtml(pdfUri, webviewPanel.webview)
 
@@ -38,7 +36,7 @@ export class SecurePdfCustomEditorProvider implements vscode.CustomReadonlyEdito
                 return
             }
             const payload = msg as { type?: string, message?: unknown, state?: PdfViewerState }
-            if ((payload.type === 'viewer-log' || payload.type === 'log') && typeof payload.message === 'string') {
+            if ((payload.type === 'viewer-log' || payload.type === 'log' || payload.type === 'document-error') && typeof payload.message === 'string') {
                 logger.log(payload.message)
             }
             if (payload.type === 'state' && payload.state && typeof payload.state === 'object') {
@@ -49,7 +47,7 @@ export class SecurePdfCustomEditorProvider implements vscode.CustomReadonlyEdito
                 updateViewerState(pdfUri, webviewPanel, nextState)
                 lw.event.fire(lw.event.ViewerStatusChanged, nextState)
             }
-            if (payload.type === 'viewer-loaded' || payload.type === 'initialized') {
+            if (payload.type === 'document-loaded' || payload.type === 'viewer-loaded' || payload.type === 'initialized') {
                 logger.log(`Custom PDF viewer loaded for ${pdfUri.toString(true)}`)
                 const state = getPanelViewerState(pdfUri, webviewPanel) ?? baseState
                 lw.event.fire(lw.event.ViewerPageLoaded)
@@ -57,11 +55,9 @@ export class SecurePdfCustomEditorProvider implements vscode.CustomReadonlyEdito
             }
         })
 
-        const watcher = vscode.workspace.createFileSystemWatcher(
-            new vscode.RelativePattern(path.dirname(pdfUri.fsPath), path.basename(pdfUri.fsPath))
-        )
+        const watcher = vscode.workspace.createFileSystemWatcher(pdfUri.fsPath)
         const reload = async () => {
-            webviewPanel.webview.html = await getPdfViewerCustomEditorHtml(pdfUri, webviewPanel.webview)
+            await webviewPanel.webview.postMessage({type: 'reload'})
         }
         const d1 = watcher.onDidChange(reload)
         const d2 = watcher.onDidCreate(reload)
@@ -84,46 +80,26 @@ export function getCustomEditorStates(pdfUri: vscode.Uri): PdfViewerState[] {
     return Array.from(viewerStates.get(toKey(pdfUri))?.values() ?? [])
 }
 
-async function getPdfViewerCustomEditorHtml(pdfUri: vscode.Uri, webview: vscode.Webview): Promise<string> {
-    const nonce = getNonce()
-    const extensionRoot = lw.file.toUri(lw.extensionRoot)
-    const viewerRoot = vscode.Uri.joinPath(extensionRoot, 'viewer')
-    const viewerHtmlPath = path.join(lw.extensionRoot, 'viewer', 'viewer.html')
-    const pdfWebviewUri = webview.asWebviewUri(pdfUri).toString()
-    const docTitle = path.basename(pdfUri.fsPath) || 'Untitled PDF'
-    const params = lw.viewer.getParams()
-
-    const viewerCssUri = webview.asWebviewUri(vscode.Uri.joinPath(viewerRoot, 'viewer.css')).toString()
-    const latexWorkshopCssUri = webview.asWebviewUri(vscode.Uri.joinPath(viewerRoot, 'latexworkshop.css')).toString()
-    const localeUri = webview.asWebviewUri(vscode.Uri.joinPath(viewerRoot, 'locale', 'locale.json')).toString()
-    const bootstrapUri = webview.asWebviewUri(vscode.Uri.joinPath(viewerRoot, 'bootstrap.js')).toString()
-
-    let html = await fs.readFile(viewerHtmlPath, 'utf8')
-    html = html.replace(
-        /<meta http-equiv="Content-Security-Policy" content="[^"]*">/,
-        `<meta http-equiv="Content-Security-Policy" content="default-src 'none'; base-uri 'none'; connect-src ${webview.cspSource} ws://127.0.0.1:*; style-src ${webview.cspSource} 'unsafe-inline'; img-src ${webview.cspSource} data: blob:; font-src ${webview.cspSource}; script-src ${webview.cspSource} 'nonce-${nonce}'; worker-src ${webview.cspSource} blob:;">`
-    )
-    html = html.replace('href="locale/locale.json"', `href="${localeUri}"`)
-    html = html.replace('href="viewer.css"', `href="${viewerCssUri}"`)
-    html = html.replace('href="latexworkshop.css"', `href="${latexWorkshopCssUri}"`)
-    html = html.replace(
-        '<script src="bootstrap.js" type="module"></script>',
-        `<script nonce="${nonce}">
-  globalThis.lwPdfUri = ${JSON.stringify(pdfWebviewUri)};
-  globalThis.lwDocTitle = ${JSON.stringify(docTitle)};
-  globalThis.lwParams = ${JSON.stringify(params)};
-</script>
-<script nonce="${nonce}" src="${bootstrapUri}" type="module"></script>`
-    )
-    return html
+export async function reloadCustomEditorPanels(pdfUri?: vscode.Uri): Promise<void> {
+    const targets = pdfUri
+        ? [[pdfUri, viewerStates.get(toKey(pdfUri))] as const]
+        : Array.from(viewerStates.entries()).map(([uri, states]) => [vscode.Uri.parse(uri), states] as const)
+    for (const [targetPdfUri, panelStates] of targets) {
+        if (!panelStates) {
+            continue
+        }
+        await Promise.all(Array.from(panelStates.keys()).map(async panel => {
+            panel.webview.html = await getPdfViewerCustomEditorHtml(targetPdfUri, panel.webview)
+        }))
+    }
 }
 
-function getNonce(): string {
-    return Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2)
+async function getPdfViewerCustomEditorHtml(pdfUri: vscode.Uri, webview: vscode.Webview): Promise<string> {
+    return getSecurePdfViewerHtml(pdfUri, webview, lw.viewer.getParams())
 }
 
 function toKey(pdfUri: vscode.Uri): string {
-    return pdfUri.toString(true).toLocaleUpperCase()
+    return pdfUri.toString(true)
 }
 
 function getOrCreateViewerStateMap(pdfUri: vscode.Uri): Map<vscode.WebviewPanel, PdfViewerState> {

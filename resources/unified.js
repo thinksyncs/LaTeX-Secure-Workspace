@@ -10719,7 +10719,7 @@ ${P}`), h ? g.reset(P) : P;
                   return T.value;
                 case "StringValue": {
                   if (T.block) {
-                    let m = T.value.replace(/"""/g, "\\$&").split(`
+                    let m = T.value.replace(/\\|"""/g, "\\$&").split(`
 `);
                     return m.length === 1 && (m[0] = m[0].trim()), m.every((C) => C === "") && (m.length = 0), t(s2, ['"""', ...m, '"""']);
                   }
@@ -11086,7 +11086,7 @@ ${u.content}`;
                 case "sentence":
                   return ue(oe, H, pe);
                 case "word": {
-                  let le = X.value.replace(/\*/g, "\\$&").replace(new RegExp([`(^|${B})(_+)`, `(_+)(${B}|$)`].join("|"), "g"), (De, A, G, re, ye) => (G ? `${A}${G}` : `${re}${ye}`).replace(/_/g, "\\_")), Ae = (De, A, G) => De.type === "sentence" && G === 0, Ee = (De, A, G) => R(De.children[G - 1]);
+                  let le = X.value.replace(/[\\*]/g, "\\$&").replace(new RegExp([`(^|${B})(_+)`, `(_+)(${B}|$)`].join("|"), "g"), (De, A, G, re, ye) => (G ? `${A}${G}` : `${re}${ye}`).replace(/_/g, "\\_")), Ae = (De, A, G) => De.type === "sentence" && G === 0, Ee = (De, A, G) => R(De.children[G - 1]);
                   return le !== X.value && (oe.match(void 0, Ae, Ee) || oe.match(void 0, Ae, (De, A, G) => De.type === "emphasis" && G === 0, Ee)) && (le = le.replace(/^(\\?[*_])+/, (De) => De.replace(/\\/g, ""))), le;
                 }
                 case "whitespace": {
@@ -11348,7 +11348,7 @@ ${u.content}`;
               if (pe) return " " + we(oe, H, false);
               if (oe = oe.replace(/\\(["')])/g, "$1"), oe.includes('"') && oe.includes("'") && !oe.includes(")")) return `(${oe})`;
               let X = oe.split("'").length - 1, le = oe.split('"').length - 1, Ae = X > le ? '"' : le > X || H.singleQuote ? "'" : '"';
-              return oe = oe.replace(/\\/, "\\\\"), oe = oe.replace(new RegExp(`(${Ae})`, "g"), "\\$1"), `${Ae}${oe}${Ae}`;
+              return oe = oe.replace(/\\/g, "\\\\"), oe = oe.replace(new RegExp(`(${Ae})`, "g"), "\\$1"), `${Ae}${oe}${Ae}`;
             }
             function ke(oe, H, pe) {
               return oe < H ? H : oe > pe ? pe : oe;
