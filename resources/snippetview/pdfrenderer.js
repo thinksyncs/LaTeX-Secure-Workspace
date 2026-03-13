@@ -22,7 +22,7 @@ window.addEventListener('message', async (event) => {
 
 // https://github.com/microsoft/vscode/issues/87282#issuecomment-919464403
 async function createPdfWorker() {
-    const result = await fetch(pdfjsDistUri + '/build/pdf.worker.mjs');
+    const result = await fetch(pdfjsWorkerUrl);
     const blob = await result.blob();
     const blobUrl = URL.createObjectURL(blob);
     pdfjsLib.GlobalWorkerOptions.workerPort = new Worker(blobUrl, { type: 'module' });
@@ -31,7 +31,7 @@ async function createPdfWorker() {
 async function renderPdfFile(url, opts) {
     const loadingTask = pdfjsLib.getDocument({
         url,
-        cMapUrl: pdfjsDistUri + '/cmaps/',
+        cMapUrl: pdfjsCMapUrl + '/',
         cMapPacked: true
     });
     const pdf = await loadingTask.promise;

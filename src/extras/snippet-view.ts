@@ -64,23 +64,17 @@ function receive(message: SnippetViewResult) {
 }
 
 class SnippetViewProvider implements vscode.WebviewViewProvider {
-    private serverHandlerInserted = false
-
     public async resolveWebviewView(webviewView: vscode.WebviewView) {
-        if (this.serverHandlerInserted === false) {
-            lw.server.setHandler((url: string) => {
-                if (url.startsWith('/snippetview/')) {
-                    return path.resolve(lw.extensionRoot, 'resources')
-                }
-                return undefined
-            })
-            this.serverHandlerInserted = true
-        }
-
         state.view = webviewView
 
+        const resourcesRoot = vscode.Uri.file(path.join(lw.extensionRoot, 'resources'))
+        const snippetRoot = vscode.Uri.joinPath(resourcesRoot, 'snippetview')
+        const pdfBuildRoot = vscode.Uri.file(path.join(lw.extensionRoot, 'viewer', 'lib', 'build'))
+        const pdfWebRoot = vscode.Uri.file(path.join(lw.extensionRoot, 'viewer', 'lib', 'web'))
+
         webviewView.webview.options = {
-            enableScripts: true
+            enableScripts: true,
+            localResourceRoots: [resourcesRoot, pdfBuildRoot, pdfWebRoot]
         }
 
         webviewView.onDidDispose(() => {
@@ -88,13 +82,15 @@ class SnippetViewProvider implements vscode.WebviewViewProvider {
         })
 
         const webviewSourcePath = path.join(lw.extensionRoot, 'resources', 'snippetview', 'snippetview.html')
-        const serverUrl = (await lw.server.getUrl()).url
-        const serverUri = vscode.Uri.parse(serverUrl, true)
-        const serverOrigin = `${serverUri.scheme}://${serverUri.authority}`
-
         const htmlContent = readFileSync(webviewSourcePath, { encoding: 'utf8' })
-            .replaceAll('%SRC%', serverUrl)
-            .replaceAll('%CSP%', `${webviewView.webview.cspSource} ${serverOrigin}`)
+            .replaceAll('%SNIPPET_PANEL_JSON%', webviewView.webview.asWebviewUri(vscode.Uri.joinPath(snippetRoot, 'snippetpanel.json')).toString())
+            .replaceAll('%SNIPPET_VIEW_JS%', webviewView.webview.asWebviewUri(vscode.Uri.joinPath(snippetRoot, 'snippetview.js')).toString())
+            .replaceAll('%PDF_SCRIPT%', webviewView.webview.asWebviewUri(vscode.Uri.joinPath(pdfBuildRoot, 'pdf.mjs')).toString())
+            .replaceAll('%PDF_WORKER%', webviewView.webview.asWebviewUri(vscode.Uri.joinPath(pdfBuildRoot, 'pdf.worker.mjs')).toString())
+            .replaceAll('%PDF_CMAPS%', webviewView.webview.asWebviewUri(vscode.Uri.joinPath(pdfWebRoot, 'cmaps')).toString())
+            .replaceAll('%PDF_RENDERER_JS%', webviewView.webview.asWebviewUri(vscode.Uri.joinPath(snippetRoot, 'pdfrenderer.js')).toString())
+            .replaceAll('%SNIPPET_VIEW_CSS%', webviewView.webview.asWebviewUri(vscode.Uri.joinPath(snippetRoot, 'snippetview.css')).toString())
+            .replaceAll('%CSP%', webviewView.webview.cspSource)
         const replacements = await Promise.all(Array.from(htmlContent.matchAll(/\{%(.*?)%\}/g), match => lw.language.getLocaleString(match[1])))
         let index = 0
         webviewView.webview.html = htmlContent.replace(/\{%(.*?)%\}/g, () => replacements[index++])

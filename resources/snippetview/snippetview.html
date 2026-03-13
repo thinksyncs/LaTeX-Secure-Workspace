@@ -5,15 +5,16 @@
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
         <meta http-equiv="Content-Security-Policy" content="default-src 'none'; base-uri 'none'; connect-src %CSP%; script-src %CSP% 'unsafe-inline' blob:; style-src %CSP% 'unsafe-inline';">
         <script>
-            var mathSymbolsJsonUrl = '%SRC%/snippetview/snippetpanel.json';
+            var mathSymbolsJsonUrl = '%SNIPPET_PANEL_JSON%';
         </script>
-        <script src="%SRC%/snippetview/snippetview.js" defer></script>
+        <script src="%SNIPPET_VIEW_JS%" defer></script>
         <script>
-            var pdfjsDistUri = '%SRC%';
+            var pdfjsWorkerUrl = '%PDF_WORKER%';
+            var pdfjsCMapUrl = '%PDF_CMAPS%';
         </script>
-        <script src="%SRC%/build/pdf.mjs" type="module"></script>
-        <script src="%SRC%/snippetview/pdfrenderer.js" defer></script>
-        <link rel="stylesheet" href="%SRC%/snippetview/snippetview.css">
+        <script src="%PDF_SCRIPT%" type="module"></script>
+        <script src="%PDF_RENDERER_JS%" defer></script>
+        <link rel="stylesheet" href="%SNIPPET_VIEW_CSS%">
     </head>
     <body>
         <div id="Symbols" class="tabcontent">
