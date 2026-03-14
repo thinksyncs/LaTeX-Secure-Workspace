@@ -158,7 +158,7 @@ function format(document: vscode.TextDocument, range?: vscode.Range): Thenable<v
         })
 
         logger.logCommand('Formatting LaTeX.', formatter, args)
-        const worker = cs.spawn(formatter, args, { stdio: 'pipe', cwd: documentDirectory })
+        const worker = cs.spawn(formatter, args, { stdio: ['ignore', 'pipe', 'pipe'], cwd: documentDirectory })
         // handle stdout/stderr
         const stdoutBuffer: Buffer[] = []
         const stderrBuffer: Buffer[] = []
@@ -176,19 +176,29 @@ function format(document: vscode.TextDocument, range?: vscode.Range): Thenable<v
             resolve(undefined)
         })
         worker.on('close', code => {
-            removeTemporaryFiles()
             if (code !== 0) {
+                removeTemporaryFiles()
                 void logger.showErrorMessage('Formatting failed. Please refer to LaTeX-Secure-Workspace Output for details.')
                 logger.log(`Formatting failed with exit code ${code}`)
                 logger.log(`stderr: ${Buffer.concat(stderrBuffer).toString()}`)
                 return resolve(undefined)
             }
             const stdout = Buffer.concat(stdoutBuffer).toString()
-            if (stdout !== '') {
-                const edit = vscode.TextEdit.replace(range ?? document.validateRange(new vscode.Range(0, 0, Number.MAX_VALUE, Number.MAX_VALUE)), stdout)
+            let formattedText = stdout
+            if (formattedText === '' && fs.existsSync(temporaryFile)) {
+                formattedText = fs.readFileSync(temporaryFile, 'utf8')
+                logger.log('Formatting produced no stdout, using the temporary file content instead.')
+            }
+            removeTemporaryFiles()
+            if (formattedText !== '' && formattedText !== textToFormat) {
+                const edit = vscode.TextEdit.replace(range ?? document.validateRange(new vscode.Range(0, 0, Number.MAX_VALUE, Number.MAX_VALUE)), formattedText)
                 logger.log(`Formatted using ${formatter} ${document.fileName}.`)
                 return resolve(edit)
             }
+            if (Buffer.concat(stderrBuffer).length > 0) {
+                logger.log(`stderr: ${Buffer.concat(stderrBuffer).toString()}`)
+            }
+            logger.log(`Formatting finished without document changes for ${document.fileName}.`)
 
             return resolve(undefined)
         })
