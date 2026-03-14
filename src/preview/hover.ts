@@ -45,13 +45,7 @@ class HoverProvider implements vscode.HoverProvider {
             return provideHoverOnMacro(token)
         }
         if (onAPackage(document, position, token)) {
-            const packageName = encodeURIComponent(JSON.stringify(token))
-            const md = `Package **${token}** \n\n`
-            const mdLink = new vscode.MarkdownString(`[View documentation](command:latex-workshop.texdoc?${packageName})`)
-            mdLink.isTrusted = true
-            const ctanUrl = `https://ctan.org/pkg/${token}`
-            const ctanLink = new vscode.MarkdownString(`[${ctanUrl}](${ctanUrl})`)
-            return new vscode.Hover([md, mdLink, ctanLink])
+            return new vscode.Hover(new vscode.MarkdownString(`Package **${token}**`))
         }
         const refData = lw.completion.reference.getItem(token)
         if (hovReference && refData) {
@@ -106,20 +100,14 @@ function provideHoverOnMacro(token: string): vscode.Hover | undefined {
         lw.cache.get(cachedFile)?.elements.macro?.forEach(checkCmd)
     })
 
-    let pkgLink = ''
+    let packageSummary = ''
     if (packageNames.length > 0) {
-        pkgLink = '\n\nView documentation for package(s) '
-        packageNames.forEach(p => {
-            const packageName = encodeURIComponent(JSON.stringify(p))
-            pkgLink += `[${p}](command:latex-workshop.texdoc?${packageName}),`
-        })
-        pkgLink = pkgLink.substring(0, pkgLink.lastIndexOf(',')) + '.'
+        packageSummary = `\n\nPackages: ${packageNames.join(', ')}.`
     }
     if (signatures.length > 0) {
-        const mdLink = new vscode.MarkdownString(signatures.join('  \n')) // We need two spaces to ensure md newline
-        mdLink.appendMarkdown(pkgLink)
-        mdLink.isTrusted = true
-        return new vscode.Hover(mdLink)
+        const markdown = new vscode.MarkdownString(signatures.join('  \n')) // We need two spaces to ensure md newline
+        markdown.appendMarkdown(packageSummary)
+        return new vscode.Hover(markdown)
     }
     return
 }

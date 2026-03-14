@@ -23,8 +23,6 @@ export default [{
         "vendor/pdfviewer-secure/**",
         "**/out",
         "**/node_modules",
-        "viewer/viewer.mjs",
-        "viewer/wasm/*.js",
         "**/.idea/",
         "**/__pycache__/",
         "**/.mypy_cache/",
@@ -188,27 +186,5 @@ export default [{
             named: "never",
             asyncArrow: "always",
         }],
-    },
-}, {
-    files: ["viewer/**/*.ts"],
-
-    languageOptions: {
-        ecmaVersion: 2018,
-        sourceType: "script",
-
-        parserOptions: {
-            project: "./tsconfig.eslint.viewer.json",
-        },
-    },
-
-    rules: {
-        "@typescript-eslint/naming-convention": ["error", {
-            selector: "interface",
-            prefix: ["I"],
-            format: ["PascalCase"],
-        }],
-
-        "@typescript-eslint/no-unnecessary-type-assertion": "off",
-        "@typescript-eslint/ban-ts-comment": "off",
     },
 }];

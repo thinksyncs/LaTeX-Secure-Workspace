@@ -14,27 +14,28 @@ function buildNode(parent: LaTeXCommand, children: LaTeXCommand[]) {
 
 async function buildCommandTree(): Promise<LaTeXCommand[]> {
     const commands: LaTeXCommand[] = []
-    const configuration = vscode.workspace.getConfiguration('latex-workshop', lw.root.getWorkspace())
 
     const buildCommand = new LaTeXCommand(await lw.language.getLocaleString('command.build'), {command: 'latex-workshop.build'}, 'debug-start')
-    const recipes = configuration.get('latex.recipes', []) as {name: string}[]
-    const recipeCommands = await Promise.all(
-        recipes.map(async recipe =>
-            new LaTeXCommand(await lw.language.getLocaleString('activity.recipe') + `: ${recipe.name}`, {command: 'latex-workshop.recipes', arguments: [recipe.name]}, 'debug-start')))
+    const buildRecipeCommand = new LaTeXCommand(await lw.language.getLocaleString('command.buildRecipe'), {command: 'latex-workshop.build-recipe'}, 'tools')
+    const viewCommand = new LaTeXCommand(await lw.language.getLocaleString('activity.view'), {command: 'latex-workshop.view'}, 'file-media')
     let node: LaTeXCommand
+    commands.push(viewCommand)
+    commands.push(buildRecipeCommand)
+
     node = buildNode(buildCommand, [
         new LaTeXCommand(await lw.language.getLocaleString('command.clean'), {command: 'latex-workshop.clean'}, 'clear-all'),
-        new LaTeXCommand(await lw.language.getLocaleString('command.kill'), {command: 'latex-workshop.kill'}, 'debug-stop'),
-        ...recipeCommands
+        new LaTeXCommand(await lw.language.getLocaleString('command.kill'), {command: 'latex-workshop.kill'}, 'debug-stop')
     ])
     commands.push(node)
 
     const logCommand = new LaTeXCommand(await lw.language.getLocaleString('activity.log'), {command: 'latex-workshop.log'}, 'output')
     const compilerLog = new LaTeXCommand(await lw.language.getLocaleString('command.compilerlog'), {command: 'latex-workshop.compilerlog'}, 'output')
     const latexWorkshopLog = new LaTeXCommand(await lw.language.getLocaleString('command.log'), {command: 'latex-workshop.log'}, 'output')
+    const problems = new LaTeXCommand(await lw.language.getLocaleString('command.problems'), {command: 'workbench.actions.view.problems'}, 'warning')
     node = buildNode(logCommand, [
         latexWorkshopLog,
-        compilerLog
+        compilerLog,
+        problems
     ])
     commands.push(node)
 
@@ -52,6 +53,7 @@ async function buildCommandTree(): Promise<LaTeXCommand[]> {
     const miscCommand = new LaTeXCommand(await lw.language.getLocaleString('activity.misc'), undefined, 'menu')
     node = buildNode(miscCommand, [
         new LaTeXCommand(await lw.language.getLocaleString('command.citation'), {command: 'latex-workshop.citation'}),
+        new LaTeXCommand(await lw.language.getLocaleString('command.saveWithoutBuilding'), {command: 'latex-workshop.saveWithoutBuilding'}, 'save'),
         new LaTeXCommand(await lw.language.getLocaleString('command.revealoutput'), {command: 'latex-workshop.revealOutputDir'}, 'folder-opened')
     ])
     commands.push(node)

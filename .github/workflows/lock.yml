@@ -28,6 +28,8 @@ jobs:
           import datetime as dt
           import json
           import os
+          import sys
+          import urllib.parse
           import urllib.request
 
           token = os.environ['GITHUB_TOKEN']
@@ -65,9 +67,8 @@ jobs:
                           next_url = part[part.find('<') + 1:part.find('>')]
                           break
 
-          owner, repo = repository.split('/', 1)
-          repo_path = f'{owner}/{repo}'
-          list_url = f'https://api.github.com/repos/{repo_path}/issues?state=open&sort=updated&direction=asc&per_page=100'
+          encoded_repo = urllib.parse.quote(repository, safe='')
+          list_url = f'https://api.github.com/repos/{encoded_repo}/issues?state=open&sort=updated&direction=asc&per_page=100'
 
           locked = 0
           for item in iter_issues(list_url):
@@ -79,7 +80,7 @@ jobs:
               number = item['number']
               issue_type = 'pull request' if 'pull_request' in item else 'issue'
               print(f'Locking {issue_type} #{number} last updated at {item["updated_at"]}')
-              lock_url = f'https://api.github.com/repos/{repo_path}/issues/{number}/lock'
+              lock_url = f'https://api.github.com/repos/{encoded_repo}/issues/{number}/lock'
               api_request('PUT', lock_url, {'lock_reason': 'resolved'})
               locked += 1
 

@@ -9369,11 +9369,6 @@
     "detail": "Write labels for plants",
     "documentation": "https://ctan.org/pkg/plantslabels"
   },
-  "plantuml": {
-    "command": "plantuml",
-    "detail": "Support for rendering UML diagrams using the syntax and tool of PlantUML",
-    "documentation": "https://ctan.org/pkg/plantuml"
-  },
   "plates": {
     "command": "plates",
     "detail": "Arrange for \"plates\" sections of documents",

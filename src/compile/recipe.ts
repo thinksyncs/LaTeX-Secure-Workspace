@@ -1,6 +1,7 @@
 import vscode from 'vscode'
 import path from 'path'
 import { replaceArgumentPlaceholders, splitCommandLineArgs } from '../utils/utils'
+import { confirmNoWorkspaceConfigurationOverride } from '../utils/security'
 
 import { lw } from '../lw'
 import type { Recipe, Tool } from '../types'
@@ -29,6 +30,11 @@ let state: {
     isMikTeX: boolean | undefined
 }
 
+type InspectValue<T> = {
+    defaultValue?: T
+    globalValue?: T
+}
+
 initialize()
 export function initialize() {
     state = {
@@ -38,20 +44,38 @@ export function initialize() {
     }
 }
 
-setDockerImage()
-lw.onConfigChange('docker.image.latex', setDockerImage)
-function setDockerImage() {
-    const dockerImageName: string = vscode.workspace.getConfiguration('latex-workshop').get('docker.image.latex', '')
+void setDockerImage()
+lw.onConfigChange('docker.image.latex', () => { void setDockerImage() })
+async function setDockerImage() {
+    const dockerImageName = await getSecureDockerSetting('docker.image.latex', '')
     logger.log(`Set $LATEXWORKSHOP_DOCKER_LATEX: ${JSON.stringify(dockerImageName)}`)
     process.env['LATEXWORKSHOP_DOCKER_LATEX'] = dockerImageName
 }
 
-setDockerPath()
-lw.onConfigChange('docker.path', setDockerPath)
-function setDockerPath() {
-    const dockerPath: string = vscode.workspace.getConfiguration('latex-workshop').get('docker.path', '')
+void setDockerPath()
+lw.onConfigChange('docker.path', () => { void setDockerPath() })
+async function setDockerPath() {
+    const dockerPath = await getSecureDockerSetting('docker.path', '')
     logger.log(`Set $LATEXWORKSHOP_DOCKER_PATH: ${JSON.stringify(dockerPath)}`)
     process.env['LATEXWORKSHOP_DOCKER_PATH'] = dockerPath
+}
+
+async function getSecureDockerSetting<T>(section: string, fallback: T): Promise<T> {
+    const configuration = vscode.workspace.getConfiguration('latex-workshop')
+    const inspect = configuration.inspect<T>(section)
+    if (!inspect) {
+        return fallback
+    }
+
+    if (!await confirmNoWorkspaceConfigurationOverride(undefined, section)) {
+        return getNonWorkspaceValue(inspect, fallback)
+    }
+
+    return configuration.get(section, fallback)
+}
+
+function getNonWorkspaceValue<T>(inspect: InspectValue<T>, fallback: T): T {
+    return inspect.globalValue ?? inspect.defaultValue ?? fallback
 }
 
 /**

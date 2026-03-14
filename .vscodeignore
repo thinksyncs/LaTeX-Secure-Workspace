@@ -12,16 +12,14 @@ src/**/*.ts
 src/**/*.md
 samples/
 types/
-viewer/**/*.ts
 .devcontainer/
 .github/
 .beads/
+AGENTS.md
 .gitignore
 eslint.config.mjs
 tsconfig.json
 tsconfig.eslint.json
-tsconfig.eslint.viewer.json
-viewer/tsconfig.json
 dev/
 demo_media/
 docs/

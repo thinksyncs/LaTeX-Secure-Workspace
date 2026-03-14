@@ -140,7 +140,13 @@ class Watcher {
     private async initiatePolling(uri: vscode.Uri): Promise<void> {
         const uriString = uri.toString(true)
         const firstChangeTime = Date.now()
-        const size = (await lw.external.stat(uri)).size
+        let size: number
+        try {
+            size = (await lw.external.stat(uri)).size
+        } catch {
+            // The file can disappear between change notification and stat.
+            return
+        }
 
         this.polling[uriString] = { size, time: firstChangeTime }
 
@@ -171,21 +177,36 @@ class Watcher {
             return
         }
 
-        // Resume vscode may cause accidental "change", do nothing
-        if (!(uriString in this.polling)) {
+        const pollingInfo = this.polling[uriString]
+        // Resume vscode may cause accidental "change", do nothing.
+        // Another timer tick may also have already finalized and removed polling info.
+        if (!pollingInfo) {
             clearInterval(interval)
             return
         }
 
-        const currentSize = (await lw.external.stat(uri)).size
-
-        if (currentSize !== this.polling[uriString].size) {
-            this.polling[uriString].size = currentSize
-            this.polling[uriString].time = Date.now()
+        let currentSize: number
+        try {
+            currentSize = (await lw.external.stat(uri)).size
+        } catch {
+            clearInterval(interval)
+            delete this.polling[uriString]
             return
         }
 
-        if (Date.now() - this.polling[uriString].time >= 200) {
+        const latestPollingInfo = this.polling[uriString]
+        if (!latestPollingInfo) {
+            clearInterval(interval)
+            return
+        }
+
+        if (currentSize !== latestPollingInfo.size) {
+            latestPollingInfo.size = currentSize
+            latestPollingInfo.time = Date.now()
+            return
+        }
+
+        if (Date.now() - latestPollingInfo.time >= 200) {
             logger.log(`"change" emitted on ${uriString} after polling for ${Date.now() - firstChangeTime} ms.`)
             clearInterval(interval)
             delete this.polling[uriString]

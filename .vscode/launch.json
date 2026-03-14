@@ -14,7 +14,7 @@
                 "${workspaceFolder}/out/src/**/*.js"
             ],
             "debugWebviews": true,
-            "preLaunchTask": "task-watch-all"
+            "preLaunchTask": "task-watch-src"
         },
         {
             "name": "Unit Tests",
@@ -30,55 +30,10 @@
                 "${workspaceFolder}/out/src/**/*.js",
                 "${workspaceFolder}/out/test/**/*.js"
             ],
-            "preLaunchTask": "task-watch-all",
+            "preLaunchTask": "task-watch-src",
             "env": {
                 "LATEXWORKSHOP_UNIT": ""
             }
-        },
-        {
-            "name": "Test testground",
-            "type": "extensionHost",
-            "request": "launch",
-            "runtimeExecutable": "${execPath}",
-            "args": [
-                "${workspaceFolder}/test/fixtures/testground",
-                "--extensionDevelopmentPath=${workspaceFolder}",
-                "--extensionTestsPath=${workspaceFolder}/out/test/suites/index"
-            ],
-            "outFiles": [
-                "${workspaceFolder}/out/src/**/*.js",
-                "${workspaceFolder}/out/test/**/*.js"
-            ],
-            "preLaunchTask": "task-watch-all",
-            "env": {
-                "LATEXWORKSHOP_SUITE": ""
-            }
-        },
-        {
-            "name": "Test multiroot",
-            "type": "extensionHost",
-            "request": "launch",
-            "runtimeExecutable": "${execPath}",
-            "args": [
-                "${workspaceFolder}/test/fixtures/multiroot/resource.code-workspace",
-                "--extensionDevelopmentPath=${workspaceFolder}",
-                "--extensionTestsPath=${workspaceFolder}/out/test/suites/index"
-            ],
-            "outFiles": [
-                "${workspaceFolder}/out/src/**/*.js",
-                "${workspaceFolder}/out/test/**/*.js"
-            ],
-            "preLaunchTask": "task-watch-all",
-            "env": {
-                "LATEXWORKSHOP_SUITE": ""
-            }
-        },
-        {
-            "name": "Python: Current File",
-            "type": "python",
-            "request": "launch",
-            "program": "${file}",
-            "console": "integratedTerminal"
         }
     ]
 }

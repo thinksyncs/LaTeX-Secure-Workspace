@@ -15,32 +15,6 @@
             },
             "group": "build",
             "detail": "Watch ./src"
-        },
-        {
-            "label": "task-watch-viewer",
-            "type": "npm",
-            "script": "watch-viewer",
-            "problemMatcher": "$tsc-watch",
-            "isBackground": true,
-            "presentation": {
-                "reveal": "never",
-                "group": "buildWatchers"
-            },
-            "group": "build",
-            "detail": "Watch ./viewer"
-        },
-        {
-            "label": "task-watch-all",
-            "dependsOn": [
-                "task-watch-src",
-                "task-watch-viewer"
-            ],
-            "group": {
-                "kind": "build",
-                "isDefault": true
-            },
-            "detail": "Watch ./src and ./viewer",
-            "problemMatcher": []
         }
     ]
 }

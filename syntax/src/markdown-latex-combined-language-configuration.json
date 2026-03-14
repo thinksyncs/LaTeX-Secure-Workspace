@@ -1,5 +1,5 @@
 {
-	"extends": "https://raw.githubusercontent.com/jlelong/vscode-latex-basics/main/languages/markdown-latex-combined-language-configuration.json",
+	"extends": "../markdown-latex-combined-language-configuration.json",
 
 	"overrides": {
 		"autoClosingPairs": [
