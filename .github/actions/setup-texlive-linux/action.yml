@@ -32,8 +32,9 @@ runs:
           curl --fail --show-error --silent --location --proto '=https' --tlsv1.2 -o install-tl-unx.tar.gz "$INSTALLER_URL"
           curl --fail --show-error --silent --location --proto '=https' --tlsv1.2 -o install-tl-unx.tar.gz.sha512 "$INSTALLER_BASE/install-tl-unx.tar.gz.sha512"
           curl --fail --show-error --silent --location --proto '=https' --tlsv1.2 -o install-tl-unx.tar.gz.sha512.asc "$INSTALLER_BASE/install-tl-unx.tar.gz.sha512.asc"
-          sha512sum --check install-tl-unx.tar.gz.sha512
-          gpg --batch --verify install-tl-unx.tar.gz.sha512.asc install-tl-unx.tar.gz.sha512
+          sha512sum --check install-tl-unx.tar.gz.sha512 || return 1
+          gpg --batch --verify install-tl-unx.tar.gz.sha512.asc install-tl-unx.tar.gz.sha512 || return 1
+          echo "TEXLIVE_REPOSITORY=$INSTALLER_BASE" >> "$GITHUB_ENV"
         }
         curl --fail --show-error --silent --location --proto '=https' --tlsv1.2 -O https://tug.org/texlive/files/texlive.asc
         test "$(gpg --show-keys --with-colons texlive.asc | awk -F: '/^fpr:/ {print $10; exit}')" = "$TEXLIVE_KEY_FINGERPRINT"
@@ -58,11 +59,12 @@ runs:
       if: steps.cache-texlive.outputs.cache-hit != 'true'
       shell: bash
       run: |
-        install-tl-dir/install-tl --profile "$GITHUB_WORKSPACE/test/config/texlive_linux.profile"
+        install-tl-dir/install-tl --repository "$TEXLIVE_REPOSITORY" --profile "$GITHUB_WORKSPACE/test/config/texlive_linux.profile"
     - name: Install TeX Live packages
       if: steps.cache-texlive.outputs.cache-hit != 'true'
       shell: bash
       run: |
+        tlmgr option repository "$TEXLIVE_REPOSITORY"
         tlmgr update --self
         tlmgr install collection-latex
         tlmgr install import subfiles latexmk makeindex
