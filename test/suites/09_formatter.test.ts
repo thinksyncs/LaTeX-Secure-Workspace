@@ -4,6 +4,8 @@ import * as assert from 'assert'
 import * as test from './utils'
 import { readFileSync } from 'fs'
 
+const extensionId = 'ToppyMicroServices.tex-workspace-secure'
+
 suite('Formatter test suite', () => {
     test.suite.name = path.basename(__filename).replace('.test.js', '')
     test.suite.fixture = 'testground'
@@ -16,6 +18,7 @@ suite('Formatter test suite', () => {
     setup(async () => {
         await vscode.workspace.getConfiguration('latex-workshop').update('formatting.latex', 'latexindent')
         await vscode.workspace.getConfiguration('latex-workshop').update('bibtex-format.sort.enabled', true)
+        await vscode.workspace.getConfiguration('[latex]').update('editor.defaultFormatter', extensionId)
     })
 
     teardown(async () => {
@@ -35,6 +38,7 @@ suite('Formatter test suite', () => {
         await vscode.workspace.getConfiguration('latex-workshop').update('bibtex-entries.first', undefined)
         await vscode.workspace.getConfiguration('latex-workshop').update('bibtex-fields.sort.enabled', undefined)
         await vscode.workspace.getConfiguration('latex-workshop').update('bibtex-fields.order', undefined)
+        await vscode.workspace.getConfiguration('[latex]').update('editor.defaultFormatter', undefined)
     })
 
     test.run('test latex formatter', async (fixture: string) => {
