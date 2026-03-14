@@ -1,7 +1,4 @@
 name: TeX Live (current) on Linux
-env:
-  cache-version: tl-current-v1
-  TEXLIVE_KEY_FINGERPRINT: C78B82D8C79512F79CC0D7C80D5E5D9106BAB6BC
 on: [push, pull_request]
 
 permissions:
@@ -13,51 +10,7 @@ jobs:
     timeout-minutes: 30
     steps:
     - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
-    - name: Set up PATH
-      run: |
-        echo "/tmp/texlive/bin/x86_64-linux" >> $GITHUB_PATH
-    - name: Cache TeX Live
-      id: cache-texlive
-      uses: actions/cache@cdf6c1fa76f9f475f3d7449005a359c84ca0f306 # v5
-      with:
-        path: /tmp/texlive
-        key: ${{ env.cache-version }}-${{ runner.os }}-texlive-essential
-        restore-keys: |
-          ${{ env.cache-version }}-${{ runner.os }}-texlive-essential
-    - name: Download and verify install-tl archive
-      run: |
-        curl --fail --show-error --silent --location --proto '=https' --tlsv1.2 -O https://mirror.ctan.org/systems/texlive/tlnet/install-tl-unx.tar.gz
-        curl --fail --show-error --silent --location --proto '=https' --tlsv1.2 -O https://mirror.ctan.org/systems/texlive/tlnet/install-tl-unx.tar.gz.sha512
-        curl --fail --show-error --silent --location --proto '=https' --tlsv1.2 -O https://mirror.ctan.org/systems/texlive/tlnet/install-tl-unx.tar.gz.sha512.asc
-        curl --fail --show-error --silent --location --proto '=https' --tlsv1.2 -O https://tug.org/texlive/files/texlive.asc
-        test "$(gpg --show-keys --with-colons texlive.asc | awk -F: '/^fpr:/ {print $10; exit}')" = "$TEXLIVE_KEY_FINGERPRINT"
-        sha512sum --check install-tl-unx.tar.gz.sha512
-        export GNUPGHOME="$(mktemp -d)"
-        gpg --batch --import texlive.asc
-        gpg --batch --verify install-tl-unx.tar.gz.sha512.asc install-tl-unx.tar.gz.sha512
-        tar -xzf install-tl-unx.tar.gz
-        INSTALL_DIR="$(find . -maxdepth 1 -type d -name 'install-tl-*' | head -n 1)"
-        test -n "$INSTALL_DIR"
-        mv "$INSTALL_DIR" install-tl-dir
-        rm -rf "$GNUPGHOME"
-      if: steps.cache-texlive.outputs.cache-hit != 'true'
-    - name: Run install-tl
-      run: |
-        install-tl-dir/install-tl --profile test/config/texlive_linux.profile
-      if: steps.cache-texlive.outputs.cache-hit != 'true'
-    - name: Run tlmgr install
-      run: |
-        tlmgr update --self
-        tlmgr install collection-latex
-        tlmgr install import subfiles latexmk makeindex
-        tlmgr install chktex lacheck latexindent
-      if: steps.cache-texlive.outputs.cache-hit != 'true'
-    - name: Create latexindent wrapper
-      run: |
-        SCRIPT_PATH="$(kpsewhich latexindent.pl)"
-        test -n "$SCRIPT_PATH"
-        printf '%s\n' '#!/bin/sh' 'exec perl "'"$SCRIPT_PATH"'" "$@"' > /tmp/texlive/bin/x86_64-linux/latexindent
-        chmod +x /tmp/texlive/bin/x86_64-linux/latexindent
+    - uses: ./.github/actions/setup-texlive-linux
     - uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6
       with:
         node-version: '20'
