@@ -8,6 +8,7 @@ The release automation is split into two channels.
 - `daily-release.yml`: builds, tests, and packages a daily prerelease, refreshes the rolling GitHub `daily` prerelease, publishes to the Marketplace pre-release channel, and attaches summaries of open pull requests, CodeQL alerts, and Dependabot alerts.
 
 Both release workflows expect a `VSCE_PAT` secret with permission to publish to the `ToppyMicroServices` Marketplace publisher.
+The release jobs run VS Code integration tests on Linux under `xvfb-run` so Electron can start in a headless GitHub Actions environment.
 
 We run tests on GitHub Actions on Windows, macOS, and Linux with the minimal installations of TeX Live.
 

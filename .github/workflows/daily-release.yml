@@ -36,7 +36,7 @@ jobs:
     - name: Apply daily prerelease version
       run: npm version --no-git-tag-version "${{ steps.version.outputs.daily_version }}"
     - name: Verify daily release build
-      run: npm run release:verify
+      run: xvfb-run -a npm run release:verify
     - name: Package daily VSIX
       id: package
       run: |
