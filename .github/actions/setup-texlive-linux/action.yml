@@ -56,7 +56,10 @@ runs:
     - name: Create latexindent wrapper
       shell: bash
       run: |
-        SCRIPT_PATH="$(kpsewhich latexindent.pl)"
-        test -n "$SCRIPT_PATH"
-        printf '%s\n' '#!/bin/sh' 'exec perl "'"$SCRIPT_PATH"'" "$@"' > /tmp/texlive/bin/x86_64-linux/latexindent
-        chmod +x /tmp/texlive/bin/x86_64-linux/latexindent
+        SCRIPT_PATH="$(kpsewhich latexindent.pl || true)"
+        if [ -n "$SCRIPT_PATH" ]; then
+          printf '%s\n' '#!/bin/sh' 'exec perl "'"$SCRIPT_PATH"'" "$@"' > /tmp/texlive/bin/x86_64-linux/latexindent
+          chmod +x /tmp/texlive/bin/x86_64-linux/latexindent
+        else
+          command -v latexindent >/dev/null
+        fi

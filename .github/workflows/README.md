@@ -20,7 +20,7 @@ For the installer of TeX Live, `install-tl`, see the [official manual](https://t
 
 The CI workflows download TeX Live installers from CTAN over HTTPS only, and verify them with the published `.sha512` checksum and `.sha512.asc` signature before extraction or execution. When changing these workflows, avoid plaintext HTTP downloads and prefer strict `curl` options that fail closed on transfer or TLS errors.
 
-We no longer download standalone `latexindent` binaries in CI. Instead, the shared Linux TeX Live setup action installs `latexindent` from TeX Live and creates a small wrapper around the installed `latexindent.pl` script. This avoids executing an extra unsigned binary fetched from a mirror.
+We no longer download standalone `latexindent` binaries in CI. Instead, the shared Linux TeX Live setup action installs `latexindent` from TeX Live and uses the packaged executable directly when available, otherwise creating a small wrapper around `latexindent.pl`. This avoids executing an extra unsigned binary fetched from a mirror.
 
 The same shared TeX Live setup is used by the Linux validation workflow and both release workflows, so release packaging runs against the same LaTeX toolchain that the test suite expects.
 
