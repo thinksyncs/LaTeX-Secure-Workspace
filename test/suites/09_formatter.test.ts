@@ -5,6 +5,7 @@ import * as test from './utils'
 import { readFileSync } from 'fs'
 
 const extensionId = 'ToppyMicroServices.tex-workspace-secure'
+const mockLatexindentPath = path.resolve(__dirname, '../../..', 'test/fixtures/armory/formatter/mock-latexindent.cjs')
 
 suite('Formatter test suite', () => {
     test.suite.name = path.basename(__filename).replace('.test.js', '')
@@ -17,6 +18,12 @@ suite('Formatter test suite', () => {
 
     setup(async () => {
         await vscode.workspace.getConfiguration('latex-workshop').update('formatting.latex', 'latexindent')
+        await vscode.workspace.getConfiguration('latex-workshop').update('formatting.latexindent.path', process.execPath)
+        await vscode.workspace.getConfiguration('latex-workshop').update('formatting.latexindent.args', [
+            mockLatexindentPath,
+            '%TMPFILE%',
+            '-y=defaultIndent: \'%INDENT%\''
+        ])
         await vscode.workspace.getConfiguration('latex-workshop').update('bibtex-format.sort.enabled', true)
         await vscode.workspace.getConfiguration().update('[latex]', {
             'editor.defaultFormatter': extensionId
@@ -65,8 +72,12 @@ suite('Formatter test suite', () => {
         const echoed = vscode.window.activeTextEditor?.document.getText()
         assert.strictEqual(original, echoed)
 
-        await vscode.workspace.getConfiguration('latex-workshop').update('formatting.latexindent.path', 'latexindent')
-        await vscode.workspace.getConfiguration('latex-workshop').update('formatting.latexindent.args', ['-c', '%DIR%/', '%TMPFILE%', '-y=defaultIndent: \'%INDENT%\''])
+        await vscode.workspace.getConfiguration('latex-workshop').update('formatting.latexindent.path', process.execPath)
+        await vscode.workspace.getConfiguration('latex-workshop').update('formatting.latexindent.args', [
+            mockLatexindentPath,
+            '%TMPFILE%',
+            '-y=defaultIndent: \'%INDENT%\''
+        ])
         const formatted = await test.format()
         assert.notStrictEqual(original, formatted)
     }, ['win32', 'linux'])
