@@ -20,6 +20,8 @@ Secure LaTeX tools for [Visual Studio Code](https://code.visualstudio.com/) with
 - Stable versioning: `1.2.3 -> 1.2.4`, `1.2 -> 1.3.0`
 - Daily versioning: `1.2.3 -> 1.3.<run_number>`, `1.2 -> 1.3.<run_number>`
 
+Release operations are documented in [RELEASING.md](./RELEASING.md).
+
 ## Manual
 
 Start with the local secure-fork manual in [docs/manual/README.md](./docs/manual/README.md).
