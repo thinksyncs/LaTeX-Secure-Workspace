@@ -2915,6 +2915,8 @@
     "@secretlint/config-loader": {
       "ajv": "^8.18.0"
     },
+    "undici": "^7.24.0",
+    "flatted": "^3.4.0",
     "typed-rest-client": {
       "underscore": "^1.13.8"
     },

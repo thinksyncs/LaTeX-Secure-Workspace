@@ -6,6 +6,7 @@ out/dev/
 out/resources/
 out/snippets/
 out/test/
+out/vendor/pdfviewer-secure/src/
 test/
 src/**/*.ts
 src/**/*.md
@@ -14,13 +15,17 @@ types/
 viewer/**/*.ts
 .devcontainer/
 .github/
+.beads/
 .gitignore
+eslint.config.mjs
 tsconfig.json
 tsconfig.eslint.json
 tsconfig.eslint.viewer.json
 viewer/tsconfig.json
 dev/
 demo_media/
+docs/
+vendor/
 VERSION/
 VERSION
 .idea/
@@ -30,11 +35,23 @@ __pycache__/
 .venv/
 .eslintcache
 .eslintignore
+AGENTS.md
+RELEASING.md
+SECURITY.md
+data/README.md
+resources/snippetview/README.md
+syntax/README.md
 
 install-tl*
 
 **/*.map
 node_modules/**/*.d.ts
+node_modules/**/README.md
+node_modules/**/CHANGELOG.md
+node_modules/**/SECURITY.md
+node_modules/**/HISTORY.md
+node_modules/**/test/
+node_modules/**/tests/
 
 node_modules/@napi-rs/
 node_modules/fsevents/
