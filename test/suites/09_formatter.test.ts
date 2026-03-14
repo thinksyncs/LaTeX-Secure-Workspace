@@ -18,7 +18,9 @@ suite('Formatter test suite', () => {
     setup(async () => {
         await vscode.workspace.getConfiguration('latex-workshop').update('formatting.latex', 'latexindent')
         await vscode.workspace.getConfiguration('latex-workshop').update('bibtex-format.sort.enabled', true)
-        await vscode.workspace.getConfiguration('[latex]').update('editor.defaultFormatter', extensionId)
+        await vscode.workspace.getConfiguration().update('[latex]', {
+            'editor.defaultFormatter': extensionId
+        })
     })
 
     teardown(async () => {
@@ -38,7 +40,7 @@ suite('Formatter test suite', () => {
         await vscode.workspace.getConfiguration('latex-workshop').update('bibtex-entries.first', undefined)
         await vscode.workspace.getConfiguration('latex-workshop').update('bibtex-fields.sort.enabled', undefined)
         await vscode.workspace.getConfiguration('latex-workshop').update('bibtex-fields.order', undefined)
-        await vscode.workspace.getConfiguration('[latex]').update('editor.defaultFormatter', undefined)
+        await vscode.workspace.getConfiguration().update('[latex]', undefined)
     })
 
     test.run('test latex formatter', async (fixture: string) => {
