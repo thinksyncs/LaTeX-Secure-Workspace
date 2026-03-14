@@ -13,6 +13,13 @@ Secure LaTeX tools for [Visual Studio Code](https://code.visualstudio.com/) with
 > [!IMPORTANT]
 > This extension is an independent secure fork and is not the official `James-Yu.latex-workshop` marketplace release. For compatibility, settings and command IDs still use the existing `latex-workshop.*` prefix.
 
+## Release Channels
+
+- Stable releases publish GitHub release tags to the Marketplace stable channel.
+- Daily releases build, test, and package a VSIX every day, refresh the rolling GitHub daily prerelease, publish to the Marketplace pre-release channel, and attach open PR, CodeQL, and Dependabot summaries.
+- Stable versioning: `1.2.3 -> 1.2.4`, `1.2 -> 1.3.0`
+- Daily versioning: `1.2.3 -> 1.3.<run_number>`, `1.2 -> 1.3.<run_number>`
+
 ## Manual
 
 Start with the local secure-fork manual in [docs/manual/README.md](./docs/manual/README.md).

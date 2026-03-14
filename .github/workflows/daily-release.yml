@@ -1,0 +1,77 @@
+name: Daily Release
+
+on:
+  schedule:
+    - cron: '0 0 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: read
+  security-events: read
+
+concurrency:
+  group: daily-release
+  cancel-in-progress: true
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+    - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+      with:
+        fetch-depth: 0
+    - uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6
+      with:
+        node-version: '20'
+        cache: npm
+    - name: Install dependencies
+      run: npm ci --ignore-scripts
+    - name: Compute daily release version
+      id: version
+      env:
+        GITHUB_RUN_NUMBER: ${{ github.run_number }}
+      run: node ./dev/computeDailyVersion.mjs >> "$GITHUB_OUTPUT"
+    - name: Apply daily prerelease version
+      run: npm version --no-git-tag-version "${{ steps.version.outputs.daily_version }}"
+    - name: Verify daily release build
+      run: npm run release:verify
+    - name: Package daily VSIX
+      id: package
+      run: |
+        mkdir -p artifacts/vsix
+        vsix_path="artifacts/vsix/${{ steps.version.outputs.package_name }}-${{ steps.version.outputs.daily_version }}.vsix"
+        npx vsce package --out "$vsix_path"
+        echo "vsix_path=$vsix_path" >> "$GITHUB_OUTPUT"
+    - name: Publish Marketplace pre-release
+      env:
+        VSCE_PAT: ${{ secrets.VSCE_PAT }}
+      run: npx vsce publish --pre-release --packagePath "${{ steps.package.outputs.vsix_path }}"
+    - name: Build daily release notes
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        GITHUB_REPOSITORY: ${{ github.repository }}
+        GITHUB_SHA: ${{ github.sha }}
+        GITHUB_RUN_NUMBER: ${{ github.run_number }}
+        STABLE_VERSION: ${{ steps.version.outputs.stable_version }}
+        DAILY_VERSION: ${{ steps.version.outputs.daily_version }}
+      run: node ./dev/buildDailyReleaseNotes.mjs "$RUNNER_TEMP/daily-release-notes.md"
+    - name: Refresh rolling daily GitHub prerelease
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+        if gh release view daily >/dev/null 2>&1; then
+          gh release delete daily --yes --cleanup-tag
+        fi
+        git tag daily "$GITHUB_SHA"
+        git push origin refs/tags/daily --force
+        gh release create daily "${{ steps.package.outputs.vsix_path }}" \
+          --title "Daily Pre-release ${{ steps.version.outputs.daily_version }}" \
+          --prerelease \
+          --notes-file "$RUNNER_TEMP/daily-release-notes.md"
+    - name: Archive daily VSIX artifact
+      uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7
+      with:
+        name: daily-vsix
+        path: ${{ steps.package.outputs.vsix_path }}

@@ -1,5 +1,14 @@
 # Overview
 
+## Release Channels
+
+The release automation is split into two channels.
+
+- `stable-release.yml`: builds from a published GitHub release tag and publishes to the Marketplace stable channel.
+- `daily-release.yml`: builds, tests, and packages a daily prerelease, refreshes the rolling GitHub `daily` prerelease, publishes to the Marketplace pre-release channel, and attaches summaries of open pull requests, CodeQL alerts, and Dependabot alerts.
+
+Both release workflows expect a `VSCE_PAT` secret with permission to publish to the `ToppyMicroServices` Marketplace publisher.
+
 We run tests on GitHub Actions on Windows, macOS, and Linux with the minimal installations of TeX Live.
 
 We can see [preinstalled software](https://docs.github.com/en/actions/using-github-hosted-runners/about-github-hosted-runners#preinstalled-software) on each platform. Perl 5 is installed even on Windows. So, all we have to do is just installing TeX Live.
