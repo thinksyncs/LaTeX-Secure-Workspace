@@ -235,9 +235,27 @@ export async function view(fixture: string, pdfName: string, postAction?: () => 
 }
 
 export async function format() {
-    const promise = wait(lw.event.DocumentChanged)
-    await vscode.commands.executeCommand('editor.action.formatDocument')
-    await promise
+    const editor = vscode.window.activeTextEditor
+    ok(editor)
+
+    const document = editor.document
+    const options: vscode.FormattingOptions = {
+        insertSpaces: typeof editor.options.insertSpaces === 'boolean' ? editor.options.insertSpaces : true,
+        tabSize: typeof editor.options.tabSize === 'number' ? editor.options.tabSize : Number(editor.options.tabSize ?? 4)
+    }
+    const token = new vscode.CancellationTokenSource().token
+    const formatter = lw.file.hasBibLangId(document.languageId)
+        ? lw.lint.bibtex.formatter
+        : lw.lint.latex.formatter
+
+    const edits = await formatter.provideDocumentFormattingEdits(document, options, token) ?? []
+    if (edits.length > 0) {
+        const workspaceEdit = new vscode.WorkspaceEdit()
+        workspaceEdit.set(document.uri, edits)
+        ok(await vscode.workspace.applyEdit(workspaceEdit))
+        await sleep(50)
+    }
+
     const formatted = vscode.window.activeTextEditor?.document.getText()
     ok(formatted)
     return formatted
