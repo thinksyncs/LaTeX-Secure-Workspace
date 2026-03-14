@@ -26,9 +26,11 @@ runs:
       env:
         TEXLIVE_KEY_FINGERPRINT: C78B82D8C79512F79CC0D7C80D5E5D9106BAB6BC
       run: |
-        curl --fail --show-error --silent --location --proto '=https' --tlsv1.2 -O https://mirror.ctan.org/systems/texlive/tlnet/install-tl-unx.tar.gz
-        curl --fail --show-error --silent --location --proto '=https' --tlsv1.2 -O https://mirror.ctan.org/systems/texlive/tlnet/install-tl-unx.tar.gz.sha512
-        curl --fail --show-error --silent --location --proto '=https' --tlsv1.2 -O https://mirror.ctan.org/systems/texlive/tlnet/install-tl-unx.tar.gz.sha512.asc
+        INSTALLER_URL="$(curl --fail --show-error --silent --location --output /dev/null --write-out '%{url_effective}' --proto '=https' --tlsv1.2 https://mirror.ctan.org/systems/texlive/tlnet/install-tl-unx.tar.gz)"
+        INSTALLER_BASE="${INSTALLER_URL%/*}"
+        curl --fail --show-error --silent --location --proto '=https' --tlsv1.2 -o install-tl-unx.tar.gz "$INSTALLER_URL"
+        curl --fail --show-error --silent --location --proto '=https' --tlsv1.2 -o install-tl-unx.tar.gz.sha512 "$INSTALLER_BASE/install-tl-unx.tar.gz.sha512"
+        curl --fail --show-error --silent --location --proto '=https' --tlsv1.2 -o install-tl-unx.tar.gz.sha512.asc "$INSTALLER_BASE/install-tl-unx.tar.gz.sha512.asc"
         curl --fail --show-error --silent --location --proto '=https' --tlsv1.2 -O https://tug.org/texlive/files/texlive.asc
         test "$(gpg --show-keys --with-colons texlive.asc | awk -F: '/^fpr:/ {print $10; exit}')" = "$TEXLIVE_KEY_FINGERPRINT"
         sha512sum --check install-tl-unx.tar.gz.sha512

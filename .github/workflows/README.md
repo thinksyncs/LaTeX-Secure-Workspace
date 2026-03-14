@@ -18,7 +18,7 @@ We can see [preinstalled software](https://docs.github.com/en/actions/using-gith
 
 For the installer of TeX Live, `install-tl`, see the [official manual](https://tug.org/texlive/doc/install-tl.html). Giving a profile fie to the option, `-profile`, we can install TeX Live in batch mode with no user interaction.
 
-The CI workflows download TeX Live installers from CTAN over HTTPS only, and verify them with the published `.sha512` checksum and `.sha512.asc` signature before extraction or execution. When changing these workflows, avoid plaintext HTTP downloads and prefer strict `curl` options that fail closed on transfer or TLS errors.
+The CI workflows download TeX Live installers from CTAN over HTTPS only, pin the archive and checksum downloads to the same resolved mirror, and verify them with the published `.sha512` checksum and `.sha512.asc` signature before extraction or execution. When changing these workflows, avoid plaintext HTTP downloads and prefer strict `curl` options that fail closed on transfer or TLS errors.
 
 We no longer download standalone `latexindent` binaries in CI. Instead, the shared Linux TeX Live setup action installs `latexindent` from TeX Live and uses the packaged executable directly when available, otherwise creating a small wrapper around `latexindent.pl`. This avoids executing an extra unsigned binary fetched from a mirror.
 
