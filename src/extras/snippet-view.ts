@@ -68,11 +68,12 @@ class SnippetViewProvider implements vscode.WebviewViewProvider {
         state.view = webviewView
 
         const resourcesUri = vscode.Uri.joinPath(lw.file.toUri(lw.extensionRoot), 'resources', 'snippetview')
-        const pdfjsUri = vscode.Uri.joinPath(lw.file.toUri(lw.extensionRoot), 'node_modules', 'pdfjs-dist')
+        const viewerBuildUri = vscode.Uri.joinPath(lw.file.toUri(lw.extensionRoot), 'viewer', 'lib', 'build')
+        const viewerCmapsUri = vscode.Uri.joinPath(lw.file.toUri(lw.extensionRoot), 'viewer', 'lib', 'web', 'cmaps')
 
         webviewView.webview.options = {
             enableScripts: true,
-            localResourceRoots: [resourcesUri, pdfjsUri]
+            localResourceRoots: [resourcesUri, viewerBuildUri, viewerCmapsUri]
         }
 
         webviewView.onDidDispose(() => {
@@ -81,11 +82,14 @@ class SnippetViewProvider implements vscode.WebviewViewProvider {
 
         const webviewSourcePath = path.join(lw.extensionRoot, 'resources', 'snippetview', 'snippetview.html')
         const resourceRoot = webviewView.webview.asWebviewUri(resourcesUri).toString()
-        const pdfjsRoot = webviewView.webview.asWebviewUri(pdfjsUri).toString()
+        const viewerBuildRoot = webviewView.webview.asWebviewUri(viewerBuildUri).toString()
+        const viewerCmapsRoot = webviewView.webview.asWebviewUri(viewerCmapsUri).toString()
 
         const htmlContent = readFileSync(webviewSourcePath, { encoding: 'utf8' })
             .replaceAll('%RESOURCE_ROOT%', resourceRoot)
-            .replaceAll('%PDFJS_ROOT%', pdfjsRoot)
+            .replaceAll('%PDFJS_ROOT%', viewerBuildRoot)
+            .replaceAll('%PDF_WORKER%', `${viewerBuildRoot}/pdf.worker.mjs`)
+            .replaceAll('%PDF_CMAPS%', viewerCmapsRoot)
             .replaceAll('%CSP%', webviewView.webview.cspSource)
         const replacements = await Promise.all(Array.from(htmlContent.matchAll(/\{%(.*?)%\}/g), match => lw.language.getLocaleString(match[1])))
         let index = 0

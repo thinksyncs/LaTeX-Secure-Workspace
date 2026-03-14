@@ -152,7 +152,7 @@ function provide(langId: string, line?: string, position?: vscode.Position): Com
  *
  * @param content A string to be surrounded. If not provided, then we loop over all the selections and surround each of them.
  */
-function surround(cmdItems?: CompletionItem[]) {
+async function surround(cmdItems?: CompletionItem[]) {
     const editor = vscode.window.activeTextEditor
     if (!editor) {
         return
@@ -177,26 +177,33 @@ function surround(cmdItems?: CompletionItem[]) {
             })
         }
     })
-    void vscode.window.showQuickPick(candidate, {
+
+    if (candidate.length === 1) {
+        return applySurround(editor, candidate[0])
+    }
+
+    const selected = await vscode.window.showQuickPick(candidate, {
         placeHolder: 'Press ENTER to surround previous selection with selected macro',
         matchOnDetail: false,
         matchOnDescription: false
-    }).then(selected => {
-        if (selected === undefined) {
-            return
-        }
-        void editor.edit( editBuilder => {
-            for (const selection of editor.selections) {
-                const selectedContent = editor.document.getText(selection).replaceAll('$', '$$$$')
-                const selectedMacro = '\\' + selected.macro
-                editBuilder.replace(new vscode.Range(selection.start, selection.end),
-                    selectedMacro.replace(/\$\d/g, '')                                // Remove $2 etc
-                                 .replace(/(.*)(\${\d.*?})/g, `$1${selectedContent}`) // Replace text
-                                 .replace(/\${\d:?(.*?)}/g, '$1'))                   // Remove snippet placeholders
-            }
-        })
     })
-    return
+    if (selected === undefined) {
+        return
+    }
+    return applySurround(editor, selected)
+}
+
+function applySurround(editor: vscode.TextEditor, selected: { macro: string }) {
+    return editor.edit(editBuilder => {
+        for (const selection of editor.selections) {
+            const selectedContent = editor.document.getText(selection).replaceAll('$', '$$$$')
+            const selectedMacro = '\\' + selected.macro
+            editBuilder.replace(new vscode.Range(selection.start, selection.end),
+                selectedMacro.replace(/\$\d/g, '')                                // Remove $2 etc
+                             .replace(/(.*)(\${\d.*?})/g, `$1${selectedContent}`) // Replace text
+                             .replace(/\${\d:?(.*?)}/g, '$1'))                   // Remove snippet placeholders
+        }
+    })
 }
 
 function parse(cache: FileCache) {

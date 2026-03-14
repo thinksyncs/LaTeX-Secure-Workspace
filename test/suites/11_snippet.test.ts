@@ -10,7 +10,7 @@ suite('Snippet test suite', () => {
     test.suite.fixture = 'testground'
 
     suiteSetup(async () => {
-        await vscode.commands.executeCommand('latex-workshop.activate')
+        await test.activateExtension()
         await vscode.workspace.getConfiguration('latex-workshop').update('latex.autoBuild.run', 'never')
     })
 
@@ -33,12 +33,9 @@ suite('Snippet test suite', () => {
             insertText: new vscode.SnippetString('fbox{${1:${TM_SELECTED_TEXT:text}}}'),
             kind: 2
         }]
-        lw.completion.macro.surround(items)
-        const promise = test.wait(lw.event.DocumentChanged)
-        await test.sleep(500)
-        await vscode.commands.executeCommand('workbench.action.acceptSelectedQuickOpenItem')
+        await lw.completion.macro.surround(items)
         await vscode.commands.executeCommand('editor.action.formatDocument')
-        await promise
+        await test.sleep(250)
         const changed = vscode.window.activeTextEditor?.document.getText()
         assert.ok(changed?.includes('\\fbox{a}bc'))
     }, ['linux', 'darwin'])

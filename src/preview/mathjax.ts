@@ -10,7 +10,7 @@ export const mathjax = {
 }
 
 const pool: workerpool.Pool = workerpool.pool(
-    path.join(__dirname, 'mathjax', 'mathjax.js'),
+    path.join(lw.extensionRoot, 'out', 'src', 'preview', 'mathjax', 'mathjax.js'),
     { minWorkers: 1, maxWorkers: 1, workerType: 'process' }
 )
 const proxy = pool.proxy<IMathJaxWorker>()

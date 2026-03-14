@@ -10,6 +10,8 @@ import type { EventArgs, Events } from '../../src/core/event'
 
 let testIndex = 0
 const logger = logModule.getLogger('Test')
+const packageJson = JSON.parse(fs.readFileSync(path.resolve(__dirname, '../../../package.json'), 'utf8')) as { publisher: string, name: string }
+const extensionId = `${packageJson.publisher}.${packageJson.name}`
 
 function getFixture() {
     if (vscode.workspace.workspaceFile) {
@@ -74,6 +76,12 @@ export function run(testName: string, cb: (fixturePath: string) => unknown, plat
 
 export function sleep(ms: number) {
     return new Promise(resolve => setTimeout(resolve, ms))
+}
+
+export async function activateExtension() {
+    const extension = vscode.extensions.getExtension(extensionId)
+    ok(extension, `Expected extension ${extensionId} to be available in tests`)
+    await extension.activate()
 }
 
 export async function reset() {

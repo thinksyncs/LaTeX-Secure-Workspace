@@ -9,11 +9,14 @@ import { getEnvDefs, getMacroDefs } from './parser/unified-defs'
 import { bibtexLogParser } from './parser/bibtexlog'
 import { biberLogParser } from './parser/biberlog'
 import { latexLogParser } from './parser/latexlog'
-// @ts-expect-error Load unified.js from /out/src/...
-import { toString } from '../../../resources/unified.js'
+
+type UnifiedStringifier = {
+    toString: (ast: Ast.Ast) => string
+}
 
 const logger = lw.log('Parser')
 const bibDiagnostics = vscode.languages.createDiagnosticCollection('BibTeX')
+const { toString } = require(path.join(lw.extensionRoot, 'resources', 'unified.js')) as UnifiedStringifier
 
 export const parser = {
     bib,
@@ -26,7 +29,7 @@ export const parser = {
 }
 
 const pool = workerpool.pool(
-    path.join(__dirname, 'parser', 'unified.js'),
+    path.join(lw.extensionRoot, 'out', 'src', 'parse', 'parser', 'unified.js'),
     { minWorkers: 1, maxWorkers: 1, workerType: 'thread' }
 )
 const proxy = pool.proxy<Worker>()

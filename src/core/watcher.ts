@@ -259,6 +259,9 @@ class Watcher {
      */
     private disposeWatcher(folder: string): void {
         const watcherInfo = this.watchers[folder]
+        if (!watcherInfo) {
+            return
+        }
         watcherInfo.watcher.dispose()
         delete this.watchers[folder]
         logger.log(`Unwatched folder ${folder}.`)

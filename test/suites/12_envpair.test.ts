@@ -15,7 +15,7 @@ suite('EnvPair test suite', () => {
     test.suite.fixture = 'testground'
 
     suiteSetup(async () => {
-        await vscode.commands.executeCommand('latex-workshop.activate')
+        await test.activateExtension()
     })
 
     teardown(async () => {

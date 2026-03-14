@@ -1,13 +1,17 @@
+import * as path from 'path'
 import * as workerpool from 'workerpool'
 import type * as Ast from '@unified-latex/unified-latex-types'
 // import { getParser } from '@unified-latex/unified-latex-util-parse'
 // import { attachMacroArgs } from '@unified-latex/unified-latex-util-arguments'
 import { bibtexParser } from 'latex-utensils'
 
-// @ts-expect-error Load unified.js from /out/src/...
-import { getParser, attachMacroArgs } from '../../../../resources/unified.js'
+type UnifiedModule = {
+    attachMacroArgs: (ast: Ast.Root, macros: Ast.MacroInfoRecord) => void
+    getParser: (opts: { macros?: Ast.MacroInfoRecord, environments?: Ast.EnvInfoRecord, flags: { autodetectExpl3AndAtLetter: boolean } }) => UnifiedParser
+}
 
 type UnifiedParser = { parse: (content: string) => Ast.Root }
+const { getParser, attachMacroArgs } = require(path.resolve(__dirname, '../../../../resources/unified.js')) as UnifiedModule
 
 // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call
 let unifiedParser: UnifiedParser = getParser({ flags: { autodetectExpl3AndAtLetter: true } })

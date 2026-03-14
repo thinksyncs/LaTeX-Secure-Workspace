@@ -8,7 +8,7 @@ suite.skip('Auto-build test suite', () => {
     test.suite.fixture = 'testground'
 
     suiteSetup(async () => {
-        await vscode.commands.executeCommand('latex-workshop.activate')
+        await test.activateExtension()
         await vscode.workspace.getConfiguration('latex-workshop').update('latex.autoBuild.interval', 250)
     })
 
