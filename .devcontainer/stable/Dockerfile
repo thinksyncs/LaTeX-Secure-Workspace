@@ -35,7 +35,8 @@ RUN apt-get update && apt-get -y upgrade \
     texlive-lang-japanese
 
 # latexindent modules
-RUN curl -fsSL https://cpanmin.us | perl - App::cpanminus \
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends cpanminus \
     && cpanm Log::Dispatch@2.71 \
     && cpanm YAML::Tiny@1.76 \
     && cpanm File::HomeDir@1.006 \
