@@ -35,7 +35,7 @@ This secure build keeps a focused subset of the upstream editing and compilation
 - Build LaTeX documents manually with the fixed internal build recipe.
 - Resolve the build root with a fixed internal policy and always run manual build and clean against the resolved main root file. Secure build and viewer flows do not honor file-level `%!TEX root` comments.
 - Write build outputs and auxiliary files into the resolved root file directory, rather than honoring workspace-controlled output-path overrides.
-- Open the built PDF in a local VS Code tab using the vendored `vscode-pdfviewer-secure` runtime, with one-way refresh from the extension to the viewer.
+- Open the built PDF in a local VS Code tab using a minimal `pdf.js` runtime, with one-way refresh from the extension to the viewer.
 - IntelliSense for citations, labels, commands, environments, document classes, packages, and input paths.
 - Snippets and text-wrapping commands for common LaTeX authoring tasks.
 - Automatic `\item` continuation and other core editing conveniences that stay within the editor process.

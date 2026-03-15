@@ -6,8 +6,6 @@ role.
 ## Top-Level Structure
 
 - `src/`: extension host TypeScript source
-- `viewer/`: vendored secure PDF viewer runtime assets
-- `vendor/pdfviewer-secure/`: upstream snapshot metadata and webview source used to rebuild the bundled runtime
 - `resources/`: webview assets used by the extension
 - `syntax/`: TextMate grammars and language-configuration files
 - `data/`: completion, package, snippet, and metadata sources
@@ -32,4 +30,4 @@ These areas are intentionally treated as disposable local output:
 - Keep secure-fork documentation under `docs/` instead of adding new root-level
   markdown files unless the file is a standard repository entry point.
 - Remove dead feature files only after verifying that they are no longer
-  imported from `src/`, vendored viewer assets, tests, or packaging configuration.
+  imported from `src/`, webview resources, tests, or packaging configuration.

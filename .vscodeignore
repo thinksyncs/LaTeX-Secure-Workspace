@@ -9,7 +9,6 @@ out/src/**
 !out/src/parse/parser/unified.js
 !out/src/preview/mathjax/mathjax.js
 out/test/
-out/vendor/pdfviewer-secure/src/
 test/
 src/**/*.ts
 src/**/*.md
@@ -42,18 +41,24 @@ RELEASING.md
 SECURITY.md
 data/README.md
 resources/snippetview/README.md
-viewer/lib/pdf.css
-viewer/lib/web/debugger.css
-viewer/lib/web/debugger.mjs
-viewer/lib/web/images/**
-viewer/lib/web/iccs/**
-viewer/lib/web/locale/**
-viewer/lib/web/viewer.css
-viewer/lib/web/viewer.html
-viewer/lib/web/viewer.mjs
 syntax/README.md
 
 install-tl*
 
 **/*.map
-node_modules/
+node_modules/**
+!node_modules/pdfjs-dist/
+node_modules/pdfjs-dist/**
+!node_modules/pdfjs-dist/build/
+!node_modules/pdfjs-dist/cmaps/
+!node_modules/pdfjs-dist/standard_fonts/
+!node_modules/pdfjs-dist/wasm/
+node_modules/pdfjs-dist/build/**
+!node_modules/pdfjs-dist/build/pdf.mjs
+!node_modules/pdfjs-dist/build/pdf.worker.mjs
+node_modules/pdfjs-dist/cmaps/**
+!node_modules/pdfjs-dist/cmaps/**
+node_modules/pdfjs-dist/standard_fonts/**
+!node_modules/pdfjs-dist/standard_fonts/**
+node_modules/pdfjs-dist/wasm/**
+!node_modules/pdfjs-dist/wasm/**

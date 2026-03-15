@@ -68,8 +68,9 @@ class SnippetViewProvider implements vscode.WebviewViewProvider {
         state.view = webviewView
 
         const resourcesUri = vscode.Uri.joinPath(lw.file.toUri(lw.extensionRoot), 'resources', 'snippetview')
-        const viewerBuildUri = vscode.Uri.joinPath(lw.file.toUri(lw.extensionRoot), 'viewer', 'lib', 'build')
-        const viewerCmapsUri = vscode.Uri.joinPath(lw.file.toUri(lw.extensionRoot), 'viewer', 'lib', 'web', 'cmaps')
+        const pdfjsRootUri = vscode.Uri.joinPath(lw.file.toUri(lw.extensionRoot), 'node_modules', 'pdfjs-dist')
+        const viewerBuildUri = vscode.Uri.joinPath(pdfjsRootUri, 'build')
+        const viewerCmapsUri = vscode.Uri.joinPath(pdfjsRootUri, 'cmaps')
 
         webviewView.webview.options = {
             enableScripts: true,

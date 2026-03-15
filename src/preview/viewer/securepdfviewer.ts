@@ -35,9 +35,9 @@ export function configureSecurePdfViewerWebview(webview: vscode.Webview, pdfUri:
 
 export async function getSecurePdfViewerHtml(pdfUri: vscode.Uri, webview: vscode.Webview, params: PdfViewerParams): Promise<string> {
     const extensionRoot = lw.file.toUri(lw.extensionRoot)
-    const viewerRoot = vscode.Uri.joinPath(extensionRoot, 'viewer', 'lib')
+    const pdfjsRoot = vscode.Uri.joinPath(extensionRoot, 'node_modules', 'pdfjs-dist')
     const viewerHtmlPath = path.join(lw.extensionRoot, 'resources', 'pdfviewer', 'minimalviewer.html')
-    const webviewSettings = createWebviewSettings(pdfUri, webview, viewerRoot, params)
+    const webviewSettings = createWebviewSettings(pdfUri, webview, pdfjsRoot, params)
     const viewerCssUri = webview.asWebviewUri(vscode.Uri.joinPath(extensionRoot, 'resources', 'pdfviewer', 'minimalviewer.css')).toString()
     const viewerScriptUri = webview.asWebviewUri(vscode.Uri.joinPath(extensionRoot, 'resources', 'pdfviewer', 'minimalviewer.js')).toString()
 
@@ -49,18 +49,18 @@ export async function getSecurePdfViewerHtml(pdfUri: vscode.Uri, webview: vscode
     return html
 }
 
-function createWebviewSettings(pdfUri: vscode.Uri, webview: vscode.Webview, viewerRoot: vscode.Uri, params: PdfViewerParams): SecurePdfViewerWebviewSettings {
+function createWebviewSettings(pdfUri: vscode.Uri, webview: vscode.Webview, pdfjsRoot: vscode.Uri, params: PdfViewerParams): SecurePdfViewerWebviewSettings {
     return {
         appearance: params,
-        cMapUrl: `${webview.asWebviewUri(vscode.Uri.joinPath(viewerRoot, 'web', 'cmaps')).toString()}/`,
+        cMapUrl: `${webview.asWebviewUri(vscode.Uri.joinPath(pdfjsRoot, 'cmaps')).toString()}/`,
         defaults: {
             scale: params.scale,
         },
         path: webview.asWebviewUri(pdfUri).toString(),
-        pdfjsSrc: webview.asWebviewUri(vscode.Uri.joinPath(viewerRoot, 'build', 'pdf.mjs')).toString(),
-        standardFontDataUrl: `${webview.asWebviewUri(vscode.Uri.joinPath(viewerRoot, 'web', 'standard_fonts')).toString()}/`,
-        wasmUrl: `${webview.asWebviewUri(vscode.Uri.joinPath(viewerRoot, 'web', 'wasm')).toString()}/`,
-        workerSrc: webview.asWebviewUri(vscode.Uri.joinPath(viewerRoot, 'build', 'pdf.worker.mjs')).toString(),
+        pdfjsSrc: webview.asWebviewUri(vscode.Uri.joinPath(pdfjsRoot, 'build', 'pdf.mjs')).toString(),
+        standardFontDataUrl: `${webview.asWebviewUri(vscode.Uri.joinPath(pdfjsRoot, 'standard_fonts')).toString()}/`,
+        wasmUrl: `${webview.asWebviewUri(vscode.Uri.joinPath(pdfjsRoot, 'wasm')).toString()}/`,
+        workerSrc: webview.asWebviewUri(vscode.Uri.joinPath(pdfjsRoot, 'build', 'pdf.worker.mjs')).toString(),
     }
 }
 

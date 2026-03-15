@@ -2908,13 +2908,15 @@
     "latex-utensils": "^6.2.0",
     "mathjax-full": "^3.2.2",
     "micromatch": "^4.0.8",
+    "pdfjs-dist": "5.4.394",
     "tmp": "^0.2.4",
     "workerpool": "^9.2.0",
     "ws": "^8.18.0"
   },
   "overrides": {
     "@vscode/vsce": {
-      "markdown-it": "^14.1.1"
+      "markdown-it": "^14.1.1",
+      "yauzl": "^3.2.1"
     },
     "@secretlint/config-loader": {
       "ajv": "^8.18.0"
@@ -2957,7 +2959,6 @@
     "eslint": "^9.39.4",
     "mocha": "^11.7.5",
     "node-fetch": "^2.7.0",
-    "pdfjs-dist": "5.4.394",
     "rimraf": "^6.0.1",
     "sinon": "^21.0.2",
     "textmate-bailout": "^1.1.0",
