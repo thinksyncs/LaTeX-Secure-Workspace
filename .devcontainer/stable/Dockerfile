@@ -36,10 +36,10 @@ RUN apt-get update && apt-get -y upgrade \
 
 # latexindent modules
 RUN curl -fsSL https://cpanmin.us | perl - App::cpanminus \
-    && cpanm Log::Dispatch::File \
-    && cpanm YAML::Tiny \
-    && cpanm File::HomeDir \
-    && cpanm Unicode::GCString
+    && cpanm Log::Dispatch@2.71 \
+    && cpanm YAML::Tiny@1.76 \
+    && cpanm File::HomeDir@1.006 \
+    && cpanm Unicode::LineBreak@2019.001
 
 # VS Code dependencies for testing
 RUN apt-get update -y \
