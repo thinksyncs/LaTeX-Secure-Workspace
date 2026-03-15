@@ -2,12 +2,25 @@ import * as fs from 'fs/promises'
 import * as path from 'path'
 import * as vscode from 'vscode'
 
-import type { PreviewDefaults, PreviewFeatures, PreviewWebviewSettings } from '../../../vendor/pdfviewer-secure/src/config'
 import type { PdfViewerParams } from '../../../types/latex-workshop-protocol-types/index'
 import { lw } from '../../lw'
 
-export interface SecurePdfViewerWebviewSettings extends PreviewWebviewSettings {
+interface MinimalPdfViewerDefaults {
+    scale: string
+}
+
+interface MinimalPdfViewerAppearance {
     appearance: PdfViewerParams
+}
+
+interface SecurePdfViewerWebviewSettings extends MinimalPdfViewerAppearance {
+    cMapUrl: string
+    defaults: MinimalPdfViewerDefaults
+    path: string
+    standardFontDataUrl: string
+    wasmUrl: string
+    workerSrc: string
+    pdfjsSrc: string
 }
 
 export function configureSecurePdfViewerWebview(webview: vscode.Webview, pdfUri: vscode.Uri): void {
@@ -23,91 +36,31 @@ export function configureSecurePdfViewerWebview(webview: vscode.Webview, pdfUri:
 export async function getSecurePdfViewerHtml(pdfUri: vscode.Uri, webview: vscode.Webview, params: PdfViewerParams): Promise<string> {
     const extensionRoot = lw.file.toUri(lw.extensionRoot)
     const viewerRoot = vscode.Uri.joinPath(extensionRoot, 'viewer', 'lib')
-    const viewerHtmlPath = path.join(lw.extensionRoot, 'viewer', 'lib', 'web', 'viewer.html')
+    const viewerHtmlPath = path.join(lw.extensionRoot, 'resources', 'pdfviewer', 'minimalviewer.html')
     const webviewSettings = createWebviewSettings(pdfUri, webview, viewerRoot, params)
-    const webviewRuntimeUri = webview.asWebviewUri(vscode.Uri.joinPath(extensionRoot, 'out', 'vendor', 'pdfviewer-secure', 'webview', 'main.js')).toString()
-    const pdfCssUri = webview.asWebviewUri(vscode.Uri.joinPath(viewerRoot, 'pdf.css')).toString()
+    const viewerCssUri = webview.asWebviewUri(vscode.Uri.joinPath(extensionRoot, 'resources', 'pdfviewer', 'minimalviewer.css')).toString()
+    const viewerScriptUri = webview.asWebviewUri(vscode.Uri.joinPath(extensionRoot, 'resources', 'pdfviewer', 'minimalviewer.js')).toString()
 
     let html = await fs.readFile(viewerHtmlPath, 'utf8')
-    html = html.replace(
-        '<title>PDF.js viewer</title>',
-        `<title>PDF.js viewer</title>
-<meta http-equiv="X-UA-Compatible" content="IE=edge">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; base-uri 'none'; object-src 'none'; connect-src ${webview.cspSource}; script-src ${webview.cspSource}; script-src-elem ${webview.cspSource}; script-src-attr 'none'; style-src ${webview.cspSource}; style-src-elem ${webview.cspSource}; style-src-attr 'unsafe-inline'; img-src blob: data: ${webview.cspSource}; font-src ${webview.cspSource}; worker-src blob: ${webview.cspSource};">
-<meta id="pdf-preview-config" data-config="${escapeAttribute(JSON.stringify(webviewSettings))}">`
-    )
-    html = html.replace('href="locale/locale.json"', `href="${webview.asWebviewUri(vscode.Uri.joinPath(viewerRoot, 'web', 'locale', 'locale.json')).toString()}"`)
-    html = html.replace('src="../build/pdf.mjs"', `src="${webview.asWebviewUri(vscode.Uri.joinPath(viewerRoot, 'build', 'pdf.mjs')).toString()}"`)
-    html = html.replace('href="viewer.css"', `href="${webview.asWebviewUri(vscode.Uri.joinPath(viewerRoot, 'web', 'viewer.css')).toString()}"`)
-    html = html.replace('src="viewer.mjs"', `src="${webview.asWebviewUri(vscode.Uri.joinPath(viewerRoot, 'web', 'viewer.mjs')).toString()}"`)
-    html = html.replace(
-        '</head>',
-        `  <link rel="stylesheet" href="${pdfCssUri}" />
-  <script src="${webviewRuntimeUri}"></script>
-  </head>`
-    )
+    html = html.replaceAll('%CSP_SOURCE%', webview.cspSource)
+    html = html.replaceAll('%VIEWER_CSS%', viewerCssUri)
+    html = html.replaceAll('%VIEWER_SCRIPT%', viewerScriptUri)
+    html = html.replaceAll('%VIEWER_CONFIG%', escapeAttribute(JSON.stringify(webviewSettings)))
     return html
 }
 
 function createWebviewSettings(pdfUri: vscode.Uri, webview: vscode.Webview, viewerRoot: vscode.Uri, params: PdfViewerParams): SecurePdfViewerWebviewSettings {
-    const features: PreviewFeatures = {
-        annotationEditing: false,
-        currentView: false,
-        documentProperties: false,
-        download: false,
-        externalLinks: false,
-        forms: false,
-        openFile: false,
-        print: false,
-    }
-    const defaults: PreviewDefaults = {
-        cursor: params.hand ? 'hand' : 'select',
-        scale: params.scale,
-        sidebar: params.sidebar.open === 'on',
-        scrollMode: mapScrollMode(params.scrollMode),
-        spreadMode: mapSpreadMode(params.spreadMode),
-    }
-
     return {
         appearance: params,
         cMapUrl: `${webview.asWebviewUri(vscode.Uri.joinPath(viewerRoot, 'web', 'cmaps')).toString()}/`,
-        defaults,
-        features,
-        iccUrl: `${webview.asWebviewUri(vscode.Uri.joinPath(viewerRoot, 'web', 'iccs')).toString()}/`,
-        imageResourcesPath: `${webview.asWebviewUri(vscode.Uri.joinPath(viewerRoot, 'web', 'images')).toString()}/`,
-        path: webview.asWebviewUri(pdfUri).toString(),
-        runtime: {
-            annotationEditorModeDisable: -1,
-            annotationEditorModeNone: 0,
-            annotationModeEnable: 1,
-            annotationModeEnableForms: 2,
+        defaults: {
+            scale: params.scale,
         },
-        sandboxBundleSrc: webview.asWebviewUri(vscode.Uri.joinPath(viewerRoot, 'build', 'pdf.sandbox.mjs')).toString(),
+        path: webview.asWebviewUri(pdfUri).toString(),
+        pdfjsSrc: webview.asWebviewUri(vscode.Uri.joinPath(viewerRoot, 'build', 'pdf.mjs')).toString(),
         standardFontDataUrl: `${webview.asWebviewUri(vscode.Uri.joinPath(viewerRoot, 'web', 'standard_fonts')).toString()}/`,
         wasmUrl: `${webview.asWebviewUri(vscode.Uri.joinPath(viewerRoot, 'web', 'wasm')).toString()}/`,
         workerSrc: webview.asWebviewUri(vscode.Uri.joinPath(viewerRoot, 'build', 'pdf.worker.mjs')).toString(),
-    }
-}
-
-function mapScrollMode(scrollMode: number): PreviewDefaults['scrollMode'] {
-    switch (scrollMode) {
-        case 1:
-            return 'horizontal'
-        case 2:
-            return 'wrapped'
-        default:
-            return 'vertical'
-    }
-}
-
-function mapSpreadMode(spreadMode: number): PreviewDefaults['spreadMode'] {
-    switch (spreadMode) {
-        case 1:
-            return 'odd'
-        case 2:
-            return 'even'
-        default:
-            return 'none'
     }
 }
 

@@ -2884,9 +2884,8 @@
   },
   "scripts": {
     "clean": "rimraf out/ .eslintcache",
-    "build:pdfviewer-secure": "node ./dev/build-pdfviewer-secure.mjs",
     "build:extension-bundle": "node ./dev/build-extension-bundle.mjs",
-    "compile": "tsc -p tsconfig.json && npm run build:extension-bundle && npm run build:pdfviewer-secure",
+    "compile": "tsc -p tsconfig.json && npm run build:extension-bundle",
     "coverage": "c8 --check-coverage npm run test --src out/src/",
     "extension:cleanup-local": "node ./dev/cleanupLocalExtensions.mjs",
     "extension:package-local": "node ./dev/manageLocalExtension.mjs package",
