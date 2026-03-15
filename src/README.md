@@ -53,7 +53,7 @@ flowchart LR
   click MathJaxWorkers "https://github.com/James-Yu/LaTeX-Workshop/blob/master/src/providers/preview/mathjaxpool_worker.ts"
 ```
 
-PDF files are opened in a VS Code custom editor backed by the vendored `vscode-pdfviewer-secure` runtime.
+PDF files are opened in a VS Code custom editor backed by a minimal `pdf.js` webview runtime.
 
 ## flowchart
 

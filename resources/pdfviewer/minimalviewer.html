@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+        <meta
+            http-equiv="Content-Security-Policy"
+            content="default-src 'none'; base-uri 'none'; object-src 'none'; connect-src %CSP_SOURCE%; script-src %CSP_SOURCE%; script-src-elem %CSP_SOURCE%; script-src-attr 'none'; style-src %CSP_SOURCE%; style-src-elem %CSP_SOURCE%; style-src-attr 'unsafe-inline'; img-src blob: data: %CSP_SOURCE%; font-src %CSP_SOURCE%; worker-src blob: %CSP_SOURCE%;"
+        />
+        <title>PDF Preview</title>
+        <meta id="pdf-preview-config" data-config="%VIEWER_CONFIG%" />
+        <link rel="stylesheet" href="%VIEWER_CSS%" />
+        <script type="module" src="%VIEWER_SCRIPT%"></script>
+    </head>
+    <body>
+        <div id="app">
+            <div id="statusBar">
+                <span id="statusText">Loading PDF…</span>
+            </div>
+            <div id="viewerContainer">
+                <div id="pages"></div>
+            </div>
+        </div>
+    </body>
+</html>
