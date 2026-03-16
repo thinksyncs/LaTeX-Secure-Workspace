@@ -71,7 +71,10 @@ jobs:
       if: steps.cache-texlive.outputs.cache-hit != 'true'
     - name: Create latexindent wrapper
       run: |
-        SCRIPT_PATH="$(kpsewhich latexindent.pl)"
+        if command -v latexindent >/dev/null 2>&1; then
+          exit 0
+        fi
+        SCRIPT_PATH="$(kpsewhich latexindent.pl || true)"
         test -n "$SCRIPT_PATH"
         TARGET_DIR="/Users/runner/texlive/bin/universal-darwin"
         [ -d /Users/runner/texlive/bin/x86_64-darwin/ ] && TARGET_DIR="/Users/runner/texlive/bin/x86_64-darwin"

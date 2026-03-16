@@ -76,6 +76,7 @@ jobs:
       if: steps.cache-texlive.outputs.cache-hit != 'true'
     - name: Create latexindent wrapper
       run: |
+        if (Get-Command latexindent -ErrorAction SilentlyContinue) { exit 0 }
         $script = & kpsewhich latexindent.pl
         if (-not $script) { throw 'latexindent.pl not found via kpsewhich' }
         @(
