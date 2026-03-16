@@ -46,6 +46,8 @@ jobs:
         vsix_path="artifacts/vsix/${package_name}-${package_version}.vsix"
         npx vsce package --out "$vsix_path"
         echo "vsix_path=$vsix_path" >> "$GITHUB_OUTPUT"
+    - name: Assert universal VSIX metadata
+      run: node ./dev/assertUniversalVsix.mjs "${{ steps.package.outputs.vsix_path }}"
     - name: Publish stable Marketplace release
       env:
         VSCE_PAT: ${{ secrets.VSCE_PAT }}
