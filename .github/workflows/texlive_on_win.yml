@@ -65,13 +65,14 @@ jobs:
       if: steps.cache-texlive.outputs.cache-hit != 'true'
       shell: cmd
     - name: Run tlmgr install
-      shell: bash
+      shell: pwsh
       run: |
-        tlmgr option repository "$TEXLIVE_REPOSITORY"
-        tlmgr update --self
-        tlmgr install collection-latex
-        tlmgr install import subfiles latexmk makeindex
-        tlmgr install chktex lacheck latexindent
+        $tlmgr = 'D:\texlive\bin\windows\tlmgr.bat'
+        & $tlmgr option repository $env:TEXLIVE_REPOSITORY
+        & $tlmgr update --self
+        & $tlmgr install collection-latex
+        & $tlmgr install import subfiles latexmk makeindex
+        & $tlmgr install chktex lacheck latexindent
       if: steps.cache-texlive.outputs.cache-hit != 'true'
     - name: Create latexindent wrapper
       run: |
