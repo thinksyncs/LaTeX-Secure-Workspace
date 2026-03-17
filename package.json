@@ -3,7 +3,7 @@
   "displayName": "LaTeX Workspace Security",
   "description": "Secure LaTeX tools for VS Code with IntelliSense, manual build, diagnostics, and a local PDF tab viewer.",
   "icon": "icons/icon.png",
-  "version": "11.0.17",
+  "version": "11.0.18",
   "publisher": "ToppyMicroServices",
   "license": "MIT",
   "homepage": "https://github.com/thinksyncs/LaTeX-Secure-Workspace",
@@ -2923,9 +2923,6 @@
     "update-grammar": "node ./dev/update-grammar.mjs"
   },
   "dependencies": {
-    "@unified-latex/unified-latex-util-arguments": "1.8.1",
-    "@unified-latex/unified-latex-util-parse": "1.8.1",
-    "@unified-latex/unified-latex-util-to-string": "1.8.1",
     "cross-spawn": "^7.0.6",
     "glob": "^11.1.0",
     "iconv-lite": "^0.6.3",
