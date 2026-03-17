@@ -19,11 +19,18 @@ let renderEpoch = 0
 let currentPdf = undefined
 let resizeTimer = undefined
 let stateTimer = undefined
+let synctexIndicatorTimer = undefined
+let pendingSyncTeX = undefined
+const renderedPages = new Map()
 
 window.addEventListener('message', (event) => {
     const message = event.data
     if (message?.type === 'reload') {
         void renderDocument({ preserveScroll: true })
+    }
+    if (message?.type === 'synctex') {
+        pendingSyncTeX = message.data
+        void applyPendingSyncTeX()
     }
 })
 
@@ -94,6 +101,7 @@ async function renderDocument({ preserveScroll }) {
     const epoch = ++renderEpoch
     const previousScrollTop = viewerContainer.scrollTop
     const previousScrollLeft = viewerContainer.scrollLeft
+    renderedPages.clear()
     pagesRoot.replaceChildren()
     statusText.textContent = 'Loading PDF…'
 
@@ -135,6 +143,7 @@ async function renderDocument({ preserveScroll }) {
         viewerContainer.scrollLeft = previousScrollLeft
     }
 
+    applyPendingSyncTeX()
     queueStatePost()
     vscode.postMessage({ type: 'document-loaded' })
 }
@@ -148,10 +157,14 @@ async function renderPage(pdf, pageNumber) {
 
     const shell = document.createElement('section')
     shell.className = 'pageShell'
+    shell.dataset.pageNumber = String(pageNumber)
 
     const label = document.createElement('div')
     label.className = 'pageLabel'
     label.textContent = `Page ${pageNumber}`
+
+    const canvasWrap = document.createElement('div')
+    canvasWrap.className = 'pageCanvasWrap'
 
     const canvas = document.createElement('canvas')
     canvas.className = 'pageCanvas'
@@ -159,6 +172,9 @@ async function renderPage(pdf, pageNumber) {
     canvas.height = Math.ceil(viewport.height * outputScale)
     canvas.style.width = `${Math.ceil(viewport.width)}px`
     canvas.style.height = `${Math.ceil(viewport.height)}px`
+
+    const synctexIndicator = document.createElement('div')
+    synctexIndicator.className = 'synctexIndicator'
 
     const context = canvas.getContext('2d', { alpha: false })
     context.scale(outputScale, outputScale)
@@ -169,7 +185,14 @@ async function renderPage(pdf, pageNumber) {
         intent: 'display',
     }).promise
 
-    shell.append(label, canvas)
+    canvasWrap.append(canvas, synctexIndicator)
+    shell.append(label, canvasWrap)
+    renderedPages.set(pageNumber, {
+        canvas,
+        shell,
+        synctexIndicator,
+        viewport,
+    })
     return shell
 }
 
@@ -216,6 +239,52 @@ function queueStatePost() {
             }
         })
     }, 75)
+}
+
+function applyPendingSyncTeX() {
+    const record = pickSyncTeXRecord(pendingSyncTeX)
+    if (!record) {
+        return
+    }
+    const renderedPage = renderedPages.get(record.page)
+    if (!renderedPage) {
+        return
+    }
+
+    const point = renderedPage.viewport.convertToViewportPoint(record.x, record.y)
+    const targetLeft = Math.max(0, renderedPage.shell.offsetLeft + renderedPage.canvas.offsetLeft + point[0] - viewerContainer.clientWidth / 2)
+    const targetTop = Math.max(0, renderedPage.shell.offsetTop + renderedPage.canvas.offsetTop + point[1] - viewerContainer.clientHeight * 0.35)
+
+    viewerContainer.scrollTo({
+        left: targetLeft,
+        top: targetTop,
+        behavior: 'smooth'
+    })
+
+    if (record.indicator) {
+        flashSyncTeXIndicator(renderedPage.synctexIndicator, point[0], point[1])
+    }
+    pendingSyncTeX = undefined
+}
+
+function pickSyncTeXRecord(data) {
+    if (!data) {
+        return undefined
+    }
+    if (Array.isArray(data)) {
+        return data[0]
+    }
+    return data
+}
+
+function flashSyncTeXIndicator(indicator, left, top) {
+    indicator.style.left = `${left}px`
+    indicator.style.top = `${top}px`
+    indicator.classList.add('active')
+    clearTimeout(synctexIndicatorTimer)
+    synctexIndicatorTimer = setTimeout(() => {
+        indicator.classList.remove('active')
+    }, 1200)
 }
 
 function reportError(error) {

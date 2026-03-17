@@ -4,7 +4,7 @@ import * as path from 'path'
 import { lw } from '../lw'
 import type { SyncTeXRecordToPDF, SyncTeXRecordToPDFAll } from '../types'
 import type { PdfViewerParams, PdfViewerState } from '../../types/latex-workshop-protocol-types/index'
-import { getCustomEditorStates, reloadCustomEditorPanels, securePdfCustomEditorViewType } from './pdfcustomeditor'
+import { getCustomEditorStates, revealLocationInCustomEditor, reloadCustomEditorPanels, securePdfCustomEditorViewType } from './pdfcustomeditor'
 
 const logger = lw.log('Viewer')
 
@@ -125,11 +125,16 @@ function getParams(): PdfViewerParams {
  * @param pdfUri The path of a PDF file.
  * @param record The position to be revealed.
  */
-function locate(pdfUri: vscode.Uri, record: SyncTeXRecordToPDF | SyncTeXRecordToPDFAll[]): Promise<void> {
-    void pdfUri
-    void record
-    logger.log('Ignoring SyncTeX locate request because reverse SyncTeX is not wired for the tab viewer.')
-    return Promise.resolve()
+async function locate(pdfUri: vscode.Uri, record: SyncTeXRecordToPDF | SyncTeXRecordToPDFAll[]): Promise<void> {
+    if (await revealLocationInCustomEditor(pdfUri, record)) {
+        logger.log(`Revealed SyncTeX location in open PDF tab for ${pdfUri.toString(true)}.`)
+        return
+    }
+
+    logger.log(`Open PDF tab to reveal SyncTeX location for ${pdfUri.toString(true)}.`)
+    const configuration = vscode.workspace.getConfiguration('latex-workshop')
+    const tabEditorGroup = configuration.get('view.pdf.tab.editorGroup', 'right') as string
+    await openPdfInTab(pdfUri, tabEditorGroup, true)
 }
 
 /**

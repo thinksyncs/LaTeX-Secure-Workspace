@@ -51,11 +51,37 @@ body {
     gap: 8px;
 }
 
+.pageCanvasWrap {
+    position: relative;
+    display: inline-block;
+}
+
 .pageCanvas {
     display: block;
     background: var(--page-background);
     box-shadow: 0 10px 32px rgba(0, 0, 0, 0.22);
     border: 1px solid var(--page-border);
+}
+
+.synctexIndicator {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 16px;
+    height: 16px;
+    border: 2px solid rgba(255, 92, 92, 0.95);
+    border-radius: 999px;
+    background: rgba(255, 92, 92, 0.22);
+    box-shadow: 0 0 0 6px rgba(255, 92, 92, 0.14);
+    pointer-events: none;
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.75);
+    transition: opacity 140ms ease, transform 140ms ease;
+}
+
+.synctexIndicator.active {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
 }
 
 .pageLabel {
