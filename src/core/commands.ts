@@ -125,7 +125,12 @@ export function kill() {
 }
 
 export function synctex() {
-    showDisabledFeature('SyncTeX')
+    logger.log('SYNCTEX command invoked.')
+    if (!vscode.window.activeTextEditor || !lw.file.hasLaTeXLangId(vscode.window.activeTextEditor.document.languageId)) {
+        logger.log('Cannot start SyncTeX. The active editor is undefined, or the document is not a LaTeX document.')
+        return
+    }
+    lw.locate.synctex.toPDF()
 }
 
 export function synctexonref(line: number, filePath: string) {
@@ -488,4 +493,3 @@ export function closeMathPreviewPanel() {
 export function toggleMathPreviewPanel() {
     showDisabledFeature('Math preview panel')
 }
-

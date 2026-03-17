@@ -163,6 +163,8 @@ function registerLatexWorkshopCommands(extensionContext: vscode.ExtensionContext
         vscode.commands.registerCommand('latex-workshop.build-recipe', () => lw.commands.buildRecipe()),
         vscode.commands.registerCommand('latex-workshop.view', (mode?: 'tab' | 'browser' | 'external' | vscode.Uri) => lw.commands.view(mode)),
         vscode.commands.registerCommand('latex-workshop.refresh-viewer', () => lw.commands.refresh()),
+        vscode.commands.registerCommand('latex-workshop.synctex', () => lw.commands.synctex()),
+        vscode.commands.registerCommand('latex-workshop.synctexto', (line: number, filePath: string) => lw.commands.synctexonref(line, filePath)),
         vscode.commands.registerCommand('latex-workshop.recipes', (recipe: string | undefined) => lw.commands.recipes(recipe)),
         vscode.commands.registerCommand('latex-workshop.kill', () => lw.commands.kill()),
         vscode.commands.registerCommand('latex-workshop.clean', () => lw.commands.clean()),
