@@ -1,4 +1,3 @@
-"use strict";
 var __create = Object.create;
 var __defProp = Object.defineProperty;
 var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
@@ -12932,10 +12931,12 @@ ${n}`;
   }
 });
 
-// ../../../Users/akira/latex-workspace-secure/dev/unified.ts
+// ../../../Users/akira/LaTeX-Secure-Workspace/dev/unified.ts
 var unified_exports = {};
 __export(unified_exports, {
-  unified: () => unified2
+  attachMacroArgs: () => attachMacroArgs,
+  getParser: () => getParser,
+  toString: () => toString
 });
 module.exports = __toCommonJS(unified_exports);
 
@@ -38123,16 +38124,11 @@ function toString(ast) {
   }
   return processor.stringify(ast);
 }
-
-// ../../../Users/akira/latex-workspace-secure/dev/unified.ts
-var unified2 = {
-  getParser,
-  attachMacroArgs,
-  toString
-};
 // Annotate the CommonJS export names for ESM import in node:
 0 && (module.exports = {
-  unified
+  attachMacroArgs,
+  getParser,
+  toString
 });
 /*! Bundled license information:
 
