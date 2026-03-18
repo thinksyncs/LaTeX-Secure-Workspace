@@ -255,11 +255,9 @@ function applyPendingSyncTeX() {
     const targetLeft = Math.max(0, renderedPage.shell.offsetLeft + renderedPage.canvas.offsetLeft + point[0] - viewerContainer.clientWidth / 2)
     const targetTop = Math.max(0, renderedPage.shell.offsetTop + renderedPage.canvas.offsetTop + point[1] - viewerContainer.clientHeight * 0.35)
 
-    viewerContainer.scrollTo({
-        left: targetLeft,
-        top: targetTop,
-        behavior: 'smooth'
-    })
+    viewerContainer.scrollLeft = targetLeft
+    viewerContainer.scrollTop = targetTop
+    queueStatePost()
 
     if (record.indicator) {
         flashSyncTeXIndicator(renderedPage.synctexIndicator, point[0], point[1])

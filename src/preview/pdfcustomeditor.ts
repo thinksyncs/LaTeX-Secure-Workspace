@@ -91,6 +91,7 @@ export async function revealLocationInCustomEditor(pdfUri: vscode.Uri, record: S
         return false
     }
     await Promise.all(Array.from(panels.keys()).map(async panel => {
+        panel.reveal(panel.viewColumn, true)
         await postSyncTeX(panel.webview, record)
     }))
     pendingSyncTeX.delete(key)
