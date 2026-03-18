@@ -45,10 +45,10 @@ suite('PDF forward SyncTeX test suite', function() {
 
         const pdfUri = vscode.Uri.file(path.resolve(fixture, 'main.pdf'))
         await vscode.commands.executeCommand('workbench.action.focusLeftGroup')
-        await test.open(path.resolve(fixture, 'main.tex'))
 
         const activeTextEditor = vscode.window.activeTextEditor
         assert.ok(activeTextEditor)
+        assert.strictEqual(activeTextEditor.document.uri.fsPath, path.resolve(fixture, 'main.tex'))
 
         const targetPosition = new vscode.Position(8, 0)
         activeTextEditor.selection = new vscode.Selection(targetPosition, targetPosition)
