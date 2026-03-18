@@ -17,6 +17,12 @@
         <div id="app">
             <div id="statusBar">
                 <span id="statusText">Loading PDF…</span>
+                <div id="zoomToolbar" aria-label="PDF zoom controls">
+                    <button id="zoomOutButton" class="toolbarButton" type="button" title="Zoom out" aria-label="Zoom out">-</button>
+                    <button id="zoomResetButton" class="toolbarButton toolbarButtonLabel" type="button" title="Reset zoom to 100%" aria-label="Reset zoom to 100%">100%</button>
+                    <button id="zoomInButton" class="toolbarButton" type="button" title="Zoom in" aria-label="Zoom in">+</button>
+                    <button id="zoomFitWidthButton" class="toolbarButton toolbarButtonFit" type="button" title="Fit to width" aria-label="Fit to width">Width</button>
+                </div>
             </div>
             <div id="viewerContainer">
                 <div id="pages"></div>

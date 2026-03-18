@@ -3,12 +3,18 @@ const configElement = document.getElementById('pdf-preview-config')
 const statusText = document.getElementById('statusText')
 const viewerContainer = document.getElementById('viewerContainer')
 const pagesRoot = document.getElementById('pages')
+const zoomOutButton = document.getElementById('zoomOutButton')
+const zoomResetButton = document.getElementById('zoomResetButton')
+const zoomInButton = document.getElementById('zoomInButton')
+const zoomFitWidthButton = document.getElementById('zoomFitWidthButton')
 
 const config = JSON.parse(configElement?.dataset.config ?? '{}')
+const persistedState = vscode.getState() ?? {}
+const ZOOM_STEPS = [0.5, 0.67, 0.8, 0.9, 1, 1.1, 1.25, 1.5, 1.75, 2, 2.5, 3]
 const state = {
     path: config.path,
     pdfFileUri: config.path,
-    scale: config.defaults?.scale ?? config.appearance?.scale ?? 'page-width',
+    scale: persistedState.scale ?? config.defaults?.scale ?? config.appearance?.scale ?? 'page-width',
     trim: config.appearance?.trim,
     scrollMode: config.appearance?.scrollMode,
     spreadMode: config.appearance?.spreadMode,
@@ -21,6 +27,7 @@ let resizeTimer = undefined
 let stateTimer = undefined
 let synctexIndicatorTimer = undefined
 let pendingSyncTeX = undefined
+let resolvedScale = 1
 const renderedPages = new Map()
 
 window.addEventListener('message', (event) => {
@@ -45,12 +52,29 @@ window.addEventListener('resize', () => {
     }, 150)
 })
 
+zoomOutButton?.addEventListener('click', () => {
+    void stepZoom('out')
+})
+
+zoomResetButton?.addEventListener('click', () => {
+    void setZoom('100%')
+})
+
+zoomInButton?.addEventListener('click', () => {
+    void stepZoom('in')
+})
+
+zoomFitWidthButton?.addEventListener('click', () => {
+    void setZoom('page-width')
+})
+
 void initialize()
 
 async function initialize() {
     try {
         applyAppearance()
         await renderDocument({ preserveScroll: false })
+        restorePersistedScrollPosition()
         vscode.postMessage({ type: 'initialized' })
     } catch (error) {
         reportError(error)
@@ -99,8 +123,7 @@ function applyAppearance() {
 
 async function renderDocument({ preserveScroll }) {
     const epoch = ++renderEpoch
-    const previousScrollTop = viewerContainer.scrollTop
-    const previousScrollLeft = viewerContainer.scrollLeft
+    const previousScrollAnchor = preserveScroll ? captureScrollAnchor() : undefined
     renderedPages.clear()
     pagesRoot.replaceChildren()
     statusText.textContent = 'Loading PDF…'
@@ -138,12 +161,10 @@ async function renderDocument({ preserveScroll }) {
         pagesRoot.append(pageShell)
     }
 
-    if (preserveScroll) {
-        viewerContainer.scrollTop = previousScrollTop
-        viewerContainer.scrollLeft = previousScrollLeft
-    }
+    restoreScrollAnchor(previousScrollAnchor)
 
     applyPendingSyncTeX()
+    updateZoomUi()
     queueStatePost()
     vscode.postMessage({ type: 'document-loaded' })
 }
@@ -152,6 +173,9 @@ async function renderPage(pdf, pageNumber) {
     const page = await pdf.getPage(pageNumber)
     const unitViewport = page.getViewport({ scale: 1 })
     const scale = resolveScale(unitViewport)
+    if (pageNumber === 1) {
+        resolvedScale = scale
+    }
     const viewport = page.getViewport({ scale })
     const outputScale = window.devicePixelRatio || 1
 
@@ -220,6 +244,78 @@ function resolveScale(viewport) {
         return parsed
     }
     return availableWidth / viewport.width
+}
+
+async function setZoom(nextScale) {
+    state.scale = nextScale
+    await renderDocument({ preserveScroll: true })
+}
+
+async function stepZoom(direction) {
+    const currentScale = resolvedScale > 0 ? resolvedScale : 1
+    const nextScale = direction === 'in'
+        ? findNextZoomStep(currentScale)
+        : findPreviousZoomStep(currentScale)
+    await setZoom(formatZoomScale(nextScale))
+}
+
+function findNextZoomStep(scale) {
+    return ZOOM_STEPS.find((step) => step > scale + 0.01) ?? clampZoomScale(scale + 0.25)
+}
+
+function findPreviousZoomStep(scale) {
+    const reversed = [...ZOOM_STEPS].reverse()
+    return reversed.find((step) => step < scale - 0.01) ?? clampZoomScale(scale - 0.25)
+}
+
+function clampZoomScale(scale) {
+    return Math.min(3, Math.max(0.5, scale))
+}
+
+function formatZoomScale(scale) {
+    return `${Math.round(clampZoomScale(scale) * 100)}%`
+}
+
+function updateZoomUi() {
+    if (!zoomResetButton || !zoomFitWidthButton) {
+        return
+    }
+
+    zoomResetButton.textContent = `${Math.round(resolvedScale * 100)}%`
+    const requestedScale = String(state.scale || '').trim().toLowerCase()
+    const isFitWidth = requestedScale === 'page-width' || requestedScale === 'auto'
+    zoomFitWidthButton.classList.toggle('active', isFitWidth)
+}
+
+function restorePersistedScrollPosition() {
+    if (typeof persistedState.scrollTop === 'number') {
+        viewerContainer.scrollTop = persistedState.scrollTop
+    }
+    if (typeof persistedState.scrollLeft === 'number') {
+        viewerContainer.scrollLeft = persistedState.scrollLeft
+    }
+    queueStatePost()
+}
+
+function captureScrollAnchor() {
+    const maxScrollTop = Math.max(0, viewerContainer.scrollHeight - viewerContainer.clientHeight)
+    const maxScrollLeft = Math.max(0, viewerContainer.scrollWidth - viewerContainer.clientWidth)
+    return {
+        scrollTop: viewerContainer.scrollTop,
+        scrollLeft: viewerContainer.scrollLeft,
+        topRatio: maxScrollTop > 0 ? viewerContainer.scrollTop / maxScrollTop : 0,
+        leftRatio: maxScrollLeft > 0 ? viewerContainer.scrollLeft / maxScrollLeft : 0,
+    }
+}
+
+function restoreScrollAnchor(anchor) {
+    if (!anchor) {
+        return
+    }
+    const maxScrollTop = Math.max(0, viewerContainer.scrollHeight - viewerContainer.clientHeight)
+    const maxScrollLeft = Math.max(0, viewerContainer.scrollWidth - viewerContainer.clientWidth)
+    viewerContainer.scrollTop = maxScrollTop > 0 ? anchor.topRatio * maxScrollTop : anchor.scrollTop
+    viewerContainer.scrollLeft = maxScrollLeft > 0 ? anchor.leftRatio * maxScrollLeft : anchor.scrollLeft
 }
 
 function queueStatePost() {
