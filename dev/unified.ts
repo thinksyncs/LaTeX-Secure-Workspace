@@ -1,5 +1,5 @@
-// Run `npx esbuild dev/unified.ts --platform=node --format=cjs --bundle --outfile=resources/unified.js`
-// so the runtime parser helper does not depend on separately packaged modules.
+// Run `npx esbuild dev/unified.ts --platform=node --format=cjs --packages=external --outfile=resources/unified.js`
+// to keep dependency code external and avoid vendoring large bundled helpers.
 
 import { getParser } from '@unified-latex/unified-latex-util-parse'
 import { attachMacroArgs } from '@unified-latex/unified-latex-util-arguments'
