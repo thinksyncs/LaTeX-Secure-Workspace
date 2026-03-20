@@ -41,6 +41,22 @@ window.addEventListener('message', (event) => {
     }
 })
 
+window.addEventListener('error', (event) => {
+    const reason = event.error instanceof Error ? event.error.stack ?? event.error.message : event.message
+    vscode.postMessage({
+        type: 'document-error',
+        message: `Minimal viewer error: ${String(reason)}`
+    })
+})
+
+window.addEventListener('unhandledrejection', (event) => {
+    const reason = event.reason instanceof Error ? event.reason.stack ?? event.reason.message : String(event.reason)
+    vscode.postMessage({
+        type: 'document-error',
+        message: `Minimal viewer rejection: ${reason}`
+    })
+})
+
 viewerContainer.addEventListener('scroll', () => {
     queueStatePost()
 }, { passive: true })
@@ -321,18 +337,11 @@ function restoreScrollAnchor(anchor) {
 function queueStatePost() {
     clearTimeout(stateTimer)
     stateTimer = setTimeout(() => {
-        vscode.setState({
-            ...state,
-            scrollTop: viewerContainer.scrollTop,
-            scrollLeft: viewerContainer.scrollLeft,
-        })
+        const nextState = snapshotViewerState()
+        vscode.setState(nextState)
         vscode.postMessage({
             type: 'state',
-            state: {
-                ...state,
-                scrollTop: viewerContainer.scrollTop,
-                scrollLeft: viewerContainer.scrollLeft,
-            }
+            state: nextState
         })
     }, 75)
 }
@@ -353,6 +362,12 @@ function applyPendingSyncTeX() {
 
     viewerContainer.scrollLeft = targetLeft
     viewerContainer.scrollTop = targetTop
+    const nextState = snapshotViewerState()
+    vscode.setState(nextState)
+    vscode.postMessage({
+        type: 'synctex-applied',
+        state: nextState
+    })
     queueStatePost()
 
     if (record.indicator) {
@@ -379,6 +394,14 @@ function flashSyncTeXIndicator(indicator, left, top) {
     synctexIndicatorTimer = setTimeout(() => {
         indicator.classList.remove('active')
     }, 1200)
+}
+
+function snapshotViewerState() {
+    return {
+        ...state,
+        scrollTop: viewerContainer.scrollTop,
+        scrollLeft: viewerContainer.scrollLeft,
+    }
 }
 
 function reportError(error) {

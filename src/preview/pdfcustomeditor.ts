@@ -31,7 +31,6 @@ export class SecurePdfCustomEditorProvider implements vscode.CustomReadonlyEdito
         }
         configureSecurePdfViewerWebview(webviewPanel.webview, pdfUri)
         updateViewerState(pdfUri, webviewPanel, baseState)
-        webviewPanel.webview.html = await getPdfViewerCustomEditorHtml(pdfUri, webviewPanel.webview)
 
         webviewPanel.webview.onDidReceiveMessage((msg: unknown) => {
             if (typeof msg !== 'object' || msg === null) {
@@ -41,13 +40,16 @@ export class SecurePdfCustomEditorProvider implements vscode.CustomReadonlyEdito
             if ((payload.type === 'viewer-log' || payload.type === 'log' || payload.type === 'document-error') && typeof payload.message === 'string') {
                 logger.log(payload.message)
             }
-            if (payload.type === 'state' && payload.state && typeof payload.state === 'object') {
+            if ((payload.type === 'state' || payload.type === 'synctex-applied') && payload.state && typeof payload.state === 'object') {
                 const nextState = {
                     ...baseState,
                     ...payload.state
                 }
                 updateViewerState(pdfUri, webviewPanel, nextState)
                 lw.event.fire(lw.event.ViewerStatusChanged, nextState)
+                if (payload.type === 'synctex-applied') {
+                    pendingSyncTeX.delete(toKey(pdfUri))
+                }
             }
             if (payload.type === 'document-loaded' || payload.type === 'viewer-loaded' || payload.type === 'initialized') {
                 logger.log(`Custom PDF viewer loaded for ${pdfUri.toString(true)}`)
@@ -57,6 +59,7 @@ export class SecurePdfCustomEditorProvider implements vscode.CustomReadonlyEdito
                 void deliverPendingSyncTeX(pdfUri, webviewPanel)
             }
         })
+        webviewPanel.webview.html = await getPdfViewerCustomEditorHtml(pdfUri, webviewPanel.webview)
 
         const watcher = vscode.workspace.createFileSystemWatcher(pdfUri.fsPath)
         const reload = async () => {
@@ -94,7 +97,6 @@ export async function revealLocationInCustomEditor(pdfUri: vscode.Uri, record: S
         panel.reveal(panel.viewColumn, true)
         await postSyncTeX(panel.webview, record)
     }))
-    pendingSyncTeX.delete(key)
     return true
 }
 
@@ -145,11 +147,10 @@ async function deliverPendingSyncTeX(pdfUri: vscode.Uri, panel: vscode.WebviewPa
         return
     }
     await postSyncTeX(panel.webview, record)
-    pendingSyncTeX.delete(key)
 }
 
-async function postSyncTeX(webview: vscode.Webview, record: SyncTeXRecordToPDF | SyncTeXRecordToPDFAll[]): Promise<void> {
-    await webview.postMessage({
+async function postSyncTeX(webview: vscode.Webview, record: SyncTeXRecordToPDF | SyncTeXRecordToPDFAll[]): Promise<boolean> {
+    return await webview.postMessage({
         type: 'synctex',
         data: record
     })
@@ -164,5 +165,6 @@ function deleteViewerState(pdfUri: vscode.Uri, panel: vscode.WebviewPanel): void
     panelStates.delete(panel)
     if (panelStates.size === 0) {
         viewerStates.delete(key)
+        pendingSyncTeX.delete(key)
     }
 }
