@@ -3,6 +3,12 @@
 Typo fixes and other documentation improvements are welcome.
 Please note that pull requests that change default setting values or add additional recipes to the default settings are generally not accepted.
 
+## Review policy
+
+All non-trivial changes should land through a pull request and receive human review before merge.
+
+The repository includes [`.github/CODEOWNERS`](./.github/CODEOWNERS) so GitHub rulesets or branch protection can require maintainer review on protected branches.
+
 ## Quickstart
 
 ```bash
@@ -46,6 +52,10 @@ To build a release image, run
 To run tests, run
 
     npm run test
+
+To run the property-based fuzzing check used by CI and OpenSSF Scorecard detection, run
+
+    npm run test:fuzz
 
 To run a specific test, run
 
