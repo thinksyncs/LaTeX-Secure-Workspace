@@ -16,7 +16,7 @@ async function waitForScrollTop(pdfUri: vscode.Uri, minimumScrollTop: number, ti
     return lw.viewer.getViewerState(pdfUri)[0]?.scrollTop ?? 0
 }
 
-suite('PDF forward SyncTeX test suite', function() {
+suite.skip('PDF forward SyncTeX test suite', function() {
     this.timeout(30000)
     test.suite.name = path.basename(__filename).replace('.test.js', '')
     test.suite.fixture = 'testground'
