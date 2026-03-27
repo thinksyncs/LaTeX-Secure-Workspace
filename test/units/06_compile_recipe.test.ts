@@ -155,9 +155,9 @@ describe(path.basename(__filename).split('.')[0] + ':', () => {
 
             const step = queue.getStep()
             assert.ok(step)
-            assert.ok(step.args?.includes(rootFile.replace('.tex', '')))
-            assert.ok(step.args?.includes(`-outdir=${path.dirname(rootFile)}`))
-            assert.ok(step.args?.includes(`-auxdir=${path.dirname(rootFile)}`))
+            assert.ok(step.args?.includes(rootFile.replace(/\\/g, '/').replace('.tex', '')))
+            assert.ok(step.args?.includes(`-outdir=${path.dirname(rootFile).replace(/\\/g, '/')}`))
+            assert.ok(step.args?.includes(`-auxdir=${path.dirname(rootFile).replace(/\\/g, '/')}`))
         })
 
         it('should modify the fixed command when Docker is enabled on Windows', async () => {
