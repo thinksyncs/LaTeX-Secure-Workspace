@@ -83,6 +83,15 @@ export function getCustomEditorStates(pdfUri: vscode.Uri): PdfViewerState[] {
     return Array.from(viewerStates.get(toKey(pdfUri))?.values() ?? [])
 }
 
+export const components = {
+    deliverPendingSyncTeX,
+    deleteViewerState,
+    pendingSyncTeX,
+    postSyncTeX,
+    updateViewerState,
+    viewerStates,
+}
+
 export async function revealLocationInCustomEditor(pdfUri: vscode.Uri, record: SyncTeXRecordToPDF | SyncTeXRecordToPDFAll[]): Promise<boolean> {
     const key = toKey(pdfUri)
     pendingSyncTeX.set(key, record)
