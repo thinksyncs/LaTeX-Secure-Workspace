@@ -19,11 +19,20 @@ let renderEpoch = 0
 let currentPdf = undefined
 let resizeTimer = undefined
 let stateTimer = undefined
+let synctexIndicatorTimer = undefined
+let pendingSyncTeX = undefined
+const renderedPages = new Map()
+const reverseSyncTeXKeybinding = config.appearance?.keybindings?.synctex ?? 'ctrl-click'
 
 window.addEventListener('message', (event) => {
     const message = event.data
     if (message?.type === 'reload') {
         void renderDocument({ preserveScroll: true })
+        return
+    }
+    if (message?.type === 'synctex') {
+        pendingSyncTeX = normalizeSyncTeXData(message.data)
+        applyPendingSyncTeX()
     }
 })
 
@@ -95,6 +104,7 @@ async function renderDocument({ preserveScroll }) {
     const previousScrollTop = viewerContainer.scrollTop
     const previousScrollLeft = viewerContainer.scrollLeft
     pagesRoot.replaceChildren()
+    renderedPages.clear()
     statusText.textContent = 'Loading PDF…'
 
     try {
@@ -126,8 +136,9 @@ async function renderDocument({ preserveScroll }) {
         if (epoch !== renderEpoch) {
             return
         }
-        const pageShell = await renderPage(pdf, pageNumber)
-        pagesRoot.append(pageShell)
+        const renderedPage = await renderPage(pdf, pageNumber)
+        pagesRoot.append(renderedPage.shell)
+        renderedPages.set(pageNumber, renderedPage)
     }
 
     if (preserveScroll) {
@@ -135,6 +146,7 @@ async function renderDocument({ preserveScroll }) {
         viewerContainer.scrollLeft = previousScrollLeft
     }
 
+    applyPendingSyncTeX()
     queueStatePost()
     vscode.postMessage({ type: 'document-loaded' })
 }
@@ -148,10 +160,14 @@ async function renderPage(pdf, pageNumber) {
 
     const shell = document.createElement('section')
     shell.className = 'pageShell'
+    shell.dataset.pageNumber = String(pageNumber)
 
     const label = document.createElement('div')
     label.className = 'pageLabel'
     label.textContent = `Page ${pageNumber}`
+
+    const canvasWrap = document.createElement('div')
+    canvasWrap.className = 'pageCanvasWrap'
 
     const canvas = document.createElement('canvas')
     canvas.className = 'pageCanvas'
@@ -159,6 +175,9 @@ async function renderPage(pdf, pageNumber) {
     canvas.height = Math.ceil(viewport.height * outputScale)
     canvas.style.width = `${Math.ceil(viewport.width)}px`
     canvas.style.height = `${Math.ceil(viewport.height)}px`
+
+    const synctexIndicator = document.createElement('div')
+    synctexIndicator.className = 'synctexIndicator'
 
     const context = canvas.getContext('2d', { alpha: false })
     context.scale(outputScale, outputScale)
@@ -169,8 +188,51 @@ async function renderPage(pdf, pageNumber) {
         intent: 'display',
     }).promise
 
-    shell.append(label, canvas)
-    return shell
+    canvasWrap.append(canvas, synctexIndicator)
+    shell.append(label, canvasWrap)
+    installReverseSyncTeXHandlers(canvasWrap, viewport, pageNumber)
+    return {
+        canvas,
+        shell,
+        synctexIndicator,
+        viewport,
+    }
+}
+
+function installReverseSyncTeXHandlers(canvasWrap, viewport, pageNumber) {
+    canvasWrap.addEventListener('click', (event) => {
+        if (reverseSyncTeXKeybinding !== 'ctrl-click') {
+            return
+        }
+        if (!(event.ctrlKey || event.metaKey)) {
+            return
+        }
+        event.preventDefault()
+        postReverseSyncTeX(event, canvasWrap, viewport, pageNumber)
+    })
+
+    canvasWrap.addEventListener('dblclick', (event) => {
+        if (reverseSyncTeXKeybinding !== 'double-click') {
+            return
+        }
+        event.preventDefault()
+        postReverseSyncTeX(event, canvasWrap, viewport, pageNumber)
+    })
+}
+
+function postReverseSyncTeX(event, canvasWrap, viewport, pageNumber) {
+    const rect = canvasWrap.getBoundingClientRect()
+    const offsetX = event.clientX - rect.left
+    const offsetY = event.clientY - rect.top
+    const pos = viewport.convertToPdfPoint(offsetX, offsetY)
+
+    vscode.postMessage({
+        type: 'reverse_synctex',
+        page: pageNumber,
+        pos,
+        textBeforeSelection: '',
+        textAfterSelection: '',
+    })
 }
 
 function resolveScale(viewport) {
@@ -216,6 +278,50 @@ function queueStatePost() {
             }
         })
     }, 75)
+}
+
+function pickSyncTeXRecord(data) {
+    if (Array.isArray(data)) {
+        return data[0]
+    }
+    if (typeof data === 'object' && data !== null) {
+        return data
+    }
+    return undefined
+}
+
+function applyPendingSyncTeX() {
+    const record = pickSyncTeXRecord(pendingSyncTeX)
+    if (!record) {
+        return
+    }
+    const renderedPage = renderedPages.get(record.page)
+    if (!renderedPage) {
+        return
+    }
+
+    const point = renderedPage.viewport.convertToViewportPoint(record.x, record.y)
+    const targetLeft = Math.max(0, renderedPage.shell.offsetLeft + renderedPage.canvas.offsetLeft + point[0] - viewerContainer.clientWidth / 2)
+    const targetTop = Math.max(0, renderedPage.shell.offsetTop + renderedPage.canvas.offsetTop + point[1] - viewerContainer.clientHeight * 0.35)
+
+    viewerContainer.scrollLeft = targetLeft
+    viewerContainer.scrollTop = targetTop
+    queueStatePost()
+
+    if (record.indicator) {
+        flashSyncTeXIndicator(renderedPage.synctexIndicator, point[0], point[1])
+    }
+    pendingSyncTeX = undefined
+}
+
+function flashSyncTeXIndicator(indicator, left, top) {
+    indicator.style.left = `${left}px`
+    indicator.style.top = `${top}px`
+    indicator.classList.add('active')
+    clearTimeout(synctexIndicatorTimer)
+    synctexIndicatorTimer = setTimeout(() => {
+        indicator.classList.remove('active')
+    }, 1200)
 }
 
 function reportError(error) {

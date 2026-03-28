@@ -37,12 +37,12 @@ export async function buildRecipe() {
         return
     }
     const configuration = vscode.workspace.getConfiguration('latex-workshop', lw.root.getWorkspace())
-    const recipes = configuration.get('latex.recipes', []) as {name: string}[]
-    if (recipes.length === 0) {
+    const configuredRecipes = configuration.get('latex.recipes', []) as {name: string}[]
+    if (configuredRecipes.length === 0) {
         void vscode.window.showWarningMessage('No LaTeX recipes are configured.')
         return
     }
-    const picked = await vscode.window.showQuickPick(recipes.map(recipe => recipe.name), {
+    const picked = await vscode.window.showQuickPick(configuredRecipes.map(recipe => recipe.name), {
         placeHolder: 'Select a recipe to build the current LaTeX project'
     })
     if (!picked) {
@@ -125,12 +125,19 @@ export function kill() {
 }
 
 export function synctex() {
-    showDisabledFeature('SyncTeX')
+    logger.log('SYNCTEX command invoked.')
+    const editor = vscode.window.activeTextEditor ?? lw.previousActive
+    if (!editor || !lw.file.hasLaTeXLangId(editor.document.languageId)) {
+        logger.log('Cannot start SyncTeX. The active editor is undefined, or the document is not a LaTeX document.')
+        return
+    }
+    lw.locate.synctex.toPDF()
 }
 
 export function synctexonref(line: number, filePath: string) {
     logger.log('SYNCTEX command invoked on a reference.')
-    if (!vscode.window.activeTextEditor || !lw.file.hasLaTeXLangId(vscode.window.activeTextEditor.document.languageId)) {
+    const editor = vscode.window.activeTextEditor ?? lw.previousActive
+    if (!editor || !lw.file.hasLaTeXLangId(editor.document.languageId)) {
         logger.log('Cannot start SyncTeX. The active editor is undefined, or the document is not a LaTeX document.')
         return
     }
@@ -182,12 +189,11 @@ export async function gotoSection(filePath: string, lineNumber: number) {
 
     const doc = await vscode.workspace.openTextDocument(filePath)
     await vscode.window.showTextDocument(doc)
-    // input lineNumber is one-based, while editor position is zero-based.
     await vscode.commands.executeCommand('revealLine', { lineNumber, at: 'center' })
     if (vscode.window.activeTextEditor) {
         vscode.window.activeTextEditor.selection = new vscode.Selection(new vscode.Position(lineNumber, 0), new vscode.Position(lineNumber, 0))
         if (vscode.workspace.getConfiguration('latex-workshop').get('view.outline.sync.viewer') as boolean) {
-            lw.locate.synctex.toPDF(undefined, { line: lineNumber, filePath: doc.fileName })
+            lw.locate.synctex.toPDF(undefined, { line: lineNumber + 1, filePath: doc.fileName })
         }
     }
 }
@@ -488,4 +494,3 @@ export function closeMathPreviewPanel() {
 export function toggleMathPreviewPanel() {
     showDisabledFeature('Math preview panel')
 }
-

@@ -27,6 +27,10 @@ export const root = {
 const FIXED_ROOT_INDICATOR = /\\documentclass(?:\s*\[.*\])?\s*\{.*\}|\\begin\s*{document}|\\starttext|\\startTEXpage/ms
 const FIXED_ROOT_INCLUDE_GLOB = '{**/*.tex,**/*.rnw,**/*.Rnw}'
 
+function getEditorForRootDetection(): vscode.TextEditor | undefined {
+    return vscode.window.activeTextEditor ?? lw.previousActive
+}
+
 lw.watcher.src.onDelete(uri => {
     if (uri.fsPath !== root.file.path) {
         return
@@ -168,11 +172,12 @@ function getWorkspace(filePath?: string): vscode.Uri | undefined {
     }
     // If we don't have an active text editor, we can only make a guess.
     // Let's guess the first one.
-    if (!vscode.window.activeTextEditor) {
+    const editor = getEditorForRootDetection()
+    if (!editor) {
         return firstWorkspace.uri
     }
     // Get the workspace folder which contains the active document.
-    return (vscode.workspace.getWorkspaceFolder(vscode.window.activeTextEditor.document.uri) ?? firstWorkspace).uri
+    return (vscode.workspace.getWorkspaceFolder(editor.document.uri) ?? firstWorkspace).uri
 }
 
 /**
@@ -293,20 +298,21 @@ async function findFromActive(): Promise<string | undefined> {
 }
 
 async function findSecurityFromActive(): Promise<string | undefined> {
-    if (!vscode.window.activeTextEditor) {
+    const editor = getEditorForRootDetection()
+    if (!editor) {
         return
     }
-    if (!lw.constant.FILE_URI_SCHEMES.includes(vscode.window.activeTextEditor.document.uri.scheme)) {
-        logger.log(`The active document cannot be used as the secure root file: ${vscode.window.activeTextEditor.document.uri.toString(true)}`)
+    if (!lw.constant.FILE_URI_SCHEMES.includes(editor.document.uri.scheme)) {
+        logger.log(`The active document cannot be used as the secure root file: ${editor.document.uri.toString(true)}`)
         return
     }
     logger.log('Try finding secure root from active editor.')
-    const activeFilePath = vscode.window.activeTextEditor.document.fileName
+    const activeFilePath = editor.document.fileName
     if (lw.file.hasAlwaysRootExt(path.extname(activeFilePath))) {
         logger.log(`Found secure root file from active editor: ${activeFilePath}`)
         return activeFilePath
     }
-    const content = utils.stripCommentsAndVerbatim(vscode.window.activeTextEditor.document.getText())
+    const content = utils.stripCommentsAndVerbatim(editor.document.getText())
     if (content.match(FIXED_ROOT_INDICATOR)) {
         const rootFilePath = await findSubfiles(content)
         if (rootFilePath) {
@@ -336,7 +342,11 @@ async function findSubfiles(content: string): Promise<string | undefined> {
     if (!result) {
         return
     }
-    const filePath = await utils.resolveFile([path.dirname(vscode.window.activeTextEditor!.document.fileName)], result[1])
+    const editor = getEditorForRootDetection()
+    if (!editor) {
+        return
+    }
+    const filePath = await utils.resolveFile([path.dirname(editor.document.fileName)], result[1])
     if (filePath) {
         logger.log(`Found subfile root ${filePath} from active.`)
     }
@@ -458,7 +468,7 @@ async function findSecurityInWorkspace(): Promise<string | undefined> {
 }
 
 function selectBestCandidate(candidates: string[]): string {
-    const activeFilePath = vscode.window.activeTextEditor?.document.fileName
+    const activeFilePath = getEditorForRootDetection()?.document.fileName
     if (!activeFilePath) {
         return candidates[0]
     }
