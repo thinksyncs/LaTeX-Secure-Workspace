@@ -19,6 +19,7 @@ let renderEpoch = 0
 let currentPdf = undefined
 let resizeTimer = undefined
 let stateTimer = undefined
+let synctexIndicatorTimer = undefined
 let pendingSyncTeX = undefined
 const renderedPages = new Map()
 
@@ -158,10 +159,14 @@ async function renderPage(pdf, pageNumber) {
 
     const shell = document.createElement('section')
     shell.className = 'pageShell'
+    shell.dataset.pageNumber = String(pageNumber)
 
     const label = document.createElement('div')
     label.className = 'pageLabel'
     label.textContent = `Page ${pageNumber}`
+
+    const canvasWrap = document.createElement('div')
+    canvasWrap.className = 'pageCanvasWrap'
 
     const canvas = document.createElement('canvas')
     canvas.className = 'pageCanvas'
@@ -169,6 +174,9 @@ async function renderPage(pdf, pageNumber) {
     canvas.height = Math.ceil(viewport.height * outputScale)
     canvas.style.width = `${Math.ceil(viewport.width)}px`
     canvas.style.height = `${Math.ceil(viewport.height)}px`
+
+    const synctexIndicator = document.createElement('div')
+    synctexIndicator.className = 'synctexIndicator'
 
     const context = canvas.getContext('2d', { alpha: false })
     context.scale(outputScale, outputScale)
@@ -179,12 +187,13 @@ async function renderPage(pdf, pageNumber) {
         intent: 'display',
     }).promise
 
-    shell.append(label, canvas)
+    canvasWrap.append(canvas, synctexIndicator)
+    shell.append(label, canvasWrap)
     return {
+        canvas,
         shell,
-        scale,
-        viewportWidth: unitViewport.width,
-        viewportHeight: unitViewport.height,
+        synctexIndicator,
+        viewport,
     }
 }
 
@@ -233,7 +242,7 @@ function queueStatePost() {
     }, 75)
 }
 
-function normalizeSyncTeXData(data) {
+function pickSyncTeXRecord(data) {
     if (Array.isArray(data)) {
         return data[0]
     }
@@ -244,19 +253,37 @@ function normalizeSyncTeXData(data) {
 }
 
 function applyPendingSyncTeX() {
-    if (!pendingSyncTeX) {
+    const record = pickSyncTeXRecord(pendingSyncTeX)
+    if (!record) {
         return
     }
-    const renderedPage = renderedPages.get(pendingSyncTeX.page)
+    const renderedPage = renderedPages.get(record.page)
     if (!renderedPage) {
         return
     }
-    const x = Math.max(0, renderedPage.shell.offsetLeft + (pendingSyncTeX.x * renderedPage.scale) - (viewerContainer.clientWidth / 2))
-    const yFromTop = Math.max(0, (renderedPage.viewportHeight - pendingSyncTeX.y) * renderedPage.scale)
-    const y = Math.max(0, renderedPage.shell.offsetTop + yFromTop - (viewerContainer.clientHeight / 2))
-    viewerContainer.scrollLeft = x
-    viewerContainer.scrollTop = y
+
+    const point = renderedPage.viewport.convertToViewportPoint(record.x, record.y)
+    const targetLeft = Math.max(0, renderedPage.shell.offsetLeft + renderedPage.canvas.offsetLeft + point[0] - viewerContainer.clientWidth / 2)
+    const targetTop = Math.max(0, renderedPage.shell.offsetTop + renderedPage.canvas.offsetTop + point[1] - viewerContainer.clientHeight * 0.35)
+
+    viewerContainer.scrollLeft = targetLeft
+    viewerContainer.scrollTop = targetTop
+    queueStatePost()
+
+    if (record.indicator) {
+        flashSyncTeXIndicator(renderedPage.synctexIndicator, point[0], point[1])
+    }
     pendingSyncTeX = undefined
+}
+
+function flashSyncTeXIndicator(indicator, left, top) {
+    indicator.style.left = `${left}px`
+    indicator.style.top = `${top}px`
+    indicator.classList.add('active')
+    clearTimeout(synctexIndicatorTimer)
+    synctexIndicatorTimer = setTimeout(() => {
+        indicator.classList.remove('active')
+    }, 1200)
 }
 
 function reportError(error) {
