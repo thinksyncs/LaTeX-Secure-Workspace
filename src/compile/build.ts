@@ -30,10 +30,26 @@ lw.watcher.bib.onChange(filePath => autoBuild(filePath.fsPath, 'onFileChange', t
  * changed.
  */
 function autoBuild(file: string, type: 'onFileChange' | 'onSave', bibChanged: boolean = false) {
-    void file
-    void type
-    void bibChanged
-    logger.log('Auto build is disabled in this secure build.')
+    const configuration = vscode.workspace.getConfiguration('latex-workshop', lw.file.toUri(file))
+    if (configuration.get('latex.autoBuild.run') as string !== type) {
+        return
+    }
+    logger.log('Auto build started ' + (type === 'onFileChange' ? 'detecting the change of a file' : 'on saving file') + `: ${file} .`)
+    lw.event.fire(lw.event.AutoBuildInitiated, {type, file})
+    if (!canAutoBuild(file)) {
+        logger.log('Autobuild temporarily disabled.')
+        return
+    }
+    lw.compile.lastAutoBuildTime = Date.now()
+    if (!bibChanged && lw.root.subfiles.path && configuration.get('latex.rootFile.useSubFile')) {
+        return build(true, lw.root.subfiles.path, lw.root.subfiles.langId)
+    }
+    return build(true, lw.root.file.path, lw.root.file.langId)
+}
+
+function canAutoBuild(file: string): boolean {
+    const configuration = vscode.workspace.getConfiguration('latex-workshop', lw.file.toUri(file))
+    return Date.now() - lw.compile.lastAutoBuildTime >= (configuration.get('latex.autoBuild.interval', 1000) as number)
 }
 
 /**

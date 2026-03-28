@@ -1,5 +1,6 @@
 import * as path from 'path'
 import * as vscode from 'vscode'
+import { getAvailableRecipes } from '../compile/recipe'
 import { lw } from '../lw'
 import { getSurroundingMacroRange, stripText } from '../utils/utils'
 
@@ -36,8 +37,7 @@ export async function buildRecipe() {
     if (!requireTrustedWorkspace('Build')) {
         return
     }
-    const configuration = vscode.workspace.getConfiguration('latex-workshop', lw.root.getWorkspace())
-    const configuredRecipes = configuration.get('latex.recipes', []) as {name: string}[]
+    const configuredRecipes = await getAvailableRecipes(lw.root.getWorkspace())
     if (configuredRecipes.length === 0) {
         void vscode.window.showWarningMessage('No LaTeX recipes are configured.')
         return
@@ -70,9 +70,27 @@ export async function revealOutputDir() {
     await vscode.commands.executeCommand('revealFileInOS', lw.file.toUri(outDir))
 }
 
-export function recipes(recipe?: string) {
-    void recipe
-    showDisabledFeature('Custom recipes')
+export async function recipes(recipe?: string) {
+    logger.log('RECIPES command invoked.')
+    if (!requireTrustedWorkspace('Build')) {
+        return
+    }
+    const configuredRecipes = await getAvailableRecipes(lw.root.getWorkspace())
+    if (configuredRecipes.length === 0) {
+        void vscode.window.showWarningMessage('No LaTeX recipes are configured.')
+        return
+    }
+    if (recipe) {
+        await build(false, undefined, undefined, recipe)
+        return
+    }
+    const picked = await vscode.window.showQuickPick(configuredRecipes.map(candidate => candidate.name), {
+        placeHolder: 'Please Select a LaTeX Recipe'
+    })
+    if (!picked) {
+        return
+    }
+    await build(false, undefined, undefined, picked)
 }
 
 export async function view(mode?: 'tab' | 'browser' | 'external' | vscode.Uri) {
@@ -470,12 +488,19 @@ export async function devStripText() {
 }
 
 export function texdoc(packageName?: string) {
-    void packageName
-    showDisabledFeature('Texdoc')
+    logger.log('TEXDOC command invoked.')
+    if (!requireTrustedWorkspace('Texdoc')) {
+        return
+    }
+    void lw.extra.texdoc(packageName)
 }
 
 export function texdocUsepackages() {
-    showDisabledFeature('Texdoc')
+    logger.log('TEXDOC USEPACKAGES command invoked.')
+    if (!requireTrustedWorkspace('Texdoc')) {
+        return
+    }
+    void lw.extra.texdoc(undefined, true)
 }
 
 export async function saveActive() {

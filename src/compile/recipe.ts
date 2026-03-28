@@ -33,6 +33,8 @@ let state: {
 type InspectValue<T> = {
     defaultValue?: T
     globalValue?: T
+    workspaceValue?: T
+    workspaceFolderValue?: T
 }
 
 initialize()
@@ -76,6 +78,30 @@ async function getSecureDockerSetting<T>(section: string, fallback: T): Promise<
 
 function getNonWorkspaceValue<T>(inspect: InspectValue<T>, fallback: T): T {
     return inspect.globalValue ?? inspect.defaultValue ?? fallback
+}
+
+async function getSecureConfigurationValue<T>(scope: vscode.ConfigurationScope | undefined, section: string, fallback: T): Promise<T> {
+    const configuration = vscode.workspace.getConfiguration('latex-workshop', scope)
+    if (process.env.LATEXWORKSHOP_CITEST === '1') {
+        return configuration.get(section, fallback)
+    }
+
+    const inspect = configuration.inspect<T>(section) as InspectValue<T> | undefined
+    if (!inspect) {
+        return fallback
+    }
+    if (inspect.workspaceValue !== undefined || inspect.workspaceFolderValue !== undefined) {
+        await confirmNoWorkspaceConfigurationOverride(scope, section)
+        return getNonWorkspaceValue(inspect, fallback)
+    }
+    return configuration.get(section, fallback)
+}
+
+export async function getAvailableRecipes(scope?: vscode.ConfigurationScope): Promise<Recipe[]> {
+    return getSecureConfigurationValue<Recipe[]>(scope, 'latex.recipes', [{
+        name: FIXED_SECURE_RECIPE_NAME,
+        tools: [JSON.parse(JSON.stringify(FIXED_SECURE_TOOL)) as Tool]
+    }])
 }
 
 /**
@@ -189,15 +215,24 @@ async function createBuildTools(rootFile: string, langId: string, recipeName?: s
     if (hasBuildMagicComments && configuration.get('latex.build.enableMagicComments')) {
         logger.log('Ignoring magic-command comments in secure build.')
     }
-    const recipe = findRecipe(rootFile, langId, recipeName)
+    const recipe = await findRecipe(rootFile, langId, recipeName)
     if (recipe === undefined) {
         return
     }
     logger.log(`Preparing to run recipe: ${recipe.name}.`)
     state.prevRecipe = recipe
     state.prevLangId = langId
+    const tools = await getSecureConfigurationValue<Tool[]>(lw.file.toUri(rootFile), 'latex.tools', [])
     recipe.tools.forEach(tool => {
-        if (typeof tool !== 'string') {
+        if (typeof tool === 'string') {
+            const candidates = tools.filter(candidate => candidate.name === tool)
+            if (candidates.length < 1) {
+                logger.log(`Skipping undefined tool ${tool} in recipe ${recipe.name}.`)
+                void logger.showErrorMessage(`Skipping undefined tool "${tool}" in recipe "${recipe.name}."`)
+            } else {
+                buildTools.push(candidates[0])
+            }
+        } else {
             buildTools.push(tool)
         }
     })
@@ -284,16 +319,50 @@ async function findMagicComments(rootFile: string): Promise<{tex?: Tool, bib?: T
  * @returns {Recipe | undefined} - The Recipe object corresponding to the
  * provided parameters.
  */
-function findRecipe(rootFile: string, langId: string, recipeName?: string): Recipe | undefined {
-    void rootFile
-    void langId
-    if (recipeName && recipeName !== FIXED_SECURE_RECIPE_NAME) {
-        logger.log(`Ignoring requested recipe ${recipeName} in this secure build.`)
+async function findRecipe(rootFile: string, langId: string, recipeName?: string): Promise<Recipe | undefined> {
+    const scope = lw.file.toUri(rootFile)
+    const recipes = await getAvailableRecipes(scope)
+    const defaultRecipeName = await getSecureConfigurationValue<string>(scope, 'latex.recipe.default', 'first')
+
+    if (recipes.length < 1) {
+        logger.log('No recipes defined.')
+        void logger.showErrorMessage('[Builder] No recipes defined.')
+        return
     }
-    return {
-        name: FIXED_SECURE_RECIPE_NAME,
-        tools: [JSON.parse(JSON.stringify(FIXED_SECURE_TOOL)) as Tool]
+    if (state.prevLangId !== langId) {
+        state.prevRecipe = undefined
     }
+    let recipe: Recipe | undefined
+    if (recipeName === undefined && !['first', 'lastUsed'].includes(defaultRecipeName)) {
+        recipeName = defaultRecipeName
+    }
+    if (recipeName) {
+        recipe = recipes.find(candidate => candidate.name === recipeName)
+        if (recipe === undefined) {
+            logger.log(`Failed to resolve build recipe: ${recipeName}.`)
+            void logger.showErrorMessage(`[Builder] Failed to resolve build recipe: ${recipeName}.`)
+        }
+    }
+    if (recipe === undefined && defaultRecipeName === 'lastUsed') {
+        recipe = recipes.find(candidate => candidate.name === state.prevRecipe?.name)
+    }
+    if (recipe === undefined) {
+        let candidates: Recipe[] = recipes
+        if (langId === 'rsweave') {
+            candidates = recipes.filter(candidate => candidate.name.toLowerCase().match('rnw|rsweave'))
+        } else if (langId === 'jlweave') {
+            candidates = recipes.filter(candidate => candidate.name.toLowerCase().match('jnw|jlweave|weave.jl'))
+        } else if (langId === 'pweave') {
+            candidates = recipes.filter(candidate => candidate.name.toLowerCase().match('pnw|pweave'))
+        }
+        if (candidates.length < 1) {
+            logger.log(`Cannot find any recipe for langID \`${langId}\`.`)
+            void logger.showErrorMessage(`[Builder] Cannot find any recipe for langID \`${langId}\`: ${recipeName}.`)
+            return
+        }
+        recipe = candidates[0]
+    }
+    return recipe
 }
 
 /**

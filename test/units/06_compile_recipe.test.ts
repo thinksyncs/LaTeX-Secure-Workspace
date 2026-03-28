@@ -73,7 +73,7 @@ describe(path.basename(__filename).split('.')[0] + ':', () => {
         })
     })
 
-    describe('lw.compile->recipe.fixed secure recipe', () => {
+    describe('lw.compile->recipe configuration', () => {
         let readStub: sinon.SinonStub
 
         beforeEach(() => {
@@ -84,7 +84,7 @@ describe(path.basename(__filename).split('.')[0] + ':', () => {
             readStub.restore()
         })
 
-        it('should ignore custom recipes and tools from configuration', async () => {
+        it('should resolve custom recipes and tools from configuration', async () => {
             const rootFile = set.root('main.tex')
             set.config('latex.tools', [{ name: 'RecipeTool', command: 'xelatex' }])
             set.config('latex.recipes', [{ name: 'Recipe1', tools: ['RecipeTool'] }])
@@ -93,8 +93,8 @@ describe(path.basename(__filename).split('.')[0] + ':', () => {
 
             const step = queue.getStep()
             assert.ok(step)
-            assert.strictEqual(step.name, 'latexmk')
-            assert.strictEqual(step.command, 'latexmk')
+            assert.strictEqual(step.name, 'RecipeTool')
+            assert.strictEqual(step.command, 'xelatex')
         })
 
         it('should ignore build magic comments and keep the fixed recipe', async () => {
@@ -110,13 +110,15 @@ describe(path.basename(__filename).split('.')[0] + ':', () => {
             assert.hasLog('Ignoring magic-command comments in secure build.')
         })
 
-        it('should ignore requested recipe names', async () => {
+        it('should resolve requested recipe names', async () => {
+            set.config('latex.tools', [{ name: 'RecipeTool', command: 'xelatex' }])
+            set.config('latex.recipes', [{ name: 'customRecipe', tools: ['RecipeTool'] }])
+
             await build('dummy.tex', 'latex', async () => {}, 'customRecipe')
 
             const step = queue.getStep()
             assert.ok(step)
-            assert.strictEqual(step.command, 'latexmk')
-            assert.hasLog('Ignoring requested recipe customRecipe in this secure build.')
+            assert.strictEqual(step.command, 'xelatex')
         })
     })
 

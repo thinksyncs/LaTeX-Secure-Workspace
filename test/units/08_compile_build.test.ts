@@ -15,6 +15,7 @@ describe(path.basename(__filename).split('.')[0] + ':', () => {
         mock.init(lw)
         ;(lw.cache.getIncludedTeX as sinon.SinonStub).returns([get.path('main.tex')])
         ;(lw.extra.clean as sinon.SinonStub).resolves(Promise.resolve())
+        lw.compile.lastAutoBuildTime = 0
         activeStub = mock.activeTextEditor(get.path('main.tex'), '', { languageId: 'latex' })
         findStub = lw.root.resolveSecurityRoot as sinon.SinonStub
         findStub.callsFake(() => {
@@ -142,25 +143,39 @@ describe(path.basename(__filename).split('.')[0] + ':', () => {
     })
 
     describe('lw.compile->build.autoBuild', () => {
-        it('should not trigger auto build on save even if configured', async () => {
+        it('should trigger auto build on save when configured', async () => {
             set.config('latex.autoBuild.run', 'onSave')
+            lw.compile.lastAutoBuildTime = 0
 
             log.start()
             await autoBuild(get.path('main.tex'), 'onSave')
             log.stop()
 
-            assert.hasLog('Auto build is disabled in this secure build.')
-            assert.notHasLog('Building root file:')
+            assert.hasLog(`Building root file: ${get.path('main.tex')}`)
         })
 
-        it('should not trigger auto build on file change even if configured', async () => {
+        it('should start file-change auto build instead of treating it as a disabled secure-build feature', async () => {
             set.config('latex.autoBuild.run', 'onFileChange')
+            lw.compile.lastAutoBuildTime = 0
 
             log.start()
             await autoBuild(get.path('main.tex'), 'onFileChange')
             log.stop()
 
-            assert.hasLog('Auto build is disabled in this secure build.')
+            assert.hasLog(`Auto build started detecting the change of a file: ${get.path('main.tex')} .`)
+            assert.notHasLog('Auto build is disabled in this secure build.')
+        })
+
+        it('should debounce auto build according to latex.autoBuild.interval', async () => {
+            set.config('latex.autoBuild.run', 'onSave')
+            set.config('latex.autoBuild.interval', 1000)
+            lw.compile.lastAutoBuildTime = Date.now()
+
+            log.start()
+            await autoBuild(get.path('main.tex'), 'onSave')
+            log.stop()
+
+            assert.hasLog('Autobuild temporarily disabled.')
             assert.notHasLog('Building root file:')
         })
     })

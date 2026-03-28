@@ -638,6 +638,18 @@
         "enablement": "!virtualWorkspace && isWorkspaceTrusted"
       },
       {
+        "command": "latex-workshop.texdoc",
+        "title": "%command.texdoc%",
+        "category": "LaTeX-Secure-Workspace",
+        "enablement": "!virtualWorkspace && isWorkspaceTrusted"
+      },
+      {
+        "command": "latex-workshop.texdocUsepackages",
+        "title": "%command.texdocUsepackages%",
+        "category": "LaTeX-Secure-Workspace",
+        "enablement": "!virtualWorkspace && isWorkspaceTrusted"
+      },
+      {
         "command": "latex-workshop.citation",
         "title": "%command.citation%",
         "category": "LaTeX-Secure-Workspace"
