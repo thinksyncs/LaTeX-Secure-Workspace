@@ -22,6 +22,7 @@ let stateTimer = undefined
 let synctexIndicatorTimer = undefined
 let pendingSyncTeX = undefined
 const renderedPages = new Map()
+const reverseSyncTeXKeybinding = config.appearance?.keybindings?.synctex ?? 'ctrl-click'
 
 window.addEventListener('message', (event) => {
     const message = event.data
@@ -189,12 +190,49 @@ async function renderPage(pdf, pageNumber) {
 
     canvasWrap.append(canvas, synctexIndicator)
     shell.append(label, canvasWrap)
+    installReverseSyncTeXHandlers(canvasWrap, viewport, pageNumber)
     return {
         canvas,
         shell,
         synctexIndicator,
         viewport,
     }
+}
+
+function installReverseSyncTeXHandlers(canvasWrap, viewport, pageNumber) {
+    canvasWrap.addEventListener('click', (event) => {
+        if (reverseSyncTeXKeybinding !== 'ctrl-click') {
+            return
+        }
+        if (!(event.ctrlKey || event.metaKey)) {
+            return
+        }
+        event.preventDefault()
+        postReverseSyncTeX(event, canvasWrap, viewport, pageNumber)
+    })
+
+    canvasWrap.addEventListener('dblclick', (event) => {
+        if (reverseSyncTeXKeybinding !== 'double-click') {
+            return
+        }
+        event.preventDefault()
+        postReverseSyncTeX(event, canvasWrap, viewport, pageNumber)
+    })
+}
+
+function postReverseSyncTeX(event, canvasWrap, viewport, pageNumber) {
+    const rect = canvasWrap.getBoundingClientRect()
+    const offsetX = event.clientX - rect.left
+    const offsetY = event.clientY - rect.top
+    const pos = viewport.convertToPdfPoint(offsetX, offsetY)
+
+    vscode.postMessage({
+        type: 'reverse_synctex',
+        page: pageNumber,
+        pos,
+        textBeforeSelection: '',
+        textAfterSelection: '',
+    })
 }
 
 function resolveScale(viewport) {

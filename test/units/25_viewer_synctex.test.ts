@@ -4,6 +4,7 @@ import * as sinon from 'sinon'
 import { assert, mock } from './utils'
 import { lw } from '../../src/lw'
 import * as customEditor from '../../src/preview/pdfcustomeditor'
+import { synctex } from '../../src/locate/synctex'
 
 describe(path.basename(__filename).split('.')[0] + ':', () => {
     before(() => {
@@ -64,5 +65,42 @@ describe(path.basename(__filename).split('.')[0] + ':', () => {
             type: 'synctex',
             data: record
         }))
+    })
+
+    it('should route reverse SyncTeX messages to the locator', async () => {
+        const pdfUri = vscode.Uri.file('/tmp/main.pdf')
+        const panel = {
+            webview: {
+                postMessage: sinon.stub().resolves(true),
+            },
+        } as unknown as vscode.WebviewPanel
+        const toTeX = sinon.stub().resolves()
+        lw.locate = {
+            synctex: {
+                toTeX,
+            },
+        } as unknown as typeof lw.locate
+
+        await customEditor.handleCustomEditorMessageForTest(pdfUri, panel, {}, {
+            type: 'reverse_synctex',
+            page: 2,
+            pos: [12, 34],
+            textBeforeSelection: '',
+            textAfterSelection: ''
+        })
+
+        assert.ok(toTeX.calledOnceWithExactly({
+            type: 'reverse_synctex',
+            page: 2,
+            pos: [12, 34],
+            textBeforeSelection: '',
+            textAfterSelection: ''
+        }, pdfUri))
+    })
+
+    it('should keep internal tab viewer on the internal SyncTeX path', () => {
+        assert.strictEqual(synctex.components.shouldUseExternalViewerForForwardSyncTeX('auto', 'tab'), false)
+        assert.strictEqual(synctex.components.shouldUseExternalViewerForForwardSyncTeX('auto', 'external'), true)
+        assert.strictEqual(synctex.components.shouldUseExternalViewerForForwardSyncTeX('tabOrBrowser', 'tab'), true)
     })
 })

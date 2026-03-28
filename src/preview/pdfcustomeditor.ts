@@ -3,7 +3,7 @@ import * as vscode from 'vscode'
 import { getSecurePdfViewerHtml, configureSecurePdfViewerWebview } from './viewer/securepdfviewer'
 import { lw } from '../lw'
 import type { SyncTeXRecordToPDF, SyncTeXRecordToPDFAll } from '../types'
-import type { PdfViewerState } from '../../types/latex-workshop-protocol-types/index'
+import type { ClientRequest, PdfViewerState } from '../../types/latex-workshop-protocol-types/index'
 
 const logger = lw.log('Viewer', 'CustomEditor')
 
@@ -34,28 +34,7 @@ export class SecurePdfCustomEditorProvider implements vscode.CustomReadonlyEdito
         webviewPanel.webview.html = await getPdfViewerCustomEditorHtml(pdfUri, webviewPanel.webview)
 
         webviewPanel.webview.onDidReceiveMessage((msg: unknown) => {
-            if (typeof msg !== 'object' || msg === null) {
-                return
-            }
-            const payload = msg as { type?: string, message?: unknown, state?: PdfViewerState }
-            if ((payload.type === 'viewer-log' || payload.type === 'log' || payload.type === 'document-error') && typeof payload.message === 'string') {
-                logger.log(payload.message)
-            }
-            if (payload.type === 'state' && payload.state && typeof payload.state === 'object') {
-                const nextState = {
-                    ...baseState,
-                    ...payload.state
-                }
-                updateViewerState(pdfUri, webviewPanel, nextState)
-                lw.event.fire(lw.event.ViewerStatusChanged, nextState)
-            }
-            if (payload.type === 'document-loaded' || payload.type === 'viewer-loaded' || payload.type === 'initialized') {
-                logger.log(`Custom PDF viewer loaded for ${pdfUri.toString(true)}`)
-                const state = getPanelViewerState(pdfUri, webviewPanel) ?? baseState
-                lw.event.fire(lw.event.ViewerPageLoaded)
-                lw.event.fire(lw.event.ViewerStatusChanged, state)
-                void deliverPendingSyncTeX(pdfUri, webviewPanel)
-            }
+            void handleCustomEditorMessage(pdfUri, webviewPanel, baseState, msg)
         })
 
         const watcher = vscode.workspace.createFileSystemWatcher(pdfUri.fsPath)
@@ -111,6 +90,51 @@ export async function reloadCustomEditorPanels(pdfUri?: vscode.Uri): Promise<voi
 
 async function getPdfViewerCustomEditorHtml(pdfUri: vscode.Uri, webview: vscode.Webview): Promise<string> {
     return getSecurePdfViewerHtml(pdfUri, webview, lw.viewer.getParams())
+}
+
+async function handleCustomEditorMessage(pdfUri: vscode.Uri, webviewPanel: vscode.WebviewPanel, baseState: PdfViewerState, msg: unknown): Promise<void> {
+    if (typeof msg !== 'object' || msg === null) {
+        return
+    }
+    const payload = msg as {
+        type?: string
+        message?: unknown
+        state?: PdfViewerState
+        pos?: [number, number]
+        page?: number
+        textBeforeSelection?: string
+        textAfterSelection?: string
+    }
+    if ((payload.type === 'viewer-log' || payload.type === 'log' || payload.type === 'document-error') && typeof payload.message === 'string') {
+        logger.log(payload.message)
+    }
+    if (payload.type === 'state' && payload.state && typeof payload.state === 'object') {
+        const nextState = {
+            ...baseState,
+            ...payload.state
+        }
+        updateViewerState(pdfUri, webviewPanel, nextState)
+        lw.event.fire(lw.event.ViewerStatusChanged, nextState)
+        return
+    }
+    if (payload.type === 'document-loaded' || payload.type === 'viewer-loaded' || payload.type === 'initialized') {
+        logger.log(`Custom PDF viewer loaded for ${pdfUri.toString(true)}`)
+        const state = getPanelViewerState(pdfUri, webviewPanel) ?? baseState
+        lw.event.fire(lw.event.ViewerPageLoaded)
+        lw.event.fire(lw.event.ViewerStatusChanged, state)
+        await deliverPendingSyncTeX(pdfUri, webviewPanel)
+        return
+    }
+    if (
+        payload.type === 'reverse_synctex'
+        && Array.isArray(payload.pos)
+        && payload.pos.length === 2
+        && typeof payload.pos[0] === 'number'
+        && typeof payload.pos[1] === 'number'
+        && typeof payload.page === 'number'
+    ) {
+        await lw.locate.synctex.toTeX(payload as Extract<ClientRequest, { type: 'reverse_synctex' }>, pdfUri)
+    }
 }
 
 async function deliverPendingSyncTeX(pdfUri: vscode.Uri, panel?: vscode.WebviewPanel): Promise<boolean> {
@@ -191,4 +215,11 @@ export function registerCustomEditorPanelForTest(pdfUri: vscode.Uri, panel: vsco
  */
 export async function deliverPendingSyncTeXForTest(pdfUri: vscode.Uri, panel?: vscode.WebviewPanel): Promise<boolean> {
     return deliverPendingSyncTeX(pdfUri, panel)
+}
+
+/**
+ * !! Test only
+ */
+export async function handleCustomEditorMessageForTest(pdfUri: vscode.Uri, panel: vscode.WebviewPanel, baseState: PdfViewerState, msg: unknown): Promise<void> {
+    await handleCustomEditorMessage(pdfUri, panel, baseState, msg)
 }
