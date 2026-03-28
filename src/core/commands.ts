@@ -126,7 +126,8 @@ export function kill() {
 
 export function synctex() {
     logger.log('SYNCTEX command invoked.')
-    if (!vscode.window.activeTextEditor || !lw.file.hasLaTeXLangId(vscode.window.activeTextEditor.document.languageId)) {
+    const editor = vscode.window.activeTextEditor ?? lw.previousActive
+    if (!editor || !lw.file.hasLaTeXLangId(editor.document.languageId)) {
         logger.log('Cannot start SyncTeX. The active editor is undefined, or the document is not a LaTeX document.')
         return
     }
@@ -135,7 +136,8 @@ export function synctex() {
 
 export function synctexonref(line: number, filePath: string) {
     logger.log('SYNCTEX command invoked on a reference.')
-    if (!vscode.window.activeTextEditor || !lw.file.hasLaTeXLangId(vscode.window.activeTextEditor.document.languageId)) {
+    const editor = vscode.window.activeTextEditor ?? lw.previousActive
+    if (!editor || !lw.file.hasLaTeXLangId(editor.document.languageId)) {
         logger.log('Cannot start SyncTeX. The active editor is undefined, or the document is not a LaTeX document.')
         return
     }

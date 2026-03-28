@@ -73,7 +73,7 @@ let isBuilding = false
  * build.
  */
 async function build(skipSelection: boolean = false, rootFile: string | undefined = undefined, languageId: string | undefined = undefined, recipe: string | undefined = undefined) {
-    const activeEditor = vscode.window.activeTextEditor
+    const activeEditor = vscode.window.activeTextEditor ?? lw.previousActive
     if (!activeEditor) {
         logger.log('Cannot start to build because the active editor is undefined.')
         return

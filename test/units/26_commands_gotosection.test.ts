@@ -11,6 +11,7 @@ describe(path.basename(__filename).split('.')[0] + ':', () => {
     })
 
     afterEach(() => {
+        lw.previousActive = undefined
         sinon.restore()
     })
 
@@ -36,5 +37,23 @@ describe(path.basename(__filename).split('.')[0] + ':', () => {
         assert.ok(revealLine.calledOnceWithExactly('revealLine', { lineNumber: 4, at: 'center' }))
         assert.strictEqual(editor.selection.active.line, 4)
         assert.ok(toPDF.calledOnceWithExactly(undefined, { line: 5, filePath }))
+    })
+
+    it('should allow SyncTeX from the previous active LaTeX editor when a PDF tab is focused', () => {
+        const editor = new TextEditor('/tmp/main.tex', 'a\nb\n', {})
+        const toPDF = sinon.stub()
+
+        lw.previousActive = editor as unknown as typeof lw.previousActive
+        lw.locate = {
+            synctex: {
+                toPDF,
+            },
+        } as unknown as typeof lw.locate
+
+        sinon.stub(vscode.window, 'activeTextEditor').value(undefined)
+
+        commands.synctex()
+
+        assert.ok(toPDF.calledOnce)
     })
 })

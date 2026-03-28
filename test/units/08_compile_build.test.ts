@@ -2,7 +2,7 @@ import * as path from 'path'
 import * as sinon from 'sinon'
 import type { SpawnOptions } from 'child_process'
 import * as cs from 'cross-spawn'
-import { assert, get, log, mock, set } from './utils'
+import { assert, get, log, mock, set, TextEditor } from './utils'
 import { lw } from '../../src/lw'
 import { autoBuild, build } from '../../src/compile/build'
 
@@ -37,10 +37,21 @@ describe(path.basename(__filename).split('.')[0] + ':', () => {
     describe('lw.compile->build.build', () => {
         it('should do nothing if there is no active text editor', async () => {
             activeStub.restore()
+            lw.previousActive = undefined
 
             await build()
 
             assert.hasLog('Cannot start to build because the active editor is undefined.')
+        })
+
+        it('should build using the previous active LaTeX editor when a PDF tab is focused', async () => {
+            activeStub.restore()
+            lw.previousActive = new TextEditor(get.path('main.tex'), '', { languageId: 'latex' }) as unknown as typeof lw.previousActive
+
+            await build()
+
+            assert.ok(findStub.called)
+            assert.hasLog(`Building root file: ${get.path('main.tex')}`)
         })
 
         it('should try find the secure root if not given as an argument', async () => {

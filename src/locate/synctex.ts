@@ -782,10 +782,11 @@ function animateToNotify(editor: vscode.TextEditor, position: vscode.Position) {
  * @param rootFile - The path of the root TeX file.
  */
 async function syncTeXExternal(line: number, pdfUri: vscode.Uri, rootFile: string) {
-    if (!vscode.window.activeTextEditor) {
+    const editor = vscode.window.activeTextEditor ?? lw.previousActive
+    if (!editor) {
         return
     }
-    const texFile = vscode.window.activeTextEditor.document.uri.fsPath
+    const texFile = editor.document.uri.fsPath
     const configuration = vscode.workspace.getConfiguration('latex-workshop', pdfUri)
     const command = configuration.get('view.pdf.external.synctex.command') as string
     let args = configuration.get('view.pdf.external.synctex.args') as string[]
