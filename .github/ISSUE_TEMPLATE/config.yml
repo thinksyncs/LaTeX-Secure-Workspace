@@ -1,8 +1,0 @@
-blank_issues_enabled: false
-contact_links:
-  - name: Security report
-    url: https://github.com/thinksyncs/LaTeX-Secure-Workspace/security/policy
-    about: Report vulnerabilities privately through the repository security policy.
-  - name: Support
-    url: https://github.com/thinksyncs/LaTeX-Secure-Workspace/blob/master/SUPPORT.md
-    about: See support guidance before opening a bug or feature request.

@@ -1,11 +1,6 @@
 # LaTeX Workspace Security
 
-[![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/thinksyncs/LaTeX-Secure-Workspace/badge)](https://scorecard.dev/viewer/?uri=github.com/thinksyncs/LaTeX-Secure-Workspace)
-[![Scorecard supply-chain security](https://github.com/thinksyncs/LaTeX-Secure-Workspace/actions/workflows/scorecard.yml/badge.svg?branch=master)](https://github.com/thinksyncs/LaTeX-Secure-Workspace/actions/workflows/scorecard.yml)
-
 Secure LaTeX tools for [Visual Studio Code](https://code.visualstudio.com/) with IntelliSense, manual build, diagnostics, and a local PDF tab viewer.
-
-The main goal of this project is to harden the original extension by removing or sanitizing several high-risk vulnerabilities. We found that LaTeX Workshop had previously been identified as having critical vulnerabilities that were not fully addressed, and this fork focuses on reducing that risk.
 
 ## TL;DR
 
@@ -32,11 +27,6 @@ Release operations are documented in [RELEASING.md](./RELEASING.md).
 Start with the local secure-fork manual in [docs/manual/README.md](./docs/manual/README.md).
 
 For repository organization and cleanup rules, see [Repository Layout](./docs/manual/repository-layout.md). For the security controls in this fork, see [Security Hardening Summary](./docs/security-hardening.md) or [in Japanese](./docs/security-hardening.ja.md).
-
-## OpenSSF
-
-- The live OpenSSF Scorecard badge above is published from the repository's default-branch Scorecard workflow.
-- The OpenSSF Best Practices Badge is prepared in [docs/openssf-best-practices.md](./docs/openssf-best-practices.md). After the project is registered on [bestpractices.dev](https://www.bestpractices.dev/), add the project-specific badge URL from that page here.
 
 ## Supported Editing and Build Features
 

@@ -3,9 +3,6 @@
     --page-background: #ffffff;
     --page-border: rgba(128, 128, 128, 0.35);
     --status-foreground: rgba(255, 255, 255, 0.78);
-    --toolbar-background: rgba(255, 255, 255, 0.08);
-    --toolbar-background-active: rgba(255, 255, 255, 0.18);
-    --toolbar-border: rgba(255, 255, 255, 0.12);
 }
 
 html,
@@ -27,67 +24,11 @@ body {
 }
 
 #statusBar {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 12px;
     box-sizing: border-box;
     min-height: 32px;
     padding: 8px 12px;
     border-bottom: 1px solid rgba(255, 255, 255, 0.08);
     backdrop-filter: blur(8px);
-}
-
-#statusText {
-    min-width: 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
-
-#zoomToolbar {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    flex-shrink: 0;
-}
-
-.toolbarButton {
-    min-width: 28px;
-    height: 28px;
-    padding: 0 10px;
-    border: 1px solid var(--toolbar-border);
-    border-radius: 8px;
-    background: var(--toolbar-background);
-    color: inherit;
-    font: inherit;
-    font-size: 13px;
-    font-weight: 600;
-    line-height: 1;
-    cursor: pointer;
-    transition: background-color 120ms ease, border-color 120ms ease, transform 120ms ease;
-}
-
-.toolbarButton:hover {
-    background: rgba(255, 255, 255, 0.14);
-    border-color: rgba(255, 255, 255, 0.2);
-}
-
-.toolbarButton:active {
-    transform: translateY(1px);
-}
-
-.toolbarButton.active {
-    background: var(--toolbar-background-active);
-    border-color: rgba(255, 255, 255, 0.24);
-}
-
-.toolbarButtonLabel {
-    min-width: 60px;
-}
-
-.toolbarButtonFit {
-    min-width: 54px;
 }
 
 #viewerContainer {
@@ -110,11 +51,6 @@ body {
     gap: 8px;
 }
 
-.pageCanvasWrap {
-    position: relative;
-    display: inline-block;
-}
-
 .pageCanvas {
     display: block;
     background: var(--page-background);
@@ -122,41 +58,9 @@ body {
     border: 1px solid var(--page-border);
 }
 
-.synctexIndicator {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 16px;
-    height: 16px;
-    border: 2px solid rgba(255, 92, 92, 0.95);
-    border-radius: 999px;
-    background: rgba(255, 92, 92, 0.22);
-    box-shadow: 0 0 0 6px rgba(255, 92, 92, 0.14);
-    pointer-events: none;
-    opacity: 0;
-    transform: translate(-50%, -50%) scale(0.75);
-    transition: opacity 140ms ease, transform 140ms ease;
-}
-
-.synctexIndicator.active {
-    opacity: 1;
-    transform: translate(-50%, -50%) scale(1);
-}
-
 .pageLabel {
     font-size: 12px;
     letter-spacing: 0.04em;
     text-transform: uppercase;
     color: rgba(255, 255, 255, 0.55);
-}
-
-@media (max-width: 520px) {
-    #statusBar {
-        flex-wrap: wrap;
-    }
-
-    #zoomToolbar {
-        width: 100%;
-        justify-content: flex-end;
-    }
 }

@@ -17,7 +17,6 @@ export const synctex = {
     toPDFFromRef,
     toTeX,
     components: {
-        shouldUseExternalViewerForForwardSyncTeX,
         synctexToPDFCombined,
         computeToTeX,
         openTeX,
@@ -290,7 +289,7 @@ function toPDF(pdfUri?: vscode.Uri, args?: {line: number, filePath: string}, for
             line -= 1
     }
     const pdfViewerMode = configuration.get('view.pdf.viewer')
-    if (shouldUseExternalViewerForForwardSyncTeX(forcedViewer, pdfViewerMode)) {
+    if (forcedViewer === 'external' || forcedViewer === 'tabOrBrowser' || (forcedViewer === 'auto' && (pdfViewerMode === 'external' || pdfViewerMode === 'tab')) ) {
         void syncTeXExternal(line, targetPdfFile, rootFile)
         return
     }
@@ -300,15 +299,6 @@ function toPDF(pdfUri?: vscode.Uri, args?: {line: number, filePath: string}, for
     }).catch(e =>
         logger.logError('Forward SyncTeX failed.', e)
     )
-}
-
-function shouldUseExternalViewerForForwardSyncTeX(
-    forcedViewer: 'auto' | 'tabOrBrowser' | 'external',
-    pdfViewerMode: unknown
-) {
-    return forcedViewer === 'external'
-        || forcedViewer === 'tabOrBrowser'
-        || (forcedViewer === 'auto' && pdfViewerMode === 'external')
 }
 
 /**

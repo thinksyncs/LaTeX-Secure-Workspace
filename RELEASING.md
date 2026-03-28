@@ -15,20 +15,15 @@ This repository has two release tracks: `stable` and `daily`.
 3. Update `package.json` to the intended stable version if needed.
 4. Create and push a Git tag such as `v1.2.4`.
 5. Publish a GitHub Release for that tag.
-6. `stable-release.yml` builds, tests, packages a universal VSIX, verifies that the manifest has no platform target metadata, publishes to the Marketplace stable channel, and uploads the same VSIX to the GitHub Release.
+6. `stable-release.yml` builds, tests, packages the VSIX, publishes to the Marketplace stable channel, and uploads the VSIX to the GitHub Release.
 
 ## Daily Release
 
 - `daily-release.yml` runs every day or on manual dispatch.
-- The workflow builds, tests, and packages a universal VSIX.
+- The workflow builds, tests, and packages a VSIX.
 - The workflow refreshes the rolling GitHub `daily` prerelease.
 - The workflow publishes to the Marketplace pre-release channel.
 - The workflow attaches a summary of open pull requests, CodeQL alerts, and Dependabot alerts to the daily prerelease notes.
-
-## Universal Packaging
-
-- This repository publishes a universal VSIX and does not pass `--target` to `vsce publish`.
-- Release workflows verify that `extension.vsixmanifest` contains no `TargetPlatform` metadata before publishing.
 
 ## Versioning
 

@@ -67,9 +67,7 @@ jobs:
                           next_url = part[part.find('<') + 1:part.find('>')]
                           break
 
-          # GitHub expects the repo path as owner/repo. Encoding the slash
-          # turns it into a single path segment and yields a 404.
-          encoded_repo = urllib.parse.quote(repository, safe='/')
+          encoded_repo = urllib.parse.quote(repository, safe='')
           list_url = f'https://api.github.com/repos/{encoded_repo}/issues?state=open&sort=updated&direction=asc&per_page=100'
 
           locked = 0
