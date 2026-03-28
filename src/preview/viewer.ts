@@ -42,7 +42,11 @@ function reload(): void {
  * refreshes all the PDF viewers.
  */
 function refresh(pdfUri?: vscode.Uri): void {
-    void pdfUri
+    if (pdfUri) {
+        void customEditor.reloadCustomEditorPanels(pdfUri)
+        return
+    }
+    void customEditor.reloadCustomEditorPanels()
 }
 
 async function view(pdfUri: vscode.Uri, mode?: 'tab' | 'browser' | 'external'): Promise<void> {

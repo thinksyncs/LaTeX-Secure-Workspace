@@ -1,4 +1,5 @@
 import * as path from 'path'
+import * as vscode from 'vscode'
 import * as sinon from 'sinon'
 import type { SpawnOptions } from 'child_process'
 import * as cs from 'cross-spawn'
@@ -95,6 +96,28 @@ describe(path.basename(__filename).split('.')[0] + ':', () => {
             lw.root.file.langId = undefined
 
             assert.hasLog(`Building root file: ${get.path('main.tex')}`)
+        })
+
+        it('should open the built pdf when the viewer is not already open', async () => {
+            const viewStub = lw.viewer.view as sinon.SinonStub
+            sinon.stub(lw.file, 'exists').resolves({ type: vscode.FileType.File } as vscode.FileStat)
+            ;(lw.viewer.isViewing as sinon.SinonStub).returns(false)
+
+            await build()
+
+            assert.ok(viewStub.calledOnceWithExactly(vscode.Uri.file(get.path('main.pdf')), 'tab'))
+        })
+
+        it('should refresh the built pdf when it is already open', async () => {
+            const viewStub = lw.viewer.view as sinon.SinonStub
+            const refreshStub = lw.viewer.refresh as sinon.SinonStub
+            sinon.stub(lw.file, 'exists').resolves({ type: vscode.FileType.File } as vscode.FileStat)
+            ;(lw.viewer.isViewing as sinon.SinonStub).returns(true)
+
+            await build()
+
+            assert.ok(refreshStub.calledOnceWithExactly(vscode.Uri.file(get.path('main.pdf'))))
+            assert.ok(viewStub.notCalled)
         })
     })
 
