@@ -32,7 +32,9 @@ jobs:
 
       - name: "Ensure `pull_request_target` is not introduced"
         run: |
-          if git grep -n 'pull_request_target' -- .github/workflows; then
+          MATCHES="$(git grep -n 'pull_request_target' -- .github/workflows | grep -v '^.github/workflows/security-guardrails.yml:' || true)"
+          if [ -n "$MATCHES" ]; then
+            echo "$MATCHES"
             echo 'Do not use pull_request_target for this repository hardening baseline.'
             exit 1
           fi

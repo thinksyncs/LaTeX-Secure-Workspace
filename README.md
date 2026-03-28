@@ -5,6 +5,8 @@
 
 Secure LaTeX tools for [Visual Studio Code](https://code.visualstudio.com/) with IntelliSense, manual build, diagnostics, and a local PDF tab viewer.
 
+The main goal of this project is to harden the original extension by removing or sanitizing several high-risk vulnerabilities. We found that LaTeX Workshop had previously been identified as having critical vulnerabilities that were not fully addressed, and this fork focuses on reducing that risk.
+
 ## TL;DR
 
 - IntelliSense for citations, labels, commands, environments, classes, and packages
