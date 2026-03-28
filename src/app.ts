@@ -166,6 +166,8 @@ function registerLatexWorkshopCommands(extensionContext: vscode.ExtensionContext
         vscode.commands.registerCommand('latex-workshop.recipes', (recipe: string | undefined) => lw.commands.recipes(recipe)),
         vscode.commands.registerCommand('latex-workshop.kill', () => lw.commands.kill()),
         vscode.commands.registerCommand('latex-workshop.clean', () => lw.commands.clean()),
+        vscode.commands.registerCommand('latex-workshop.texdoc', (packageName?: string) => lw.commands.texdoc(packageName)),
+        vscode.commands.registerCommand('latex-workshop.texdocUsepackages', () => lw.commands.texdocUsepackages()),
         vscode.commands.registerCommand('latex-workshop.actions', () => lw.commands.actions()),
         vscode.commands.registerCommand('latex-workshop.activate', () => undefined),
         vscode.commands.registerCommand('latex-workshop.citation', () => lw.commands.citation()),

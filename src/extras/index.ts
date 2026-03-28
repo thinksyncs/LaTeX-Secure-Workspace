@@ -3,11 +3,13 @@ import { checkCitations } from './checkcites'
 import { clean } from './cleaner'
 import { section } from './section'
 import * as snippet from './snippet-view'
+import { texdoc } from './texdoc'
 import { texroot } from './texroot'
 
 export const extra = {
     checkCitations,
     clean,
+    texdoc,
     texroot,
     section,
     commands,
