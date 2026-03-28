@@ -195,6 +195,7 @@ function spawnProcess(step: Step): ProcessEnv {
     const configuration = vscode.workspace.getConfiguration('latex-workshop', step.rootFile ? lw.file.toUri(step.rootFile) : undefined)
     if (step.index === 0 || configuration.get('latex.build.clearLog.everyRecipeStep.enabled') as boolean) {
         logger.clearCompilerMessage()
+        logger.showCompilerLog()
     }
     let cwd = step.cwd
 
@@ -387,11 +388,20 @@ async function afterSuccessfulBuilt(lastStep: Step, skipped: boolean) {
     if (lastStep.rootFile === undefined) {
         return
     }
+    const pdfPath = lw.file.getSecurityPdfPath(lastStep.rootFile)
+    const pdfUri = vscode.Uri.file(pdfPath)
     logger.log(`Successfully built ${lastStep.rootFile} .`)
     logger.refreshStatus('check', 'statusBar.foreground', 'Recipe succeeded.')
     lw.event.fire(lw.event.BuildDone)
     if (!lastStep.isExternal && skipped) {
         return
+    }
+    if (await lw.file.exists(pdfPath)) {
+        if (lw.viewer.isViewing(pdfUri)) {
+            lw.viewer.refresh(pdfUri)
+        } else {
+            await lw.viewer.view(pdfUri, 'tab')
+        }
     }
     lw.completion.reference.setNumbersFromAuxFile(lastStep.rootFile)
     await lw.cache.loadFlsFile(lastStep.rootFile ?? '')
