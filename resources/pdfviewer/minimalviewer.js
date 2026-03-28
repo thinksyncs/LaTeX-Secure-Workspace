@@ -19,11 +19,18 @@ let renderEpoch = 0
 let currentPdf = undefined
 let resizeTimer = undefined
 let stateTimer = undefined
+let pendingSyncTeX = undefined
+const renderedPages = new Map()
 
 window.addEventListener('message', (event) => {
     const message = event.data
     if (message?.type === 'reload') {
         void renderDocument({ preserveScroll: true })
+        return
+    }
+    if (message?.type === 'synctex') {
+        pendingSyncTeX = normalizeSyncTeXData(message.data)
+        applyPendingSyncTeX()
     }
 })
 
@@ -95,6 +102,7 @@ async function renderDocument({ preserveScroll }) {
     const previousScrollTop = viewerContainer.scrollTop
     const previousScrollLeft = viewerContainer.scrollLeft
     pagesRoot.replaceChildren()
+    renderedPages.clear()
     statusText.textContent = 'Loading PDF…'
 
     try {
@@ -126,8 +134,9 @@ async function renderDocument({ preserveScroll }) {
         if (epoch !== renderEpoch) {
             return
         }
-        const pageShell = await renderPage(pdf, pageNumber)
-        pagesRoot.append(pageShell)
+        const renderedPage = await renderPage(pdf, pageNumber)
+        pagesRoot.append(renderedPage.shell)
+        renderedPages.set(pageNumber, renderedPage)
     }
 
     if (preserveScroll) {
@@ -135,6 +144,7 @@ async function renderDocument({ preserveScroll }) {
         viewerContainer.scrollLeft = previousScrollLeft
     }
 
+    applyPendingSyncTeX()
     queueStatePost()
     vscode.postMessage({ type: 'document-loaded' })
 }
@@ -170,7 +180,12 @@ async function renderPage(pdf, pageNumber) {
     }).promise
 
     shell.append(label, canvas)
-    return shell
+    return {
+        shell,
+        scale,
+        viewportWidth: unitViewport.width,
+        viewportHeight: unitViewport.height,
+    }
 }
 
 function resolveScale(viewport) {
@@ -216,6 +231,32 @@ function queueStatePost() {
             }
         })
     }, 75)
+}
+
+function normalizeSyncTeXData(data) {
+    if (Array.isArray(data)) {
+        return data[0]
+    }
+    if (typeof data === 'object' && data !== null) {
+        return data
+    }
+    return undefined
+}
+
+function applyPendingSyncTeX() {
+    if (!pendingSyncTeX) {
+        return
+    }
+    const renderedPage = renderedPages.get(pendingSyncTeX.page)
+    if (!renderedPage) {
+        return
+    }
+    const x = Math.max(0, renderedPage.shell.offsetLeft + (pendingSyncTeX.x * renderedPage.scale) - (viewerContainer.clientWidth / 2))
+    const yFromTop = Math.max(0, (renderedPage.viewportHeight - pendingSyncTeX.y) * renderedPage.scale)
+    const y = Math.max(0, renderedPage.shell.offsetTop + yFromTop - (viewerContainer.clientHeight / 2))
+    viewerContainer.scrollLeft = x
+    viewerContainer.scrollTop = y
+    pendingSyncTeX = undefined
 }
 
 function reportError(error) {

@@ -2,12 +2,14 @@ import * as vscode from 'vscode'
 
 import { getSecurePdfViewerHtml, configureSecurePdfViewerWebview } from './viewer/securepdfviewer'
 import { lw } from '../lw'
+import type { SyncTeXRecordToPDF, SyncTeXRecordToPDFAll } from '../types'
 import type { PdfViewerState } from '../../types/latex-workshop-protocol-types/index'
 
 const logger = lw.log('Viewer', 'CustomEditor')
 
 const VIEW_TYPE = 'tex-workspace-secure.pdf-preview'
 const viewerStates = new Map<string, Map<vscode.WebviewPanel, PdfViewerState>>()
+const pendingSyncTeX = new Map<string, SyncTeXRecordToPDF | SyncTeXRecordToPDFAll[]>()
 
 export class SecurePdfCustomEditorProvider implements vscode.CustomReadonlyEditorProvider {
     static readonly viewType = VIEW_TYPE
@@ -52,6 +54,7 @@ export class SecurePdfCustomEditorProvider implements vscode.CustomReadonlyEdito
                 const state = getPanelViewerState(pdfUri, webviewPanel) ?? baseState
                 lw.event.fire(lw.event.ViewerPageLoaded)
                 lw.event.fire(lw.event.ViewerStatusChanged, state)
+                void deliverPendingSyncTeX(pdfUri, webviewPanel)
             }
         })
 
@@ -80,6 +83,18 @@ export function getCustomEditorStates(pdfUri: vscode.Uri): PdfViewerState[] {
     return Array.from(viewerStates.get(toKey(pdfUri))?.values() ?? [])
 }
 
+export async function revealLocationInCustomEditor(pdfUri: vscode.Uri, record: SyncTeXRecordToPDF | SyncTeXRecordToPDFAll[]): Promise<boolean> {
+    pendingSyncTeX.set(toKey(pdfUri), record)
+    const panels = viewerStates.get(toKey(pdfUri))
+    if (!panels || panels.size === 0) {
+        return false
+    }
+    for (const panel of panels.keys()) {
+        panel.reveal(undefined, true)
+    }
+    return deliverPendingSyncTeX(pdfUri)
+}
+
 export async function reloadCustomEditorPanels(pdfUri?: vscode.Uri): Promise<void> {
     const targets = pdfUri
         ? [[pdfUri, viewerStates.get(toKey(pdfUri))] as const]
@@ -96,6 +111,30 @@ export async function reloadCustomEditorPanels(pdfUri?: vscode.Uri): Promise<voi
 
 async function getPdfViewerCustomEditorHtml(pdfUri: vscode.Uri, webview: vscode.Webview): Promise<string> {
     return getSecurePdfViewerHtml(pdfUri, webview, lw.viewer.getParams())
+}
+
+async function deliverPendingSyncTeX(pdfUri: vscode.Uri, panel?: vscode.WebviewPanel): Promise<boolean> {
+    const record = pendingSyncTeX.get(toKey(pdfUri))
+    if (!record) {
+        return false
+    }
+    const targets = panel
+        ? [panel]
+        : Array.from(viewerStates.get(toKey(pdfUri))?.keys() ?? [])
+    if (targets.length === 0) {
+        return false
+    }
+    const delivered = await Promise.all(targets.map(async target => {
+        return target.webview.postMessage({
+            type: 'synctex',
+            data: record
+        })
+    }))
+    if (delivered.some(result => result)) {
+        pendingSyncTeX.delete(toKey(pdfUri))
+        return true
+    }
+    return false
 }
 
 function toKey(pdfUri: vscode.Uri): string {
@@ -130,4 +169,26 @@ function deleteViewerState(pdfUri: vscode.Uri, panel: vscode.WebviewPanel): void
     if (panelStates.size === 0) {
         viewerStates.delete(key)
     }
+}
+
+/**
+ * !! Test only
+ */
+export function resetCustomEditorStateForTest(): void {
+    viewerStates.clear()
+    pendingSyncTeX.clear()
+}
+
+/**
+ * !! Test only
+ */
+export function registerCustomEditorPanelForTest(pdfUri: vscode.Uri, panel: vscode.WebviewPanel, state: PdfViewerState = {}): void {
+    updateViewerState(pdfUri, panel, state)
+}
+
+/**
+ * !! Test only
+ */
+export async function deliverPendingSyncTeXForTest(pdfUri: vscode.Uri, panel?: vscode.WebviewPanel): Promise<boolean> {
+    return deliverPendingSyncTeX(pdfUri, panel)
 }

@@ -4,7 +4,7 @@ import * as path from 'path'
 import { lw } from '../lw'
 import type { SyncTeXRecordToPDF, SyncTeXRecordToPDFAll } from '../types'
 import type { PdfViewerParams, PdfViewerState } from '../../types/latex-workshop-protocol-types/index'
-import { getCustomEditorStates, reloadCustomEditorPanels, securePdfCustomEditorViewType } from './pdfcustomeditor'
+import * as customEditor from './pdfcustomeditor'
 
 const logger = lw.log('Viewer')
 
@@ -32,7 +32,7 @@ const isViewing = (fileUri: vscode.Uri) => getViewerState(fileUri).length > 0
 
 function reload(): void {
     logger.log('PDF tab viewer parameters changed. Reloading open editors.')
-    void reloadCustomEditorPanels()
+    void customEditor.reloadCustomEditorPanels()
 }
 
 /**
@@ -126,10 +126,15 @@ function getParams(): PdfViewerParams {
  * @param record The position to be revealed.
  */
 function locate(pdfUri: vscode.Uri, record: SyncTeXRecordToPDF | SyncTeXRecordToPDFAll[]): Promise<void> {
-    void pdfUri
-    void record
-    logger.log('Ignoring SyncTeX locate request because reverse SyncTeX is not wired for the tab viewer.')
-    return Promise.resolve()
+    logger.log(`Try to synctex ${pdfUri.toString(true)}`)
+    return customEditor.revealLocationInCustomEditor(pdfUri, record).then(async revealed => {
+        if (revealed) {
+            return
+        }
+        const configuration = vscode.workspace.getConfiguration('latex-workshop')
+        const tabEditorGroup = configuration.get('view.pdf.tab.editorGroup', 'right') as string
+        await openPdfInTab(pdfUri, tabEditorGroup, true)
+    })
 }
 
 /**
@@ -139,13 +144,13 @@ function locate(pdfUri: vscode.Uri, record: SyncTeXRecordToPDF | SyncTeXRecordTo
  * @param pdfUri The path of a PDF file.
  */
 function getViewerState(pdfUri: vscode.Uri): (PdfViewerState | undefined)[] {
-    return getCustomEditorStates(pdfUri)
+    return customEditor.getCustomEditorStates(pdfUri)
 }
 
 async function openPdfInTab(pdfUri: vscode.Uri, tabEditorGroup: string, preserveFocus: boolean): Promise<void> {
     const viewColumn = resolveViewColumn(tabEditorGroup)
     logger.log(`Open PDF in internal tab viewer for ${pdfUri.toString(true)}`)
-    await vscode.commands.executeCommand('vscode.openWith', pdfUri, securePdfCustomEditorViewType, {
+    await vscode.commands.executeCommand('vscode.openWith', pdfUri, customEditor.securePdfCustomEditorViewType, {
         preview: false,
         preserveFocus,
         viewColumn

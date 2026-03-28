@@ -1623,8 +1623,8 @@
         "latex-workshop.view.outline.sync.viewer": {
           "scope": "window",
           "type": "boolean",
-          "default": false,
-          "markdownDescription": "Compatibility setting retained from upstream. PDF viewer SyncTeX is disabled in this secure build, so this setting has no effect."
+          "default": true,
+          "markdownDescription": "Whether selecting an item in the outline/structure view will also reveal the corresponding position in the PDF viewer."
         },
         "latex-workshop.view.outline.floats.enabled": {
           "scope": "window",
@@ -1942,7 +1942,7 @@
           "scope": "window",
           "type": "string",
           "default": "synctex",
-          "markdownDescription": "Compatibility setting retained from upstream. SyncTeX execution is disabled in this secure build, so this setting has no effect."
+          "markdownDescription": "Path to the SyncTeX executable used for forward SyncTeX. If execution fails, the extension falls back to its internal parser when possible."
         },
         "latex-workshop.synctex.indicator": {
           "scope": "window",
