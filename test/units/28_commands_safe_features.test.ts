@@ -14,21 +14,21 @@ describe(path.basename(__filename).split('.')[0] + ':', () => {
         sinon.restore()
     })
 
-    it('should forward an explicit recipe name to build', async () => {
+    it('should forward an explicit secure recipe name to build', async () => {
         const buildStub = sinon.stub(lw.compile, 'build').resolves()
 
-        await commands.recipes('latexmk')
+        await commands.recipes('secure-latexmk')
 
-        assert.ok(buildStub.calledOnceWithExactly(false, undefined, undefined, 'latexmk'))
+        assert.ok(buildStub.calledOnceWithExactly(false, undefined, undefined, 'secure-latexmk'))
     })
 
-    it('should build the recipe selected from quick pick', async () => {
+    it('should build the secure recipe selected from quick pick', async () => {
         const buildStub = sinon.stub(lw.compile, 'build').resolves()
-        sinon.stub(vscode.window, 'showQuickPick').resolves('latexmk' as unknown as vscode.QuickPickItem)
+        sinon.stub(vscode.window, 'showQuickPick').resolves('secure-latexmk' as unknown as vscode.QuickPickItem)
 
         await commands.buildRecipe()
 
-        assert.ok(buildStub.calledOnceWithExactly(false, undefined, undefined, 'latexmk'))
+        assert.ok(buildStub.calledOnceWithExactly(false, undefined, undefined, 'secure-latexmk'))
     })
 
     it('should delegate texdoc to the extras module', async () => {
