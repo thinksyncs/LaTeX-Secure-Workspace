@@ -1,0 +1,3 @@
+[[IgnoredVulns]]
+id = "GHSA-f886-m6hf-6m8v"
+reason = "Only affects dev-only brace-expansion transitive dependencies under minimatch@3 in eslint/vsce. The production npm audit is clean, and the vulnerable 1.x path is not currently remediable through the existing upstream dependency graph."
