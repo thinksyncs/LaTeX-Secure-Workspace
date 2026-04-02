@@ -77,3 +77,4 @@ jobs:
       with:
         name: daily-vsix
         path: ${{ steps.package.outputs.vsix_path }}
+        retention-days: 5
