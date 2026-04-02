@@ -160,6 +160,7 @@ describe(path.basename(__filename).split('.')[0] + ':', () => {
 
             const step = queue.getStep()
             assert.ok(step)
+            assert.ok(step.args?.includes('-norc'))
             assert.ok(step.args?.includes(normalizedRootFile.replace('.tex', '')))
             assert.ok(step.args?.includes(`-outdir=${normalizedRootDir}`))
             assert.ok(step.args?.includes(`-auxdir=${normalizedRootDir}`))
