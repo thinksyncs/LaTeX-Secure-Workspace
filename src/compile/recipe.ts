@@ -14,6 +14,7 @@ const FIXED_SECURE_TOOL: Tool = {
     name: 'latexmk',
     command: 'latexmk',
     args: [
+        '-norc',
         '-interaction=nonstopmode',
         '-file-line-error',
         '-pdf',
