@@ -7,7 +7,7 @@ import { lw } from '../../lw'
 import type { LaTeXLinter } from '../../types'
 import { processWrapper } from './utils'
 import { convertFilenameEncoding } from '../../utils/convertfilename'
-import { confirmWorkspaceCommandExecution } from '../../utils/security'
+import { confirmWorkspaceCommandExecution, getSecureConfigurationValue } from '../../utils/security'
 
 const logger = lw.log('Linter', 'ChkTeX')
 
@@ -54,7 +54,7 @@ async function chktexWrapper(linterid: string, configScope: vscode.Configuration
     if (!await confirmWorkspaceCommandExecution(configScope, 'linting.chktex.exec.path', command)) {
         return
     }
-    const args = [...(configuration.get('linting.chktex.exec.args') as string[])]
+    const args = [...(await getSecureConfigurationValue(configScope, 'linting.chktex.exec.args', [] as string[]))]
     if (!args.includes('-l')) {
         const rcPath = getRcPath()
         if (rcPath) {

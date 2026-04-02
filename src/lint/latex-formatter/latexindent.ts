@@ -4,7 +4,7 @@ import * as cs from 'cross-spawn'
 import * as path from 'path'
 import * as fs from 'fs'
 import { lw } from '../../lw'
-import { confirmWorkspaceCommandExecution } from '../../utils/security'
+import { confirmWorkspaceCommandExecution, getSecureConfigurationValue } from '../../utils/security'
 import { replaceArgumentPlaceholders } from '../../utils/utils'
 import type { LaTeXFormatter } from '../../types'
 
@@ -36,7 +36,7 @@ async function formatDocument(document: vscode.TextDocument, range?: vscode.Rang
     if (!(configuration.get('docker.enabled') as boolean) && !await confirmWorkspaceCommandExecution(document.uri, 'formatting.latexindent.path', pathMeta)) {
         return
     }
-    formatterArgs = configuration.get('formatting.latexindent.args') as string[]
+    formatterArgs = await getSecureConfigurationValue(document.uri, 'formatting.latexindent.args', [] as string[])
     logger.log('Start formatting with latexindent.')
     try {
         if (formatter === '') {
