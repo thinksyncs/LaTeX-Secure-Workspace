@@ -32,7 +32,9 @@ jobs:
 
       - name: "Ensure `pull_request_target` is not introduced"
         run: |
-          if git grep -n 'pull_request_target' -- .github/workflows; then
+          MATCHES="$(grep -R -n --include='*.yml' --include='*.yaml' 'pull_request_target' .github/workflows | grep -v '^.github/workflows/security-guardrails.yml:' || true)"
+          if [ -n "$MATCHES" ]; then
+            echo "$MATCHES"
             echo 'Do not use pull_request_target for this repository hardening baseline.'
             exit 1
           fi
@@ -48,7 +50,7 @@ jobs:
 
       - name: Ensure workflows verify downloaded installers
         run: |
-          for file in .github/workflows/texlive_on_linux.yml .github/workflows/texlive_on_mac.yml .github/workflows/texlive_on_win.yml; do
+          for file in .github/actions/setup-texlive-linux/action.yml .github/workflows/texlive_on_mac.yml .github/workflows/texlive_on_win.yml; do
             grep -q 'sha512' "$file" || { echo "Missing checksum verification in $file"; exit 1; }
             grep -q 'gpg' "$file" || { echo "Missing signature verification in $file"; exit 1; }
           done

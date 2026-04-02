@@ -153,14 +153,16 @@ describe(path.basename(__filename).split('.')[0] + ':', () => {
 
         it('should replace placeholders in the fixed latexmk arguments', async () => {
             const rootFile = set.root('main.tex')
+            const normalizedRootFile = rootFile.replace(/\\/g, '/')
+            const normalizedRootDir = path.dirname(rootFile).replace(/\\/g, '/')
 
             await build(rootFile, 'latex', async () => {})
 
             const step = queue.getStep()
             assert.ok(step)
-            assert.ok(step.args?.includes(rootFile.replace('.tex', '')))
-            assert.ok(step.args?.includes(`-outdir=${path.dirname(rootFile)}`))
-            assert.ok(step.args?.includes(`-auxdir=${path.dirname(rootFile)}`))
+            assert.ok(step.args?.includes(normalizedRootFile.replace('.tex', '')))
+            assert.ok(step.args?.includes(`-outdir=${normalizedRootDir}`))
+            assert.ok(step.args?.includes(`-auxdir=${normalizedRootDir}`))
         })
 
         it('should modify the fixed command when Docker is enabled on Windows', async () => {
