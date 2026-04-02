@@ -1,7 +1,7 @@
 import vscode from 'vscode'
 import path from 'path'
 import { replaceArgumentPlaceholders, splitCommandLineArgs } from '../utils/utils'
-import { confirmNoWorkspaceConfigurationOverride } from '../utils/security'
+import { getSecureConfigurationValue } from '../utils/security'
 
 import { lw } from '../lw'
 import type { Recipe, Tool } from '../types'
@@ -30,11 +30,6 @@ let state: {
     isMikTeX: boolean | undefined
 }
 
-type InspectValue<T> = {
-    defaultValue?: T
-    globalValue?: T
-}
-
 initialize()
 export function initialize() {
     state = {
@@ -61,21 +56,7 @@ async function setDockerPath() {
 }
 
 async function getSecureDockerSetting<T>(section: string, fallback: T): Promise<T> {
-    const configuration = vscode.workspace.getConfiguration('latex-workshop')
-    const inspect = configuration.inspect<T>(section)
-    if (!inspect) {
-        return fallback
-    }
-
-    if (!await confirmNoWorkspaceConfigurationOverride(undefined, section)) {
-        return getNonWorkspaceValue(inspect, fallback)
-    }
-
-    return configuration.get(section, fallback)
-}
-
-function getNonWorkspaceValue<T>(inspect: InspectValue<T>, fallback: T): T {
-    return inspect.globalValue ?? inspect.defaultValue ?? fallback
+    return getSecureConfigurationValue(undefined, section, fallback)
 }
 
 export async function getAvailableRecipes(scope?: vscode.ConfigurationScope): Promise<Recipe[]> {

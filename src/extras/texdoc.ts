@@ -1,6 +1,6 @@
 import * as vscode from 'vscode'
 import { lw } from '../lw'
-import { confirmWorkspaceCommandExecution } from '../utils/security'
+import { confirmWorkspaceCommandExecution, getSecureConfigurationValue } from '../utils/security'
 
 const logger = lw.log('TeXDoc')
 
@@ -11,8 +11,8 @@ export {
 async function runTexdoc(packageName: string) {
     const configuration = vscode.workspace.getConfiguration('latex-workshop')
     const texdocPath = configuration.get('texdoc.path') as string
-    const texdocArgs = Array.from(configuration.get('texdoc.args') as string[])
     const scope = lw.root.file.path ? lw.file.toUri(lw.root.file.path) : vscode.window.activeTextEditor?.document.uri ?? vscode.workspace.workspaceFolders?.[0]?.uri
+    const texdocArgs = Array.from(await getSecureConfigurationValue(scope, 'texdoc.args', [] as string[]))
 
     if (!await confirmWorkspaceCommandExecution(scope, 'texdoc.path', texdocPath)) {
         return

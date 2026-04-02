@@ -1,4 +1,3 @@
-import * as cp from 'child_process'
 import { lw } from '../lw'
 import { queue } from './queue'
 
@@ -22,10 +21,10 @@ export function terminate() {
         logger.log(`Kill child processes of the current process with PID ${pid}.`)
         if (process.platform === 'linux' || process.platform === 'darwin') {
             // Use pkill to kill child processes
-            cp.execSync(`pkill -P ${pid}`, { timeout: 1000 })
+            lw.external.spawnSync('pkill', ['-P', String(pid)], { timeout: 1000 })
         } else if (process.platform === 'win32') {
             // Use taskkill on Windows to forcefully terminate child processes
-            cp.execSync(`taskkill /F /T /PID ${pid}`, { timeout: 1000 })
+            lw.external.spawnSync('taskkill', ['/F', '/T', '/PID', String(pid)], { timeout: 1000 })
         }
     } catch (e) {
         logger.logError('Failed killing child processes of the current process.', e)

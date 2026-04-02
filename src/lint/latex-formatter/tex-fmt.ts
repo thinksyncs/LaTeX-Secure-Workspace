@@ -2,7 +2,7 @@ import * as vscode from 'vscode'
 import * as path from 'path'
 import { lw } from '../../lw'
 import { LaTeXFormatter } from '../../types'
-import { confirmWorkspaceCommandExecution } from '../../utils/security'
+import { confirmWorkspaceCommandExecution, getSecureConfigurationValue } from '../../utils/security'
 import { replaceArgumentPlaceholders } from '../../utils/utils'
 
 
@@ -19,7 +19,8 @@ async function formatDocument(document: vscode.TextDocument, range?: vscode.Rang
         return
     }
     const rootFile = lw.root.file.path || document.fileName
-    const args = (config.get('formatting.tex-fmt.args') as string[]).map(arg => replaceArgumentPlaceholders(rootFile, lw.file.tmpDirPath)(arg))
+    const args = (await getSecureConfigurationValue(document.uri, 'formatting.tex-fmt.args', [] as string[]))
+        .map(arg => replaceArgumentPlaceholders(rootFile, lw.file.tmpDirPath)(arg))
     args.push('--stdin')
     logger.logCommand('Formatting LaTeX.', program, args)
     const process = lw.external.spawn(program, args, { cwd: path.dirname(document.uri.fsPath) })

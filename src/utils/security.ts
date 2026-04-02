@@ -8,6 +8,13 @@ const approvedWorkspaceCommands = new Set<string>()
 const warnedWorkspaceCommands = new Set<string>()
 const blockedWorkspaceOverrides = new Set<string>()
 
+type InspectValue<T> = {
+    defaultValue?: T
+    globalValue?: T
+    workspaceValue?: T
+    workspaceFolderValue?: T
+}
+
 function getScopeKey(scope?: vscode.ConfigurationScope): string {
     if (scope === undefined || scope === null) {
         return 'global'
@@ -142,4 +149,22 @@ export async function confirmNoWorkspaceConfigurationOverride(scope: vscode.Conf
         await vscode.commands.executeCommand('workbench.action.openSettings', `latex-workshop.${section}`)
     }
     return false
+}
+
+function getNonWorkspaceValue<T>(inspect: InspectValue<T>, fallback: T): T {
+    return inspect.globalValue ?? inspect.defaultValue ?? fallback
+}
+
+export async function getSecureConfigurationValue<T>(scope: vscode.ConfigurationScope | undefined, section: string, fallback: T): Promise<T> {
+    const configuration = vscode.workspace.getConfiguration('latex-workshop', scope)
+    const inspect = configuration.inspect<T>(section)
+    if (!inspect) {
+        return fallback
+    }
+
+    if (!await confirmNoWorkspaceConfigurationOverride(scope, section)) {
+        return getNonWorkspaceValue(inspect, fallback)
+    }
+
+    return configuration.get(section, fallback)
 }

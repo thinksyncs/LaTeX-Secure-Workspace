@@ -40,6 +40,8 @@ Mitigation:
 
 The secure build disables auto build, ignores custom recipes and custom tools, and ignores external build commands. Manual compilation is limited to a fixed internal recipe so workspace content and settings cannot switch the build command path.
 
+It also ignores workspace-scoped argument overrides for formatter and linter helper commands so trusted workspaces cannot silently reshape those command lines.
+
 It also uses a fixed internal root-resolution policy for secure build and clean commands, always executes against the resolved main root file, and writes both PDF output and auxiliary files to the resolved root file directory instead of honoring workspace-controlled output-path overrides.
 
 ### 3. Ignored magic-command comments in the secure build
