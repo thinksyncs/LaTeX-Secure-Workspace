@@ -49,7 +49,12 @@ jobs:
     - name: Publish Marketplace pre-release
       env:
         VSCE_PAT: ${{ secrets.VSCE_PAT }}
-      run: npx vsce publish --pre-release --packagePath "${{ steps.package.outputs.vsix_path }}"
+      run: |
+        if [ -z "${VSCE_PAT:-}" ]; then
+          echo "VSCE_PAT is not configured; skipping Marketplace pre-release publish."
+          exit 0
+        fi
+        npx vsce publish --pre-release --packagePath "${{ steps.package.outputs.vsix_path }}"
     - name: Build daily release notes
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
