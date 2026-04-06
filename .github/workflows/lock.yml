@@ -67,7 +67,7 @@ jobs:
                           next_url = part[part.find('<') + 1:part.find('>')]
                           break
 
-          encoded_repo = urllib.parse.quote(repository, safe='')
+          encoded_repo = urllib.parse.quote(repository, safe='/')
           list_url = f'https://api.github.com/repos/{encoded_repo}/issues?state=open&sort=updated&direction=asc&per_page=100'
 
           locked = 0
