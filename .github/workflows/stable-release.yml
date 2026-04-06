@@ -49,7 +49,12 @@ jobs:
     - name: Publish stable Marketplace release
       env:
         VSCE_PAT: ${{ secrets.VSCE_PAT }}
-      run: npx vsce publish --packagePath "${{ steps.package.outputs.vsix_path }}"
+      run: |
+        if [ -z "${VSCE_PAT:-}" ]; then
+          echo "VSCE_PAT is not configured; skipping Marketplace release publish."
+          exit 0
+        fi
+        npx vsce publish --packagePath "${{ steps.package.outputs.vsix_path }}"
     - name: Upload VSIX to GitHub release
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
