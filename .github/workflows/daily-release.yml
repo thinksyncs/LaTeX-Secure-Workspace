@@ -44,7 +44,7 @@ jobs:
       run: |
         mkdir -p artifacts/vsix
         vsix_path="artifacts/vsix/${{ steps.version.outputs.package_name }}-${{ steps.version.outputs.daily_version }}.vsix"
-        npx vsce package --out "$vsix_path"
+        npx vsce package --pre-release --out "$vsix_path"
         echo "vsix_path=$vsix_path" >> "$GITHUB_OUTPUT"
     - name: Publish Marketplace pre-release
       env:
