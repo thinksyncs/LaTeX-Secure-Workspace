@@ -33,6 +33,29 @@ jobs:
           echo "Release tag $RELEASE_TAG does not match package.json version $package_version" >&2
           exit 1
         fi
+    - name: Validate stable release stays on current major line
+      env:
+        RELEASE_TAG: ${{ github.event.release.tag_name }}
+      run: |
+        normalized_tag="${RELEASE_TAG#v}"
+        previous_tag="$(git tag --list 'v*' --sort=-v:refname | grep -Fxv "$RELEASE_TAG" | head -n1)"
+        if [ -z "$previous_tag" ]; then
+          previous_tag="$(git tag --list --sort=-v:refname | grep -E '^[0-9]+\.[0-9]+(\.[0-9]+)?$' | grep -Fxv "$normalized_tag" | head -n1)"
+        fi
+        if [ -z "$previous_tag" ]; then
+          echo "No previous stable tag found; skipping major-line validation."
+          exit 0
+        fi
+
+        previous_version="${previous_tag#v}"
+        previous_major="${previous_version%%.*}"
+        current_major="${normalized_tag%%.*}"
+        if [ "$current_major" != "$previous_major" ]; then
+          echo "Stable releases must update minor or patch versions without changing the major version." >&2
+          echo "Previous stable tag: $previous_tag" >&2
+          echo "Current release tag: $RELEASE_TAG" >&2
+          exit 1
+        fi
     - name: Install dependencies
       run: npm ci --ignore-scripts
     - name: Verify release build

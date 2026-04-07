@@ -13,6 +13,7 @@ This repository has two release tracks: `stable` and `daily`.
 1. Commit the release changes on `master`.
 2. Push `master` to GitHub.
 3. Update `package.json` to the intended stable version if needed.
+   Keep the existing major version line and update the minor or patch version instead of bumping the major version.
 4. Create and push a Git tag such as `v1.2.4`.
 5. Publish a GitHub Release for that tag.
 6. `stable-release.yml` builds, tests, packages the VSIX, publishes to the Marketplace stable channel, and uploads the VSIX to the GitHub Release.
@@ -30,6 +31,7 @@ This repository has two release tracks: `stable` and `daily`.
 - Stable versioning:
   - `1.2.3 -> 1.2.4`
   - `1.2 -> 1.3.0`
+- Stable releases must not bump the major version. Stay on the current major line and update only the minor or patch version.
 - Daily versioning:
   - `1.2.3 -> 1.3.<run_number>`
   - `1.2 -> 1.3.<run_number>`
