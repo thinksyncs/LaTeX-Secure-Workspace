@@ -1,7 +1,7 @@
 import * as sinon from 'sinon'
 import * as vscode from 'vscode'
 import { assert, hooks } from './utils'
-import { getSecureConfigurationValue } from '../../src/utils/security'
+import { confirmWorkspaceCommandExecution, getSecureConfigurationValue } from '../../src/utils/security'
 
 describe('30_utils_security:', () => {
     const envKey = 'LATEXWORKSHOP_CITEST'
@@ -53,5 +53,20 @@ describe('30_utils_security:', () => {
 
         assert.deepStrictEqual(value, ['--nowrap', '--tabsize', '4'])
         assert.ok(showWarningStub.notCalled)
+    })
+
+    it('should block workspace-scoped commands instead of approving them', async () => {
+        const showWarningStub = sinon.stub(vscode.window, 'showWarningMessage').resolves(undefined)
+        sinon.stub(vscode.workspace, 'getConfiguration').returns({
+            inspect: sinon.stub().withArgs('texdoc.path').returns({
+                workspaceValue: '/tmp/evil'
+            }),
+            get: sinon.stub().withArgs('texdoc.path').returns('/tmp/evil')
+        } as unknown as vscode.WorkspaceConfiguration)
+
+        const approved = await confirmWorkspaceCommandExecution(undefined, 'texdoc.path', '/tmp/evil')
+
+        assert.strictEqual(approved, false)
+        assert.ok(showWarningStub.calledOnce)
     })
 })

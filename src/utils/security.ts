@@ -4,14 +4,14 @@ import { lw } from '../lw'
 
 const logger = lw.log('Security')
 
-const approvedWorkspaceCommands = new Set<string>()
 const warnedWorkspaceCommands = new Set<string>()
 const blockedWorkspaceOverrides = new Set<string>()
+const blockedWorkspaceCommands = new Set<string>()
 
 type InspectValue<T> = {
-    defaultValue?: T
-    globalValue?: T
-    workspaceValue?: T
+    defaultValue?: T,
+    globalValue?: T,
+    workspaceValue?: T,
     workspaceFolderValue?: T
 }
 
@@ -46,31 +46,20 @@ export async function confirmWorkspaceCommandExecution(scope: vscode.Configurati
     }
 
     const key = `${section}:${command}:${configScope}:${getScopeKey(scope)}`
-    if (approvedWorkspaceCommands.has(key)) {
-        return true
+    if (blockedWorkspaceCommands.has(key)) {
+        return false
     }
+    blockedWorkspaceCommands.add(key)
 
-    if (process.env.LATEXWORKSHOP_CITEST === '1') {
-        approvedWorkspaceCommands.add(key)
-        logger.log(`Workspace-scoped command auto-approved in tests for latex-workshop.${section}: ${command}`)
-        return true
-    }
-
+    logger.log(`Workspace-scoped command blocked for latex-workshop.${section}: ${command}`)
     const selection = await vscode.window.showWarningMessage(
-        `LaTeX-Secure-Workspace is about to run "${command}" from the ${configScope} setting "latex-workshop.${section}" in this trusted workspace. Review the workspace settings if this is unexpected.`,
+        `The ${configScope} setting "latex-workshop.${section}" is disabled in this secure build. Move "${command}" to your user settings if you still need it.`,
         { modal: true },
-        'Continue',
         'Open Settings'
     )
-    if (selection === 'Continue') {
-        approvedWorkspaceCommands.add(key)
-        logger.log(`Workspace-scoped command approved for latex-workshop.${section}: ${command}`)
-        return true
-    }
     if (selection === 'Open Settings') {
         await vscode.commands.executeCommand('workbench.action.openSettings', `latex-workshop.${section}`)
     }
-    logger.log(`Workspace-scoped command blocked for latex-workshop.${section}: ${command}`)
     return false
 }
 
