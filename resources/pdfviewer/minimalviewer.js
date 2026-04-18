@@ -1,3 +1,9 @@
+import {
+    PDF_VIEWER_LIMITS,
+    computeOutputScale,
+    pickPageNumbersToRender,
+} from './renderlimits.mjs'
+
 const vscode = acquireVsCodeApi()
 const configElement = document.getElementById('pdf-preview-config')
 const statusText = document.getElementById('statusText')
@@ -13,12 +19,6 @@ const state = {
     scrollMode: config.appearance?.scrollMode,
     spreadMode: config.appearance?.spreadMode,
 }
-
-const MAX_OUTPUT_SCALE = 1.5
-const MAX_CANVAS_PIXELS = 2_500_000
-const MAX_RENDERED_PAGES = 2
-const RENDER_MARGIN_MULTIPLIER = 0.25
-const MIN_PLACEHOLDER_CANVAS_SIZE = 1
 
 let pdfjsLibPromise
 let renderEpoch = 0
@@ -325,10 +325,7 @@ function resolveScale(viewport) {
 }
 
 function getOutputScale(viewport) {
-    const deviceScale = Math.min(MAX_OUTPUT_SCALE, window.devicePixelRatio || 1)
-    const viewportPixels = Math.max(1, viewport.width * viewport.height)
-    const cappedScale = Math.sqrt(MAX_CANVAS_PIXELS / viewportPixels)
-    return Math.max(0.5, Math.min(deviceScale, cappedScale))
+    return computeOutputScale(viewport, window.devicePixelRatio || 1)
 }
 
 function queueVisiblePageRender() {
@@ -365,65 +362,13 @@ async function updateVisiblePages(epoch) {
 function getPagesNearViewport() {
     const top = viewerContainer.scrollTop
     const height = Math.max(1, viewerContainer.clientHeight)
-    const bottom = top + height
-    const margin = height * RENDER_MARGIN_MULTIPLIER
     const pendingPageNumber = getPendingPageNumber()
-    const visiblePages = []
-    let nearestPageNumber = undefined
-    let nearestDistance = Number.POSITIVE_INFINITY
-
-    for (const [pageNumber, entry] of pageEntries) {
-        const pageTop = entry.shell.offsetTop
-        const pageBottom = pageTop + entry.shell.offsetHeight
-        if (pageBottom >= top - margin && pageTop <= bottom + margin) {
-            visiblePages.push({
-                distance: Math.abs((pageTop + pageBottom) / 2 - (top + bottom) / 2),
-                pageNumber,
-            })
-        }
-
-        const distance = Math.abs((pageTop + pageBottom) / 2 - (top + bottom) / 2)
-        if (distance < nearestDistance) {
-            nearestDistance = distance
-            nearestPageNumber = pageNumber
-        }
-    }
-
-    visiblePages.sort((left, right) => left.distance - right.distance)
-    const pages = new Set(visiblePages.slice(0, MAX_RENDERED_PAGES).map(page => page.pageNumber))
-
-    if (pendingPageNumber !== undefined) {
-        pages.add(pendingPageNumber)
-    }
-    if (pages.size === 0 && nearestPageNumber !== undefined) {
-        pages.add(nearestPageNumber)
-    }
-
-    while (pages.size > MAX_RENDERED_PAGES) {
-        let farthestPageNumber = undefined
-        let farthestDistance = Number.NEGATIVE_INFINITY
-        for (const pageNumber of pages) {
-            if (pageNumber === pendingPageNumber) {
-                continue
-            }
-            const entry = pageEntries.get(pageNumber)
-            if (!entry) {
-                continue
-            }
-            const pageTop = entry.shell.offsetTop
-            const pageBottom = pageTop + entry.shell.offsetHeight
-            const distance = Math.abs((pageTop + pageBottom) / 2 - (top + bottom) / 2)
-            if (distance > farthestDistance) {
-                farthestDistance = distance
-                farthestPageNumber = pageNumber
-            }
-        }
-        if (farthestPageNumber === undefined) {
-            break
-        }
-        pages.delete(farthestPageNumber)
-    }
-    return pages
+    const pageMetrics = [...pageEntries.entries()].map(([pageNumber, entry]) => ({
+        pageBottom: entry.shell.offsetTop + entry.shell.offsetHeight,
+        pageNumber,
+        pageTop: entry.shell.offsetTop,
+    }))
+    return new Set(pickPageNumbersToRender(pageMetrics, top, height, pendingPageNumber))
 }
 
 function releaseRenderedPage(entry) {
@@ -447,8 +392,8 @@ function clearPageEntries() {
 
 function resetCanvasToPlaceholder(canvas, viewport) {
     canvas.classList.add('pageCanvasPlaceholder')
-    canvas.width = MIN_PLACEHOLDER_CANVAS_SIZE
-    canvas.height = MIN_PLACEHOLDER_CANVAS_SIZE
+    canvas.width = PDF_VIEWER_LIMITS.minPlaceholderCanvasSize
+    canvas.height = PDF_VIEWER_LIMITS.minPlaceholderCanvasSize
     canvas.style.width = `${Math.ceil(viewport.width)}px`
     canvas.style.height = `${Math.ceil(viewport.height)}px`
 }
