@@ -219,6 +219,19 @@ describe(path.basename(__filename).split('.')[0] + ':', () => {
     })
 
     describe('lw.compile->recipe config propagation', () => {
+        it('should ignore workspace overrides for docker.enabled during secure builds', async () => {
+            const rootFile = set.root('main.tex')
+
+            await set.codeConfig('docker.enabled', true)
+            await sleep(150)
+            await build(rootFile, 'latex', async () => {})
+
+            const step = queue.getStep()
+            assert.ok(step)
+            assert.strictEqual(step.command, 'latexmk')
+            assert.ok(step.args?.includes(rootFile.replace(/\\/g, '/').replace('.tex', '')))
+        })
+
         it('should ignore workspace overrides for LATEXWORKSHOP_DOCKER_LATEX', async () => {
             const expectedImageName = 'your-docker-image'
             const showWarningStub = sinon.stub(vscode.window, 'showWarningMessage').resolves(undefined)

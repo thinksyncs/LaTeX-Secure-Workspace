@@ -8,6 +8,7 @@ const warnedWorkspaceCommands = new Set<string>()
 const approvedWorkspaceCommands = new Set<string>()
 const blockedWorkspaceOverrides = new Set<string>()
 const blockedWorkspaceCommands = new Set<string>()
+const ignoredWorkspaceOverrides = new Set<string>()
 
 type InspectValue<T> = {
     defaultValue?: T,
@@ -143,6 +144,26 @@ export async function confirmNoWorkspaceConfigurationOverride(scope: vscode.Conf
 
 function getNonWorkspaceValue<T>(inspect: InspectValue<T>, fallback: T): T {
     return inspect.globalValue ?? inspect.defaultValue ?? fallback
+}
+
+export function getSecureConfigurationValueSync<T>(scope: vscode.ConfigurationScope | undefined, section: string, fallback: T): T {
+    const configuration = vscode.workspace.getConfiguration('latex-workshop', scope)
+    const inspect = configuration.inspect<T>(section)
+    if (!inspect) {
+        return fallback
+    }
+
+    if (inspect.workspaceFolderValue !== undefined || inspect.workspaceValue !== undefined) {
+        const configScope = inspect.workspaceFolderValue !== undefined ? 'workspace folder' : 'workspace'
+        const key = `${section}:${configScope}:${getScopeKey(scope)}`
+        if (!ignoredWorkspaceOverrides.has(key)) {
+            ignoredWorkspaceOverrides.add(key)
+            logger.log(`Ignoring ${configScope}-scoped override for latex-workshop.${section} in secure build.`)
+        }
+        return getNonWorkspaceValue(inspect, fallback)
+    }
+
+    return configuration.get(section, fallback)
 }
 
 export async function getSecureConfigurationValue<T>(scope: vscode.ConfigurationScope | undefined, section: string, fallback: T): Promise<T> {

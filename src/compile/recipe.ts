@@ -1,7 +1,7 @@
 import vscode from 'vscode'
 import path from 'path'
 import { replaceArgumentPlaceholders, splitCommandLineArgs } from '../utils/utils'
-import { getSecureConfigurationValue } from '../utils/security'
+import { getSecureConfigurationValue, getSecureConfigurationValueSync } from '../utils/security'
 
 import { lw } from '../lw'
 import type { Recipe, Tool } from '../types'
@@ -295,7 +295,7 @@ function findRecipe(rootFile: string, langId: string, recipeName?: string): Reci
  */
 function populateTools(rootFile: string, buildTools: Tool[]): Tool[] {
     const configuration = vscode.workspace.getConfiguration('latex-workshop', lw.file.toUri(rootFile))
-    const docker = configuration.get('docker.enabled')
+    const docker = getSecureConfigurationValueSync(lw.file.toUri(rootFile), 'docker.enabled', false)
 
     buildTools.forEach(tool => {
         if (docker) {

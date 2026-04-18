@@ -2,6 +2,7 @@ import * as vscode from 'vscode'
 import * as path from 'path'
 import { glob } from 'glob'
 import { lw } from '../lw'
+import { getSecureConfigurationValueSync } from './security'
 
 export function sleep(ms: number) {
     return new Promise(resolve => setTimeout(resolve, ms))
@@ -343,7 +344,7 @@ export function resolveFileGlob(dirs: string[], inputGlob: string, suffix: strin
 export function replaceArgumentPlaceholders(rootFile: string, tmpDir: string): (arg: string) => string {
     return (arg: string) => {
         const configuration = vscode.workspace.getConfiguration('latex-workshop', lw.file.toUri(rootFile))
-        const docker = configuration.get('docker.enabled')
+        const docker = getSecureConfigurationValueSync(lw.file.toUri(rootFile), 'docker.enabled', false)
 
         const workspaceFolder = vscode.workspace.workspaceFolders?.[0]
         const workspaceDir = workspaceFolder?.uri.fsPath.split(path.sep).join('/') || ''
