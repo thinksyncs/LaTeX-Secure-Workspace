@@ -1,4 +1,5 @@
 import {
+    createPdfDocumentInit,
     PDF_VIEWER_LIMITS,
     computeOutputScale,
     pickPageNumbersToRender,
@@ -27,6 +28,7 @@ let renderQueueTimer = undefined
 let resizeTimer = undefined
 let stateTimer = undefined
 let synctexIndicatorTimer = undefined
+let documentCleanupTimer = undefined
 let pendingSyncTeX = undefined
 const pageEntries = new Map()
 const reverseSyncTeXKeybinding = config.appearance?.keybindings?.synctex ?? 'ctrl-click'
@@ -112,6 +114,7 @@ async function renderDocument({ preserveScroll }) {
     const previousScrollTop = viewerContainer.scrollTop
     const previousScrollLeft = viewerContainer.scrollLeft
     clearTimeout(renderQueueTimer)
+    clearTimeout(documentCleanupTimer)
     clearPageEntries()
     pagesRoot.replaceChildren()
     statusText.textContent = 'Loading PDF…'
@@ -126,13 +129,7 @@ async function renderDocument({ preserveScroll }) {
     currentPdf = undefined
 
     const pdfjsLib = await loadPdfJs()
-    const loadingTask = pdfjsLib.getDocument({
-        url: config.path,
-        cMapPacked: true,
-        cMapUrl: config.cMapUrl,
-        standardFontDataUrl: config.standardFontDataUrl,
-        wasmUrl: config.wasmUrl,
-    })
+    const loadingTask = pdfjsLib.getDocument(createPdfDocumentInit(config))
     const pdf = await loadingTask.promise
     if (epoch !== renderEpoch) {
         await pdf.destroy()
@@ -175,9 +172,14 @@ async function buildPageShells(pdf, epoch) {
         } finally {
             page.cleanup?.()
         }
+
+        if (pageNumber % PDF_VIEWER_LIMITS.pageCleanupBatchSize === 0) {
+            await pdf.cleanup?.()
+        }
     }
 
     pagesRoot.append(fragment)
+    await pdf.cleanup?.()
 }
 
 function createPageEntry(pageNumber, viewport) {
@@ -357,6 +359,8 @@ async function updateVisiblePages(epoch) {
         }
         await renderPage(entry, epoch)
     }
+
+    queueDocumentCleanup(epoch)
 }
 
 function getPagesNearViewport() {
@@ -388,6 +392,29 @@ function clearPageEntries() {
         releaseRenderedPage(entry)
     }
     pageEntries.clear()
+}
+
+function queueDocumentCleanup(epoch = renderEpoch) {
+    clearTimeout(documentCleanupTimer)
+    documentCleanupTimer = setTimeout(() => {
+        void cleanupDocumentIfIdle(epoch)
+    }, PDF_VIEWER_LIMITS.documentCleanupDelayMs)
+}
+
+async function cleanupDocumentIfIdle(epoch) {
+    if (epoch !== renderEpoch || !currentPdf) {
+        return
+    }
+    for (const entry of pageEntries.values()) {
+        if (entry.isRendering) {
+            queueDocumentCleanup(epoch)
+            return
+        }
+    }
+    try {
+        await currentPdf.cleanup?.()
+    } catch (_error) {
+    }
 }
 
 function resetCanvasToPlaceholder(canvas, viewport) {

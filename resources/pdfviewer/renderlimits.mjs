@@ -1,12 +1,40 @@
 export const PDF_VIEWER_LIMITS = Object.freeze({
-    maxCanvasDimension: 4096,
-    maxCanvasPixels: 2_500_000,
-    maxRenderedPages: 2,
-    maxOutputScale: 1.5,
+    canvasMaxAreaInBytes: 6_000_000,
+    documentCleanupDelayMs: 150,
+    disableAutoFetch: true,
+    disableStream: true,
+    enableHWA: false,
+    isImageDecoderSupported: false,
+    isOffscreenCanvasSupported: false,
+    maxCanvasDimension: 3072,
+    maxCanvasPixels: 1_500_000,
+    maxImageSize: 1_500_000,
+    maxOutputScale: 1.25,
+    maxRenderedPages: 1,
     minOutputScale: 0.1,
     minPlaceholderCanvasSize: 1,
-    renderMarginMultiplier: 0.25,
+    pageCleanupBatchSize: 4,
+    renderMarginMultiplier: 0,
+    useWasm: false,
 })
+
+export function createPdfDocumentInit(config, limits = PDF_VIEWER_LIMITS) {
+    return {
+        cMapPacked: true,
+        cMapUrl: config.cMapUrl,
+        canvasMaxAreaInBytes: limits.canvasMaxAreaInBytes,
+        disableAutoFetch: limits.disableAutoFetch,
+        disableStream: limits.disableStream,
+        enableHWA: limits.enableHWA,
+        isImageDecoderSupported: limits.isImageDecoderSupported,
+        isOffscreenCanvasSupported: limits.isOffscreenCanvasSupported,
+        maxImageSize: limits.maxImageSize,
+        standardFontDataUrl: config.standardFontDataUrl,
+        url: config.path,
+        useWasm: limits.useWasm,
+        wasmUrl: config.wasmUrl,
+    }
+}
 
 export function computeOutputScale(viewport, devicePixelRatio, limits = PDF_VIEWER_LIMITS) {
     const viewportWidth = Math.max(1, Number(viewport?.width) || 1)
