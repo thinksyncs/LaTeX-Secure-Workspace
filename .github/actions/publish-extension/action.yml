@@ -24,35 +24,32 @@ runs:
   - id: validate
     shell: bash
     env:
-      CANONICAL_REPOSITORY: ${{ inputs.canonical_repository }}
       PUBLISH_OPENVSX: ${{ inputs.publish_openvsx }}
     run: |
-      missing=()
-      if [ -z "${VSCE_PAT:-}" ]; then
-        missing+=("VSCE_PAT")
-      fi
-      if [ "$PUBLISH_OPENVSX" = 'true' ] && [ -z "${OVSX_PAT:-}" ]; then
-        missing+=("OVSX_PAT")
-      fi
+      publish_marketplace=false
+      publish_openvsx=false
 
-      if [ "${#missing[@]}" -eq 0 ]; then
-        echo "publish_enabled=true" >> "$GITHUB_OUTPUT"
-        exit 0
+      if [ -n "${VSCE_PAT:-}" ]; then
+        publish_marketplace=true
+      else
+        echo 'Skipping VS Marketplace publish because VSCE_PAT is not configured.'
       fi
 
-      if [ "$GITHUB_REPOSITORY" = "$CANONICAL_REPOSITORY" ]; then
-        printf 'Missing required publish credential(s) for %s: %s\n' "$GITHUB_REPOSITORY" "${missing[*]}" >&2
-        exit 1
+      if [ "$PUBLISH_OPENVSX" = 'true' ]; then
+        if [ -n "${OVSX_PAT:-}" ]; then
+          publish_openvsx=true
+        else
+          echo 'Skipping Open VSX publish because OVSX_PAT is not configured.'
+        fi
       fi
 
-      echo "publish_enabled=false" >> "$GITHUB_OUTPUT"
-      printf 'Skipping registry publish outside canonical repository %s because credential(s) are missing: %s\n' "$CANONICAL_REPOSITORY" "${missing[*]}"
+      echo "publish_marketplace=$publish_marketplace" >> "$GITHUB_OUTPUT"
+      echo "publish_openvsx=$publish_openvsx" >> "$GITHUB_OUTPUT"
 
-  - if: ${{ steps.validate.outputs.publish_enabled == 'true' }}
+  - if: ${{ steps.validate.outputs.publish_marketplace == 'true' }}
     shell: bash
     env:
       PRE_RELEASE: ${{ inputs.pre_release }}
-      PUBLISH_OPENVSX: ${{ inputs.publish_openvsx }}
       VSIX_PATH: ${{ inputs.vsix_path }}
       VSCE_STORE: file
     run: |
@@ -82,6 +79,28 @@ runs:
 
       retry 3 10 npx vsce "${marketplace_args[@]}"
 
-      if [ "$PUBLISH_OPENVSX" = 'true' ]; then
-        retry 3 10 npx ovsx publish "$VSIX_PATH" -p "$OVSX_PAT"
-      fi
+  - if: ${{ steps.validate.outputs.publish_openvsx == 'true' }}
+    shell: bash
+    env:
+      VSIX_PATH: ${{ inputs.vsix_path }}
+    run: |
+      retry() {
+        local attempts="$1"
+        local delay="$2"
+        shift 2
+        local try=1
+        local status=0
+        while true; do
+          "$@" && return 0
+          status=$?
+          if [ "$try" -ge "$attempts" ]; then
+            return "$status"
+          fi
+          printf 'Command failed with exit code %s. Retrying in %ss (%s/%s)...\n' "$status" "$delay" "$try" "$attempts" >&2
+          sleep "$delay"
+          try=$((try + 1))
+          delay=$((delay * 2))
+        done
+      }
+
+      retry 3 10 npx ovsx publish "$VSIX_PATH" -p "$OVSX_PAT"
