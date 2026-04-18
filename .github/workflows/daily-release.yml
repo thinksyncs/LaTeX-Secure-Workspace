@@ -35,7 +35,7 @@ jobs:
       env:
         GITHUB_RUN_NUMBER: ${{ github.run_number }}
       run: node ./dev/computeDailyVersion.mjs >> "$GITHUB_OUTPUT"
-    - name: Apply daily prerelease version
+    - name: Apply daily version
       run: npm version --no-git-tag-version "${{ steps.version.outputs.daily_version }}"
     - name: Verify daily release build
       run: xvfb-run -a npm run release:verify
@@ -44,16 +44,8 @@ jobs:
       run: |
         mkdir -p artifacts/vsix
         vsix_path="artifacts/vsix/${{ steps.version.outputs.package_name }}-${{ steps.version.outputs.daily_version }}.vsix"
-        npx vsce package --pre-release --out "$vsix_path"
+        npx vsce package --out "$vsix_path"
         echo "vsix_path=$vsix_path" >> "$GITHUB_OUTPUT"
-    - name: Publish Marketplace pre-release
-      uses: ./.github/actions/publish-extension
-      env:
-        VSCE_PAT: ${{ secrets.VSCE_PAT }}
-      with:
-        vsix_path: ${{ steps.package.outputs.vsix_path }}
-        pre_release: 'true'
-        publish_openvsx: 'false'
     - name: Build daily release notes
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -73,7 +65,7 @@ jobs:
         git tag daily "$GITHUB_SHA"
         git push origin refs/tags/daily --force
         gh release create daily "${{ steps.package.outputs.vsix_path }}" \
-          --title "Daily Pre-release ${{ steps.version.outputs.daily_version }}" \
+          --title "Daily Build ${{ steps.version.outputs.daily_version }}" \
           --prerelease \
           --notes-file "$RUNNER_TEMP/daily-release-notes.md"
     - name: Archive daily VSIX artifact

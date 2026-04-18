@@ -61,11 +61,18 @@ jobs:
             grep -q 'npm ci --ignore-scripts' "$file" || { echo "Missing npm --ignore-scripts hardening in $file"; exit 1; }
           done
 
-      - name: Ensure release workflows use the shared publish action
+      - name: Ensure stable release uses the shared publish action
         run: |
-          for file in .github/workflows/stable-release.yml .github/workflows/daily-release.yml; do
-            grep -q 'uses: ./.github/actions/publish-extension' "$file" || { echo "Missing shared publish action in $file"; exit 1; }
-          done
+          file=.github/workflows/stable-release.yml
+          grep -q 'uses: ./.github/actions/publish-extension' "$file" || { echo "Missing shared publish action in $file"; exit 1; }
+
+      - name: Ensure daily release stays off public registries
+        run: |
+          file=.github/workflows/daily-release.yml
+          if grep -q 'uses: ./.github/actions/publish-extension' "$file"; then
+            echo "Daily release must not publish to extension registries."
+            exit 1
+          fi
 
       - name: Ensure shared publish action covers both registry credentials
         run: |

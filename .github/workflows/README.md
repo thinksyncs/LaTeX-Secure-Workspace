@@ -1,18 +1,18 @@
 # Overview
 
-## Release Channels
+## Release Flows
 
-The release automation is split into two channels.
+The release automation now uses one public registry channel and one preview artifact flow.
 
-- `stable-release.yml`: builds from a published GitHub release tag, publishes the stable package to the VS Code Marketplace and Open VSX, uploads the VSIX to GitHub Releases, and fails closed in the canonical repository if required publish credentials are missing.
-- `daily-release.yml`: builds, tests, and packages a daily prerelease, refreshes the rolling GitHub `daily` prerelease, publishes to the VS Code Marketplace pre-release channel, and attaches summaries of open pull requests, CodeQL alerts, and Dependabot alerts.
+- `stable-release.yml`: builds from a published GitHub release tag, publishes the package to the VS Code Marketplace and Open VSX, uploads the VSIX to GitHub Releases, and fails closed in the canonical repository if required publish credentials are missing.
+- `daily-release.yml`: builds, tests, and packages a daily preview VSIX, refreshes the rolling GitHub `daily` prerelease, and attaches summaries of open pull requests, CodeQL alerts, and Dependabot alerts. It does not publish to Marketplace or Open VSX.
 
 The canonical repository expects:
 
 - `VSCE_PAT` for VS Code Marketplace publishing.
 - `OVSX_PAT` for Open VSX stable publishing.
 
-Forks skip registry publication when those secrets are absent, but the canonical repository fails the release workflow instead so shipping gaps are visible immediately.
+Forks skip registry publication when those secrets are absent, but the canonical repository fails the stable release workflow instead so shipping gaps are visible immediately.
 The release jobs run VS Code integration tests on Linux under `xvfb-run` so Electron can start in a headless GitHub Actions environment.
 
 We run tests on GitHub Actions on Windows, macOS, and Linux with the minimal installations of TeX Live.
