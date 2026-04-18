@@ -118,15 +118,15 @@ suite('Formatter test suite', () => {
             {src: 'formatter/bibtex_base.bib', dst: 'main.bib'}
         ], {open: 0, skipCache: true})
 
-        await vscode.workspace.getConfiguration('latex-workshop').update('bibtex-format.tab', 'tab')
+        await vscode.workspace.getConfiguration('latex-workshop').update('bibtex-format.tab', 'tab', userTarget)
         let lines = (await test.format()).split('\n')
         assert.strictEqual(lines[1].slice(0, 1), '\t')
 
-        await vscode.workspace.getConfiguration('latex-workshop').update('bibtex-format.tab', '2 spaces')
+        await vscode.workspace.getConfiguration('latex-workshop').update('bibtex-format.tab', '2 spaces', userTarget)
         lines = (await test.format()).split('\n')
         assert.strictEqual(lines[1].slice(0, 2), '  ')
 
-        await vscode.workspace.getConfiguration('latex-workshop').update('bibtex-format.tab', '4')
+        await vscode.workspace.getConfiguration('latex-workshop').update('bibtex-format.tab', '4', userTarget)
         lines = (await test.format()).split('\n')
         assert.strictEqual(lines[1].slice(0, 4), '    ')
     })
@@ -136,11 +136,11 @@ suite('Formatter test suite', () => {
             {src: 'formatter/bibtex_base.bib', dst: 'main.bib'}
         ], {open: 0, skipCache: true})
 
-        await vscode.workspace.getConfiguration('latex-workshop').update('bibtex-format.surround', 'Curly braces')
+        await vscode.workspace.getConfiguration('latex-workshop').update('bibtex-format.surround', 'Curly braces', userTarget)
         let lines = (await test.format()).split('\n')
         assert.strictEqual(lines[1].slice(-2, -1), '}')
 
-        await vscode.workspace.getConfiguration('latex-workshop').update('bibtex-format.surround', 'Quotation marks')
+        await vscode.workspace.getConfiguration('latex-workshop').update('bibtex-format.surround', 'Quotation marks', userTarget)
         lines = (await test.format()).split('\n')
         assert.strictEqual(lines[1].slice(-2, -1), '"')
     })
@@ -150,19 +150,19 @@ suite('Formatter test suite', () => {
             {src: 'formatter/bibtex_base.bib', dst: 'main.bib'}
         ], {open: 0, skipCache: true})
 
-        await vscode.workspace.getConfiguration('latex-workshop').update('bibtex-format.case.field', 'UPPERCASE')
+        await vscode.workspace.getConfiguration('latex-workshop').update('bibtex-format.case.field', 'UPPERCASE', userTarget)
         let lines = (await test.format()).split('\n')
         assert.ok(lines[1].trim().slice(0, 1).match(/[A-Z]/))
 
-        await vscode.workspace.getConfiguration('latex-workshop').update('bibtex-format.case.field', 'lowercase')
+        await vscode.workspace.getConfiguration('latex-workshop').update('bibtex-format.case.field', 'lowercase', userTarget)
         lines = (await test.format()).split('\n')
         assert.ok(lines[1].trim().slice(0, 1).match(/[a-z]/))
 
-        await vscode.workspace.getConfiguration('latex-workshop').update('bibtex-format.case.type', 'UPPERCASE')
+        await vscode.workspace.getConfiguration('latex-workshop').update('bibtex-format.case.type', 'UPPERCASE', userTarget)
         lines = (await test.format()).split('\n')
         assert.ok(lines[0].trim().slice(1, 2).match(/[A-Z]/))
 
-        await vscode.workspace.getConfiguration('latex-workshop').update('bibtex-format.case.type', 'lowercase')
+        await vscode.workspace.getConfiguration('latex-workshop').update('bibtex-format.case.type', 'lowercase', userTarget)
         lines = (await test.format()).split('\n')
         assert.ok(lines[0].trim().slice(1, 2).match(/[a-z]/))
     })
@@ -172,11 +172,11 @@ suite('Formatter test suite', () => {
             {src: 'formatter/bibtex_base.bib', dst: 'main.bib'}
         ], {open: 0, skipCache: true})
 
-        await vscode.workspace.getConfiguration('latex-workshop').update('bibtex-format.trailingComma', true)
+        await vscode.workspace.getConfiguration('latex-workshop').update('bibtex-format.trailingComma', true, userTarget)
         let lines = (await test.format()).split('\n')
         assert.strictEqual(lines[5].trim().slice(-1), ',')
 
-        await vscode.workspace.getConfiguration('latex-workshop').update('bibtex-format.trailingComma', false)
+        await vscode.workspace.getConfiguration('latex-workshop').update('bibtex-format.trailingComma', false, userTarget)
         lines = (await test.format()).split('\n')
         assert.notStrictEqual(lines[5].trim().slice(-1), ',')
     })
@@ -186,14 +186,14 @@ suite('Formatter test suite', () => {
             {src: 'formatter/bibtex_base.bib', dst: 'main.bib'}
         ], {open: 0, skipCache: true})
 
-        await vscode.workspace.getConfiguration('latex-workshop').update('bibtex-format.sortby', ['year'])
+        await vscode.workspace.getConfiguration('latex-workshop').update('bibtex-format.sortby', ['year'], userTarget)
         let lines = (await test.format()).split('\n')
         let entries = lines.filter(line => line.includes('@'))
         assert.ok(entries[2].includes('art1'))
         assert.ok(entries[1].includes('lamport1994latex'))
         assert.ok(entries[0].includes('MR1241645'))
 
-        await vscode.workspace.getConfiguration('latex-workshop').update('bibtex-format.sortby', ['year-desc'])
+        await vscode.workspace.getConfiguration('latex-workshop').update('bibtex-format.sortby', ['year-desc'], userTarget)
         lines = (await test.format()).split('\n')
         entries = lines.filter(line => line.includes('@'))
         assert.ok(entries[0].includes('art1'))
@@ -206,13 +206,13 @@ suite('Formatter test suite', () => {
             {src: 'formatter/bibtex_dup.bib', dst: 'main.bib'}
         ], {open: 0, skipCache: true})
 
-        await vscode.workspace.getConfiguration('latex-workshop').update('bibtex-format.handleDuplicates', 'Comment Duplicates')
+        await vscode.workspace.getConfiguration('latex-workshop').update('bibtex-format.handleDuplicates', 'Comment Duplicates', userTarget)
         const lines = (await test.format()).split('\n')
         assert.strictEqual(lines.filter(line => line.includes('@')).length, 1)
     })
 
     test.run('test bibtex formatter with `bibtex-format.sort.enabled`', async (fixture: string) => {
-        await vscode.workspace.getConfiguration('latex-workshop').update('bibtex-format.sortby', ['year'])
+        await vscode.workspace.getConfiguration('latex-workshop').update('bibtex-format.sortby', ['year'], userTarget)
         await test.load(fixture, [
             {src: 'formatter/bibtex_base.bib', dst: 'main.bib'}
         ], {open: 0, skipCache: true})
@@ -229,12 +229,12 @@ suite('Formatter test suite', () => {
             {src: 'formatter/bibtex_base.bib', dst: 'main.bib'}
         ], {open: 0, skipCache: true})
 
-        await vscode.workspace.getConfiguration('latex-workshop').update('bibtex-format.align-equal.enabled', false)
+        await vscode.workspace.getConfiguration('latex-workshop').update('bibtex-format.align-equal.enabled', false, userTarget)
         let lines = (await test.format()).split('\n')
         const allEqual = (arr: number[]) => arr.every(val => val === arr[0])
         assert.ok(!allEqual(lines.filter(line => line.includes('=')).map(line => line.indexOf('='))))
 
-        await vscode.workspace.getConfiguration('latex-workshop').update('bibtex-format.align-equal.enabled', true)
+        await vscode.workspace.getConfiguration('latex-workshop').update('bibtex-format.align-equal.enabled', true, userTarget)
         lines = (await test.format()).split('\n')
         assert.ok(allEqual(lines.filter(line => line.includes('=')).map(line => line.indexOf('='))))
     })
@@ -244,8 +244,8 @@ suite('Formatter test suite', () => {
             {src: 'formatter/bibtex_base.bib', dst: 'main.bib'}
         ], {open: 0, skipCache: true})
 
-        await vscode.workspace.getConfiguration('latex-workshop').update('bibtex-entries.first', ['book'])
-        await vscode.workspace.getConfiguration('latex-workshop').update('bibtex-format.sortby', ['key'])
+        await vscode.workspace.getConfiguration('latex-workshop').update('bibtex-entries.first', ['book'], userTarget)
+        await vscode.workspace.getConfiguration('latex-workshop').update('bibtex-format.sortby', ['key'], userTarget)
         const lines = (await test.format()).split('\n')
         const entries = lines.filter(line => line.includes('@'))
         assert.ok(entries[2].includes('art1'))
@@ -254,7 +254,7 @@ suite('Formatter test suite', () => {
     })
 
     test.run('test bibtex aligner with `bibtex-fields.sort.enabled` and `bibtex-fields.order`', async (fixture: string) => {
-        await vscode.workspace.getConfiguration('latex-workshop').update('bibtex-fields.sort.enabled', true)
+        await vscode.workspace.getConfiguration('latex-workshop').update('bibtex-fields.sort.enabled', true, userTarget)
         await test.load(fixture, [
             {src: 'formatter/bibtex_sortfield.bib', dst: 'main.bib'}
         ], {open: 0, skipCache: true})
@@ -267,7 +267,7 @@ suite('Formatter test suite', () => {
         assert.ok(entries[3].includes('title'))
         assert.ok(entries[4].includes('year'))
 
-        await vscode.workspace.getConfiguration('latex-workshop').update('bibtex-fields.order', ['title', 'author', 'year'])
+        await vscode.workspace.getConfiguration('latex-workshop').update('bibtex-fields.order', ['title', 'author', 'year'], userTarget)
         lines = (await test.format()).split('\n')
         entries = lines.filter(line => line.includes('='))
         assert.ok(entries[0].includes('title'))
