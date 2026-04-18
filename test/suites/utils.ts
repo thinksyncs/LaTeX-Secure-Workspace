@@ -86,6 +86,8 @@ export async function activateExtension() {
 
 export async function reset() {
     await vscode.commands.executeCommand('workbench.action.closeAllEditors')
+    await vscode.commands.executeCommand('workbench.action.closePanel')
+    await sleep(250)
     await Promise.all(Object.values(lw.cache.promises))
     lw.compile.lastAutoBuildTime = 0
     lw.compile.compiledPDFPath = ''
@@ -95,7 +97,26 @@ export async function reset() {
     lw.completion.input.reset()
     lw.lint.label.reset()
     lw.cache.reset()
-    glob.sync('**/{**.tex,**.pdf,**.bib}', { cwd: getFixture() }).forEach(file => { try {fs.unlinkSync(path.resolve(getFixture(), file))} catch {} })
+    const cleanupPatterns = [
+        '**/[0-9][0-9][0-9]/**/*.pdf',
+        '**/[0-9][0-9][0-9]/**/*.aux',
+        '**/[0-9][0-9][0-9]/**/*.bbl',
+        '**/[0-9][0-9][0-9]/**/*.blg',
+        '**/[0-9][0-9][0-9]/**/*.fdb_latexmk',
+        '**/[0-9][0-9][0-9]/**/*.fls',
+        '**/[0-9][0-9][0-9]/**/*.log',
+        '**/[0-9][0-9][0-9]/**/*.out',
+        '**/[0-9][0-9][0-9]/**/*.toc',
+        '**/[0-9][0-9][0-9]/**/*.synctex.gz'
+    ]
+    const cleanupTargets = Array.from(new Set(
+        cleanupPatterns.flatMap(pattern => glob.sync(pattern, { cwd: getFixture(), nodir: true }))
+    ))
+    cleanupTargets.forEach(file => {
+        try {
+            fs.unlinkSync(path.resolve(getFixture(), file))
+        } catch {}
+    })
 }
 
 function log(fixtureName: string, testName: string, counter: string) {
@@ -167,7 +188,14 @@ export async function load(fixture: string, files: {src: string, dst: string, ws
 
 export async function open(filePath: string) {
     const doc = await vscode.workspace.openTextDocument(filePath)
-    await vscode.window.showTextDocument(doc)
+    for (let retry = 0; retry < 5; retry++) {
+        await vscode.window.showTextDocument(doc, { preview: false, preserveFocus: false })
+        if (vscode.window.activeTextEditor?.document.uri.fsPath === filePath) {
+            await sleep(250)
+            return
+        }
+        await sleep(100)
+    }
 }
 
 export async function find(fixture: string, openFile: string, ws?: string) {

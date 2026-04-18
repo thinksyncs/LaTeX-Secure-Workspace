@@ -8,6 +8,7 @@ async function loadTestFiles(fixture: string) {
     await test.load(fixture, [
         {src: 'env_pair.tex', dst: 'main.tex'}
     ], {open: 0})
+    await test.sleep(250)
 }
 
 suite('EnvPair test suite', () => {
