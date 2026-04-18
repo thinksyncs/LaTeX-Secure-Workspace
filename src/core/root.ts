@@ -6,6 +6,7 @@ import { lw } from '../lw'
 import * as utils from '../utils/utils'
 
 const logger = lw.log('Root')
+let rootSearchGeneration = 0
 
 export const root = {
     file: {
@@ -49,6 +50,7 @@ lw.watcher.src.onDelete(uri => {
  * triggers relevant events, and dependencies are refreshed accordingly.
  */
 async function find(): Promise<undefined> {
+    const generation = ++rootSearchGeneration
     const wsfolders = vscode.workspace.workspaceFolders?.map(e => e.uri.toString(true))
     logger.log(`Current workspace folders: ${JSON.stringify(wsfolders)}`)
     root.subfiles = { path: undefined, langId: undefined }
@@ -63,8 +65,16 @@ async function find(): Promise<undefined> {
         if (rootFilePath === undefined) {
             continue
         }
+        if (generation !== rootSearchGeneration) {
+            logger.log(`Discard stale root search result: ${rootFilePath}`)
+            return
+        }
         applyResolvedRoot(rootFilePath)
         lw.event.fire(lw.event.RootFileSearched)
+        return
+    }
+    if (generation !== rootSearchGeneration) {
+        logger.log('Discard stale empty root search result.')
         return
     }
     logger.log('No root file found.')
@@ -74,6 +84,7 @@ async function find(): Promise<undefined> {
 }
 
 async function resolveSecurityRoot(): Promise<string | undefined> {
+    const generation = ++rootSearchGeneration
     const wsfolders = vscode.workspace.workspaceFolders?.map(e => e.uri.toString(true))
     logger.log(`Current workspace folders for secure root resolution: ${JSON.stringify(wsfolders)}`)
     root.subfiles = { path: undefined, langId: undefined }
@@ -87,9 +98,17 @@ async function resolveSecurityRoot(): Promise<string | undefined> {
         if (rootFilePath === undefined) {
             continue
         }
+        if (generation !== rootSearchGeneration) {
+            logger.log(`Discard stale secure root search result: ${rootFilePath}`)
+            return
+        }
         applyResolvedRoot(rootFilePath)
         lw.event.fire(lw.event.RootFileSearched)
         return rootFilePath
+    }
+    if (generation !== rootSearchGeneration) {
+        logger.log('Discard stale empty secure root search result.')
+        return
     }
     logger.log('No secure root file found.')
     void lw.outline.refresh()
