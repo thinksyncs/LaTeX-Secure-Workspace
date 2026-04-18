@@ -1,0 +1,87 @@
+name: Publish Extension Registries
+description: Publish a packaged VSIX to the configured extension registries with fail-closed checks and retries.
+
+inputs:
+  vsix_path:
+    description: Path to the packaged VSIX file.
+    required: true
+  pre_release:
+    description: Whether to publish to the VS Marketplace pre-release channel.
+    required: false
+    default: 'false'
+  publish_openvsx:
+    description: Whether to publish the VSIX to Open VSX.
+    required: false
+    default: 'true'
+  canonical_repository:
+    description: Repository that must fail closed when required publish credentials are missing.
+    required: false
+    default: thinksyncs/LaTeX-Secure-Workspace
+
+runs:
+  using: composite
+  steps:
+  - id: validate
+    shell: bash
+    env:
+      CANONICAL_REPOSITORY: ${{ inputs.canonical_repository }}
+      PUBLISH_OPENVSX: ${{ inputs.publish_openvsx }}
+    run: |
+      missing=()
+      if [ -z "${VSCE_PAT:-}" ]; then
+        missing+=("VSCE_PAT")
+      fi
+      if [ "$PUBLISH_OPENVSX" = 'true' ] && [ -z "${OVSX_PAT:-}" ]; then
+        missing+=("OVSX_PAT")
+      fi
+
+      if [ "${#missing[@]}" -eq 0 ]; then
+        echo "publish_enabled=true" >> "$GITHUB_OUTPUT"
+        exit 0
+      fi
+
+      if [ "$GITHUB_REPOSITORY" = "$CANONICAL_REPOSITORY" ]; then
+        printf 'Missing required publish credential(s) for %s: %s\n' "$GITHUB_REPOSITORY" "${missing[*]}" >&2
+        exit 1
+      fi
+
+      echo "publish_enabled=false" >> "$GITHUB_OUTPUT"
+      printf 'Skipping registry publish outside canonical repository %s because credential(s) are missing: %s\n' "$CANONICAL_REPOSITORY" "${missing[*]}"
+
+  - if: ${{ steps.validate.outputs.publish_enabled == 'true' }}
+    shell: bash
+    env:
+      PRE_RELEASE: ${{ inputs.pre_release }}
+      PUBLISH_OPENVSX: ${{ inputs.publish_openvsx }}
+      VSIX_PATH: ${{ inputs.vsix_path }}
+      VSCE_STORE: file
+    run: |
+      retry() {
+        local attempts="$1"
+        local delay="$2"
+        shift 2
+        local try=1
+        local status=0
+        while true; do
+          "$@" && return 0
+          status=$?
+          if [ "$try" -ge "$attempts" ]; then
+            return "$status"
+          fi
+          printf 'Command failed with exit code %s. Retrying in %ss (%s/%s)...\n' "$status" "$delay" "$try" "$attempts" >&2
+          sleep "$delay"
+          try=$((try + 1))
+          delay=$((delay * 2))
+        done
+      }
+
+      marketplace_args=(publish --packagePath "$VSIX_PATH")
+      if [ "$PRE_RELEASE" = 'true' ]; then
+        marketplace_args+=(--pre-release)
+      fi
+
+      retry 3 10 npx vsce "${marketplace_args[@]}"
+
+      if [ "$PUBLISH_OPENVSX" = 'true' ]; then
+        retry 3 10 npx ovsx publish "$VSIX_PATH" -p "$OVSX_PAT"
+      fi

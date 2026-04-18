@@ -60,3 +60,15 @@ jobs:
           for file in .github/workflows/texlive_on_linux.yml .github/workflows/texlive_on_mac.yml .github/workflows/texlive_on_win.yml; do
             grep -q 'npm ci --ignore-scripts' "$file" || { echo "Missing npm --ignore-scripts hardening in $file"; exit 1; }
           done
+
+      - name: Ensure release workflows use the shared publish action
+        run: |
+          for file in .github/workflows/stable-release.yml .github/workflows/daily-release.yml; do
+            grep -q 'uses: ./.github/actions/publish-extension' "$file" || { echo "Missing shared publish action in $file"; exit 1; }
+          done
+
+      - name: Ensure shared publish action covers both registry credentials
+        run: |
+          file=.github/actions/publish-extension/action.yml
+          grep -q 'VSCE_PAT' "$file" || { echo "Missing VSCE_PAT handling in $file"; exit 1; }
+          grep -q 'OVSX_PAT' "$file" || { echo "Missing OVSX_PAT handling in $file"; exit 1; }

@@ -4,10 +4,15 @@
 
 The release automation is split into two channels.
 
-- `stable-release.yml`: builds from a published GitHub release tag and publishes to the Marketplace stable channel.
-- `daily-release.yml`: builds, tests, and packages a daily prerelease, refreshes the rolling GitHub `daily` prerelease, publishes to the Marketplace pre-release channel, and attaches summaries of open pull requests, CodeQL alerts, and Dependabot alerts.
+- `stable-release.yml`: builds from a published GitHub release tag, publishes the stable package to the VS Code Marketplace and Open VSX, uploads the VSIX to GitHub Releases, and fails closed in the canonical repository if required publish credentials are missing.
+- `daily-release.yml`: builds, tests, and packages a daily prerelease, refreshes the rolling GitHub `daily` prerelease, publishes to the VS Code Marketplace pre-release channel, and attaches summaries of open pull requests, CodeQL alerts, and Dependabot alerts.
 
-Both release workflows expect a `VSCE_PAT` secret with permission to publish to the `ToppyMicroServices` Marketplace publisher.
+The canonical repository expects:
+
+- `VSCE_PAT` for VS Code Marketplace publishing.
+- `OVSX_PAT` for Open VSX stable publishing.
+
+Forks skip registry publication when those secrets are absent, but the canonical repository fails the release workflow instead so shipping gaps are visible immediately.
 The release jobs run VS Code integration tests on Linux under `xvfb-run` so Electron can start in a headless GitHub Actions environment.
 
 We run tests on GitHub Actions on Windows, macOS, and Linux with the minimal installations of TeX Live.
