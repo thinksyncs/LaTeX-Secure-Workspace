@@ -7,6 +7,8 @@ For tests of building a LaTeX file, we try to build a LaTeX file in the director
 If a PDF file is not generated, the test fails.
 The TeX files related are automatically created before the test and removed after.
 
+Property-based fuzz coverage for parser-facing code lives in `test/fuzz/` and is executed with `npm run test:fuzz`.
+
 ### How tests are executed via CLI
 
 1. `runTest.ts` starts a new VS Code instance for each `fixture` directory and executes `suites/index.ts`.
