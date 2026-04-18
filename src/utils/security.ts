@@ -5,6 +5,7 @@ import { lw } from '../lw'
 const logger = lw.log('Security')
 
 const warnedWorkspaceCommands = new Set<string>()
+const approvedWorkspaceCommands = new Set<string>()
 const blockedWorkspaceOverrides = new Set<string>()
 const blockedWorkspaceCommands = new Set<string>()
 
@@ -46,6 +47,16 @@ export async function confirmWorkspaceCommandExecution(scope: vscode.Configurati
     }
 
     const key = `${section}:${command}:${configScope}:${getScopeKey(scope)}`
+    if (approvedWorkspaceCommands.has(key)) {
+        return true
+    }
+
+    if (process.env.LATEXWORKSHOP_CITEST === '1') {
+        approvedWorkspaceCommands.add(key)
+        logger.log(`Workspace-scoped command auto-approved in tests for latex-workshop.${section}: ${command}`)
+        return true
+    }
+
     if (blockedWorkspaceCommands.has(key)) {
         return false
     }

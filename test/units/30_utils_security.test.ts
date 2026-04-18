@@ -69,4 +69,20 @@ describe('30_utils_security:', () => {
         assert.strictEqual(approved, false)
         assert.ok(showWarningStub.calledOnce)
     })
+
+    it('should auto-approve workspace-scoped commands during CI tests', async () => {
+        process.env[envKey] = '1'
+        const showWarningStub = sinon.stub(vscode.window, 'showWarningMessage')
+        sinon.stub(vscode.workspace, 'getConfiguration').returns({
+            inspect: sinon.stub().withArgs('formatting.latexindent.path').returns({
+                workspaceValue: process.execPath
+            }),
+            get: sinon.stub().withArgs('formatting.latexindent.path').returns(process.execPath)
+        } as unknown as vscode.WorkspaceConfiguration)
+
+        const approved = await confirmWorkspaceCommandExecution(undefined, 'formatting.latexindent.path', process.execPath)
+
+        assert.strictEqual(approved, true)
+        assert.ok(showWarningStub.notCalled)
+    })
 })
