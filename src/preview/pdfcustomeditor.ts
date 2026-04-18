@@ -31,11 +31,11 @@ export class SecurePdfCustomEditorProvider implements vscode.CustomReadonlyEdito
         }
         configureSecurePdfViewerWebview(webviewPanel.webview, pdfUri)
         updateViewerState(pdfUri, webviewPanel, baseState)
-        webviewPanel.webview.html = await getPdfViewerCustomEditorHtml(pdfUri, webviewPanel.webview)
 
         webviewPanel.webview.onDidReceiveMessage((msg: unknown) => {
             void handleCustomEditorMessage(pdfUri, webviewPanel, baseState, msg)
         })
+        webviewPanel.webview.html = await getPdfViewerCustomEditorHtml(pdfUri, webviewPanel.webview)
 
         const watcher = vscode.workspace.createFileSystemWatcher(pdfUri.fsPath)
         const reload = async () => {
@@ -192,6 +192,7 @@ function deleteViewerState(pdfUri: vscode.Uri, panel: vscode.WebviewPanel): void
     panelStates.delete(panel)
     if (panelStates.size === 0) {
         viewerStates.delete(key)
+        pendingSyncTeX.delete(key)
     }
 }
 
