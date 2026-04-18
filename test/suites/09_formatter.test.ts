@@ -10,44 +10,45 @@ const mockLatexindentPath = path.resolve(__dirname, '../../..', 'test/fixtures/a
 suite('Formatter test suite', () => {
     test.suite.name = path.basename(__filename).replace('.test.js', '')
     test.suite.fixture = 'testground'
+    const userTarget = vscode.ConfigurationTarget.Global
 
     suiteSetup(async () => {
         await test.activateExtension()
-        await vscode.workspace.getConfiguration('latex-workshop').update('latex.autoBuild.run', 'never')
+        await vscode.workspace.getConfiguration('latex-workshop').update('latex.autoBuild.run', 'never', userTarget)
     })
 
     setup(async () => {
-        await vscode.workspace.getConfiguration('latex-workshop').update('formatting.latex', 'latexindent')
-        await vscode.workspace.getConfiguration('latex-workshop').update('formatting.latexindent.path', process.execPath)
+        await vscode.workspace.getConfiguration('latex-workshop').update('formatting.latex', 'latexindent', userTarget)
+        await vscode.workspace.getConfiguration('latex-workshop').update('formatting.latexindent.path', process.execPath, userTarget)
         await vscode.workspace.getConfiguration('latex-workshop').update('formatting.latexindent.args', [
             mockLatexindentPath,
             '%TMPFILE%',
             '-y=defaultIndent: \'%INDENT%\''
-        ])
-        await vscode.workspace.getConfiguration('latex-workshop').update('bibtex-format.sort.enabled', true)
+        ], userTarget)
+        await vscode.workspace.getConfiguration('latex-workshop').update('bibtex-format.sort.enabled', true, userTarget)
         await vscode.workspace.getConfiguration().update('[latex]', {
             'editor.defaultFormatter': extensionId
-        })
+        }, userTarget)
     })
 
     teardown(async () => {
         await test.reset()
 
-        await vscode.workspace.getConfiguration('latex-workshop').update('formatting.latex', undefined)
-        await vscode.workspace.getConfiguration('latex-workshop').update('formatting.latexindent.path', undefined)
-        await vscode.workspace.getConfiguration('latex-workshop').update('formatting.latexindent.args', undefined)
-        await vscode.workspace.getConfiguration('latex-workshop').update('bibtex-format.tab', undefined)
-        await vscode.workspace.getConfiguration('latex-workshop').update('bibtex-format.surround', undefined)
-        await vscode.workspace.getConfiguration('latex-workshop').update('bibtex-format.case', undefined)
-        await vscode.workspace.getConfiguration('latex-workshop').update('bibtex-format.trailingComma', undefined)
-        await vscode.workspace.getConfiguration('latex-workshop').update('bibtex-format.sort.enabled', undefined)
-        await vscode.workspace.getConfiguration('latex-workshop').update('bibtex-format.sortby', undefined)
-        await vscode.workspace.getConfiguration('latex-workshop').update('bibtex-format.handleDuplicates', undefined)
-        await vscode.workspace.getConfiguration('latex-workshop').update('bibtex-format.align-equal.enabled', undefined)
-        await vscode.workspace.getConfiguration('latex-workshop').update('bibtex-entries.first', undefined)
-        await vscode.workspace.getConfiguration('latex-workshop').update('bibtex-fields.sort.enabled', undefined)
-        await vscode.workspace.getConfiguration('latex-workshop').update('bibtex-fields.order', undefined)
-        await vscode.workspace.getConfiguration().update('[latex]', undefined)
+        await vscode.workspace.getConfiguration('latex-workshop').update('formatting.latex', undefined, userTarget)
+        await vscode.workspace.getConfiguration('latex-workshop').update('formatting.latexindent.path', undefined, userTarget)
+        await vscode.workspace.getConfiguration('latex-workshop').update('formatting.latexindent.args', undefined, userTarget)
+        await vscode.workspace.getConfiguration('latex-workshop').update('bibtex-format.tab', undefined, userTarget)
+        await vscode.workspace.getConfiguration('latex-workshop').update('bibtex-format.surround', undefined, userTarget)
+        await vscode.workspace.getConfiguration('latex-workshop').update('bibtex-format.case', undefined, userTarget)
+        await vscode.workspace.getConfiguration('latex-workshop').update('bibtex-format.trailingComma', undefined, userTarget)
+        await vscode.workspace.getConfiguration('latex-workshop').update('bibtex-format.sort.enabled', undefined, userTarget)
+        await vscode.workspace.getConfiguration('latex-workshop').update('bibtex-format.sortby', undefined, userTarget)
+        await vscode.workspace.getConfiguration('latex-workshop').update('bibtex-format.handleDuplicates', undefined, userTarget)
+        await vscode.workspace.getConfiguration('latex-workshop').update('bibtex-format.align-equal.enabled', undefined, userTarget)
+        await vscode.workspace.getConfiguration('latex-workshop').update('bibtex-entries.first', undefined, userTarget)
+        await vscode.workspace.getConfiguration('latex-workshop').update('bibtex-fields.sort.enabled', undefined, userTarget)
+        await vscode.workspace.getConfiguration('latex-workshop').update('bibtex-fields.order', undefined, userTarget)
+        await vscode.workspace.getConfiguration().update('[latex]', undefined, userTarget)
     })
 
     test.run('test latex formatter', async (fixture: string) => {
@@ -81,24 +82,24 @@ suite('Formatter test suite', () => {
     }, ['win32', 'linux'])
 
     test.run('change formatting.latexindent.path on the fly', async (fixture: string) => {
-        await vscode.workspace.getConfiguration('latex-workshop').update('formatting.latexindent.path', 'echo')
+        await vscode.workspace.getConfiguration('latex-workshop').update('formatting.latexindent.path', 'echo', userTarget)
         await test.load(fixture, [
             {src: 'formatter/latex_base.tex', dst: 'main.tex'}
         ], {open: 0, skipCache: true})
         const original = readFileSync(path.resolve(fixture, 'main.tex')).toString()
         // echo add a new \n to the end of stdin
-        await vscode.workspace.getConfiguration('latex-workshop').update('formatting.latexindent.args', [original?.slice(0, -1)])
+        await vscode.workspace.getConfiguration('latex-workshop').update('formatting.latexindent.args', [original?.slice(0, -1)], userTarget)
         await vscode.commands.executeCommand('editor.action.formatDocument')
         await test.sleep(250) // wait for echo finish
         const echoed = vscode.window.activeTextEditor?.document.getText()
         assert.strictEqual(original, echoed)
 
-        await vscode.workspace.getConfiguration('latex-workshop').update('formatting.latexindent.path', process.execPath)
+        await vscode.workspace.getConfiguration('latex-workshop').update('formatting.latexindent.path', process.execPath, userTarget)
         await vscode.workspace.getConfiguration('latex-workshop').update('formatting.latexindent.args', [
             mockLatexindentPath,
             '%TMPFILE%',
             '-y=defaultIndent: \'%INDENT%\''
-        ])
+        ], userTarget)
         const formatted = await test.format()
         assert.notStrictEqual(original, formatted)
     }, ['win32', 'linux'])
