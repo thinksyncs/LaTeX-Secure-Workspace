@@ -5,13 +5,39 @@ import { runTests } from '@vscode/test-electron'
 
 type TempDir = ReturnType<typeof tmpFile.dirSync>
 
+const blockedEnvKeys = new Set([
+    'ELECTRON_RUN_AS_NODE',
+    'LD_PRELOAD',
+    'LD_LIBRARY_PATH',
+    'NODE_OPTIONS',
+    'NODE_PATH'
+])
+const blockedEnvPrefixes = [
+    'DYLD_',
+    'VSCODE_'
+]
+
 // Integrated terminals inherit host-editor variables that break nested Electron launches.
 function stripHostEditorEnv() {
     for (const key of Object.keys(process.env)) {
-        if (key === 'ELECTRON_RUN_AS_NODE' || key.startsWith('VSCODE_')) {
+        if (blockedEnvKeys.has(key) || blockedEnvPrefixes.some(prefix => key.startsWith(prefix))) {
             delete process.env[key]
         }
     }
+}
+
+function shouldBlockSandboxedElectron(platform = process.platform, env = process.env) {
+    return platform === 'darwin' && env.CODEX_SANDBOX === 'seatbelt' && env.LATEXWORKSHOP_ALLOW_SANDBOX_ELECTRON !== '1'
+}
+
+function ensureSupportedElectronTestHost() {
+    if (!shouldBlockSandboxedElectron()) {
+        return
+    }
+    console.error('Electron integration tests cannot run inside the Codex seatbelt sandbox on macOS.')
+    console.error('Run `npm test` or `npm run test:ci` from a normal terminal session, or rerun with sandbox access disabled.')
+    console.error('Set LATEXWORKSHOP_ALLOW_SANDBOX_ELECTRON=1 only if you explicitly want to try the crash-prone sandbox path.')
+    process.exit(1)
 }
 
 function snapshotEnv() {
@@ -73,6 +99,7 @@ async function runTestSuites(fixture: 'testground' | 'multiroot' | 'unittest') {
 
 async function main() {
     try {
+        ensureSupportedElectronTestHost()
         stripHostEditorEnv()
         await runTestSuites('unittest')
         await runTestSuites('testground')
