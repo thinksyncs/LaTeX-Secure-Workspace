@@ -133,17 +133,21 @@ function format(document: vscode.TextDocument, range?: vscode.Range): Thenable<v
         const indent = useSpaces ? ' '.repeat(tabSize): '\\t'
 
         const documentDirectory = path.dirname(document.fileName)
+        const trustedTmpRoot = lw.file.tmpDirPath.split('/').join(path.sep)
 
         // The version of latexindent shipped with current latex distributions doesn't support piping in the data using stdin, support was
         // only added on 2018-01-13 with version 3.4 so we have to create a temporary file
         const textToFormat = document.getText(range)
-        const temporaryFile = documentDirectory + path.sep + '__latexindent_temp_' + path.basename(document.fileName)
-        fs.writeFileSync(temporaryFile, textToFormat)
+        const temporaryDirectory = fs.mkdtempSync(path.join(trustedTmpRoot, 'latexindent-'))
+        const temporaryFile = path.join(temporaryDirectory, path.basename(document.fileName))
+        const temporaryFileDescriptor = fs.openSync(temporaryFile, 'wx', 0o600)
+        fs.writeFileSync(temporaryFileDescriptor, textToFormat, 'utf8')
+        fs.closeSync(temporaryFileDescriptor)
 
         const removeTemporaryFiles = () => {
             try {
-                fs.unlinkSync(temporaryFile)
-                fs.unlinkSync(documentDirectory + path.sep + 'indent.log')
+                fs.rmSync(temporaryDirectory, { recursive: true, force: true })
+                fs.rmSync(documentDirectory + path.sep + 'indent.log', { force: true })
             } catch (err) {
                 logger.logError('Error when removing temporary file', err)
             }
@@ -153,12 +157,20 @@ function format(document: vscode.TextDocument, range?: vscode.Range): Thenable<v
         const rootFile = lw.root.file.path || document.fileName
         const args = formatterArgs.map(arg => { return replaceArgumentPlaceholders(rootFile, lw.file.tmpDirPath)(arg)
             // ts specific tokens
-            .replace(/%TMPFILE%/g, useDocker ? path.basename(temporaryFile) : temporaryFile.split(path.sep).join('/'))
+            .replace(/%TMPFILE%/g, useDocker ? `/latexindent-tmp/${path.basename(temporaryFile)}` : temporaryFile.split(path.sep).join('/'))
             .replace(/%INDENT%/g, indent)
         })
 
         logger.logCommand('Formatting LaTeX.', formatter, args)
-        const worker = cs.spawn(formatter, args, { stdio: ['ignore', 'pipe', 'pipe'], cwd: documentDirectory })
+        const worker = cs.spawn(formatter, args, {
+            stdio: ['ignore', 'pipe', 'pipe'],
+            cwd: documentDirectory,
+            env: {
+                ...process.env,
+                LATEXWORKSHOP_TMPDIR_CONTAINER: '/latexindent-tmp',
+                LATEXWORKSHOP_TMPDIR_HOST: temporaryDirectory
+            }
+        })
         // handle stdout/stderr
         const stdoutBuffer: Buffer[] = []
         const stderrBuffer: Buffer[] = []

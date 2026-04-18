@@ -2,7 +2,7 @@ import * as vscode from 'vscode'
 import * as path from 'path'
 import * as assert from 'assert'
 import * as test from './utils'
-import { readFileSync } from 'fs'
+import { existsSync, readFileSync, rmSync } from 'fs'
 
 const extensionId = 'ToppyMicroServices.tex-workspace-secure'
 const mockLatexindentPath = path.resolve(__dirname, '../../..', 'test/fixtures/armory/formatter/mock-latexindent.cjs')
@@ -57,6 +57,27 @@ suite('Formatter test suite', () => {
         const original = readFileSync(path.resolve(fixture, 'main.tex')).toString()
         const formatted = await test.format()
         assert.notStrictEqual(original, formatted)
+    }, ['win32', 'linux'])
+
+    test.run('latexindent uses a trusted temp file outside the workspace', async (fixture: string) => {
+        await test.load(fixture, [
+            {src: 'formatter/latex_base.tex', dst: 'main.tex'}
+        ], {open: 0, skipCache: true})
+        const capturePath = path.resolve(fixture, '.mock-latexindent-path.txt')
+        rmSync(capturePath, {force: true})
+        process.env.LATEXWORKSHOP_MOCK_LATEXINDENT_CAPTURE = capturePath
+
+        try {
+            await test.format()
+        } finally {
+            delete process.env.LATEXWORKSHOP_MOCK_LATEXINDENT_CAPTURE
+        }
+
+        const tempFilePath = readFileSync(capturePath, 'utf8').trim()
+        assert.ok(path.isAbsolute(tempFilePath))
+        assert.ok(!tempFilePath.startsWith(path.resolve(fixture) + path.sep), tempFilePath)
+        assert.ok(!existsSync(tempFilePath), tempFilePath)
+        rmSync(capturePath, {force: true})
     }, ['win32', 'linux'])
 
     test.run('change formatting.latexindent.path on the fly', async (fixture: string) => {

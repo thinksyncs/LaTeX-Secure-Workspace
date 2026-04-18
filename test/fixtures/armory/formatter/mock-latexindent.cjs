@@ -13,6 +13,10 @@ if (!filePath) {
     process.exit(1)
 }
 
+if (process.env.LATEXWORKSHOP_MOCK_LATEXINDENT_CAPTURE) {
+    fs.writeFileSync(process.env.LATEXWORKSHOP_MOCK_LATEXINDENT_CAPTURE, filePath, 'utf8')
+}
+
 const content = fs.readFileSync(filePath, 'utf8')
 let depth = 0
 const formatted = content.split('\n').map(line => {

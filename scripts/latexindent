@@ -1,2 +1,9 @@
 #!/bin/sh
-$LATEXWORKSHOP_DOCKER_PATH run -i --rm -w "$(pwd)" -v "$(pwd):$(pwd)" $LATEXWORKSHOP_DOCKER_LATEX latexindent "$@"
+if [ -n "$LATEXWORKSHOP_TMPDIR_HOST" ] && [ -n "$LATEXWORKSHOP_TMPDIR_CONTAINER" ]; then
+    exec "$LATEXWORKSHOP_DOCKER_PATH" run -i --rm -w "$(pwd)" \
+        -v "$(pwd):$(pwd)" \
+        -v "$LATEXWORKSHOP_TMPDIR_HOST:$LATEXWORKSHOP_TMPDIR_CONTAINER" \
+        "$LATEXWORKSHOP_DOCKER_LATEX" latexindent "$@"
+fi
+
+exec "$LATEXWORKSHOP_DOCKER_PATH" run -i --rm -w "$(pwd)" -v "$(pwd):$(pwd)" "$LATEXWORKSHOP_DOCKER_LATEX" latexindent "$@"
