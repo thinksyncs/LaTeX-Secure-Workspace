@@ -12,6 +12,7 @@ let testIndex = 0
 const logger = logModule.getLogger('Test')
 const packageJson = JSON.parse(fs.readFileSync(path.resolve(__dirname, '../../../package.json'), 'utf8')) as { publisher: string, name: string }
 const extensionId = `${packageJson.publisher}.${packageJson.name}`
+const workspaceFileSnapshots = new Map<string, string>()
 
 function getFixture() {
     if (vscode.workspace.workspaceFile) {
@@ -27,6 +28,28 @@ function getWsFixture(fixture: string, ws?: string) {
 
 function testLabel() {
     return testIndex.toLocaleString('en-US', {minimumIntegerDigits: 3, useGrouping: false})
+}
+
+function snapshotWorkspaceFile() {
+    const workspaceFilePath = vscode.workspace.workspaceFile?.fsPath
+    if (!workspaceFilePath || workspaceFileSnapshots.has(workspaceFilePath) || !fs.existsSync(workspaceFilePath)) {
+        return
+    }
+    workspaceFileSnapshots.set(workspaceFilePath, fs.readFileSync(workspaceFilePath, 'utf8'))
+}
+
+function restoreWorkspaceFile() {
+    const workspaceFilePath = vscode.workspace.workspaceFile?.fsPath
+    if (!workspaceFilePath) {
+        return
+    }
+    const snapshot = workspaceFileSnapshots.get(workspaceFilePath)
+    if (snapshot === undefined) {
+        return
+    }
+    if (!fs.existsSync(workspaceFilePath) || fs.readFileSync(workspaceFilePath, 'utf8') !== snapshot) {
+        fs.writeFileSync(workspaceFilePath, snapshot)
+    }
 }
 
 const suite = {
@@ -45,6 +68,7 @@ export function only(testName: string, cb: (fixturePath: string) => unknown, pla
 
 export function run(testName: string, cb: (fixturePath: string) => unknown, platforms?: NodeJS.Platform[], runonly?: boolean) {
     const fixture = getFixture()
+    snapshotWorkspaceFile()
 
     if (fixture === undefined) {
         return
@@ -79,6 +103,7 @@ export function sleep(ms: number) {
 }
 
 export async function activateExtension() {
+    snapshotWorkspaceFile()
     const extension = vscode.extensions.getExtension(extensionId)
     ok(extension, `Expected extension ${extensionId} to be available in tests`)
     await extension.activate()
@@ -117,6 +142,7 @@ export async function reset() {
             fs.unlinkSync(path.resolve(getFixture(), file))
         } catch {}
     })
+    restoreWorkspaceFile()
 }
 
 function log(fixtureName: string, testName: string, counter: string) {
