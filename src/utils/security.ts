@@ -16,6 +16,13 @@ type InspectValue<T> = {
     workspaceFolderValue?: T
 }
 
+type InspectValue<T> = {
+    defaultValue?: T
+    globalValue?: T
+    workspaceValue?: T
+    workspaceFolderValue?: T
+}
+
 function getScopeKey(scope?: vscode.ConfigurationScope): string {
     if (scope === undefined || scope === null) {
         return 'global'
