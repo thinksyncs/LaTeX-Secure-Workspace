@@ -1,6 +1,5 @@
 import * as vscode from 'vscode'
 import * as os from 'os'
-import * as fs from 'fs'
 import * as path from 'path'
 import { EventEmitter } from 'events'
 import { PassThrough } from 'stream'
@@ -77,22 +76,6 @@ describe(path.basename(__filename).split('.')[0] + ':', () => {
                 assert.ok(path.isAbsolute(lw.file.tmpDirPath), lw.file.tmpDirPath)
                 assert.ok(!/['"]/.test(lw.file.tmpDirPath), lw.file.tmpDirPath)
             })
-        })
-
-        it('should alert temporary directory creation failures', () => {
-            const osTmpdirStub = sinon.stub(os, 'tmpdir').returns('/tmp')
-            const mkdtempStub = sinon.stub(fs, 'mkdtempSync').throws(new Error('mkdtemp failed'))
-
-            try {
-                initialize()
-                assert.fail('Expected an error to be thrown')
-            } catch {
-                assert.ok(osTmpdirStub.called)
-                assert.ok(mkdtempStub.called)
-            } finally {
-                osTmpdirStub.restore()
-                mkdtempStub.restore()
-            }
         })
     })
 

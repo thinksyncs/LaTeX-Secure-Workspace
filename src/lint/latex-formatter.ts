@@ -16,16 +16,14 @@ class FormattingProvider implements vscode.DocumentFormattingEditProvider, vscod
     private get formatter(): LaTeXFormatter | undefined {
         const config = vscode.workspace.getConfiguration('latex-workshop')
         const program = config.get('formatting.latex') as string
-        let errorMsg: string
         if (program === 'latexindent') {
             return latexindent
         } else if (program === 'tex-fmt') {
             return texfmt
         } else if (program === 'none') {
-            errorMsg = 'Please set your LaTeX formatter in `latex-workshop.formatting.latex`.'
-        } else {
-            errorMsg = `Unknown LaTeX formatter by \`formatting.latex\`: ${program} .`
+            return undefined
         }
+        const errorMsg = `Unknown LaTeX formatter by \`formatting.latex\`: ${program} .`
         logger.log(errorMsg)
         void logger.showErrorMessage(errorMsg)
         return undefined
