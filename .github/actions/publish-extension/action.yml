@@ -24,27 +24,11 @@ runs:
   - id: validate
     shell: bash
     env:
+      CANONICAL_REPOSITORY: ${{ inputs.canonical_repository }}
+      GITHUB_REPOSITORY: ${{ github.repository }}
       PUBLISH_OPENVSX: ${{ inputs.publish_openvsx }}
     run: |
-      publish_marketplace=false
-      publish_openvsx=false
-
-      if [ -n "${VSCE_PAT:-}" ]; then
-        publish_marketplace=true
-      else
-        echo 'Skipping VS Marketplace publish because VSCE_PAT is not configured.'
-      fi
-
-      if [ "$PUBLISH_OPENVSX" = 'true' ]; then
-        if [ -n "${OVSX_PAT:-}" ]; then
-          publish_openvsx=true
-        else
-          echo 'Skipping Open VSX publish because OVSX_PAT is not configured.'
-        fi
-      fi
-
-      echo "publish_marketplace=$publish_marketplace" >> "$GITHUB_OUTPUT"
-      echo "publish_openvsx=$publish_openvsx" >> "$GITHUB_OUTPUT"
+      node ./dev/resolvePublishPlan.mjs >> "$GITHUB_OUTPUT"
 
   - if: ${{ steps.validate.outputs.publish_marketplace == 'true' }}
     shell: bash

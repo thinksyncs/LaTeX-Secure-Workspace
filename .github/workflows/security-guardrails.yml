@@ -72,3 +72,9 @@ jobs:
           file=.github/actions/publish-extension/action.yml
           grep -q 'VSCE_PAT' "$file" || { echo "Missing VSCE_PAT handling in $file"; exit 1; }
           grep -q 'OVSX_PAT' "$file" || { echo "Missing OVSX_PAT handling in $file"; exit 1; }
+          grep -q 'resolvePublishPlan.mjs' "$file" || { echo "Missing shared publish-plan resolver in $file"; exit 1; }
+
+      - name: Ensure release docs match fail-closed publish behavior
+        run: |
+          grep -q 'fail closed' .github/workflows/README.md || { echo 'Release workflow README must document fail-closed behavior.'; exit 1; }
+          grep -q 'canonical repository' .github/workflows/README.md || { echo 'Release workflow README must document canonical repository behavior.'; exit 1; }
