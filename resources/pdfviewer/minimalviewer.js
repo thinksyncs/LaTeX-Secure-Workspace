@@ -14,9 +14,10 @@ const state = {
     spreadMode: config.appearance?.spreadMode,
 }
 
-const MAX_OUTPUT_SCALE = 2
-const MAX_CANVAS_PIXELS = 8_000_000
-const RENDER_MARGIN_MULTIPLIER = 1.5
+const MAX_OUTPUT_SCALE = 1.5
+const MAX_CANVAS_PIXELS = 2_500_000
+const MAX_RENDERED_PAGES = 2
+const RENDER_MARGIN_MULTIPLIER = 0.25
 const MIN_PLACEHOLDER_CANVAS_SIZE = 1
 
 let pdfjsLibPromise
@@ -366,7 +367,8 @@ function getPagesNearViewport() {
     const height = Math.max(1, viewerContainer.clientHeight)
     const bottom = top + height
     const margin = height * RENDER_MARGIN_MULTIPLIER
-    const pages = new Set()
+    const pendingPageNumber = getPendingPageNumber()
+    const visiblePages = []
     let nearestPageNumber = undefined
     let nearestDistance = Number.POSITIVE_INFINITY
 
@@ -374,7 +376,10 @@ function getPagesNearViewport() {
         const pageTop = entry.shell.offsetTop
         const pageBottom = pageTop + entry.shell.offsetHeight
         if (pageBottom >= top - margin && pageTop <= bottom + margin) {
-            pages.add(pageNumber)
+            visiblePages.push({
+                distance: Math.abs((pageTop + pageBottom) / 2 - (top + bottom) / 2),
+                pageNumber,
+            })
         }
 
         const distance = Math.abs((pageTop + pageBottom) / 2 - (top + bottom) / 2)
@@ -384,8 +389,39 @@ function getPagesNearViewport() {
         }
     }
 
+    visiblePages.sort((left, right) => left.distance - right.distance)
+    const pages = new Set(visiblePages.slice(0, MAX_RENDERED_PAGES).map(page => page.pageNumber))
+
+    if (pendingPageNumber !== undefined) {
+        pages.add(pendingPageNumber)
+    }
     if (pages.size === 0 && nearestPageNumber !== undefined) {
         pages.add(nearestPageNumber)
+    }
+
+    while (pages.size > MAX_RENDERED_PAGES) {
+        let farthestPageNumber = undefined
+        let farthestDistance = Number.NEGATIVE_INFINITY
+        for (const pageNumber of pages) {
+            if (pageNumber === pendingPageNumber) {
+                continue
+            }
+            const entry = pageEntries.get(pageNumber)
+            if (!entry) {
+                continue
+            }
+            const pageTop = entry.shell.offsetTop
+            const pageBottom = pageTop + entry.shell.offsetHeight
+            const distance = Math.abs((pageTop + pageBottom) / 2 - (top + bottom) / 2)
+            if (distance > farthestDistance) {
+                farthestDistance = distance
+                farthestPageNumber = pageNumber
+            }
+        }
+        if (farthestPageNumber === undefined) {
+            break
+        }
+        pages.delete(farthestPageNumber)
     }
     return pages
 }
@@ -444,6 +480,14 @@ function pickSyncTeXRecord(data) {
         return data
     }
     return undefined
+}
+
+function getPendingPageNumber() {
+    const record = pickSyncTeXRecord(pendingSyncTeX)
+    if (!record || typeof record.page !== 'number') {
+        return undefined
+    }
+    return record.page
 }
 
 function normalizeSyncTeXData(data) {
