@@ -54,7 +54,6 @@ body {
 .pageCanvasWrap {
     position: relative;
 }
-
 .pageCanvas {
     display: block;
     background: var(--page-background);
@@ -82,7 +81,6 @@ body {
     opacity: 1;
     transform: scale(1);
 }
-
 .pageLabel {
     font-size: 12px;
     letter-spacing: 0.04em;

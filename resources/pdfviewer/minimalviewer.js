@@ -168,7 +168,6 @@ async function renderPage(pdf, pageNumber) {
 
     const canvasWrap = document.createElement('div')
     canvasWrap.className = 'pageCanvasWrap'
-
     const canvas = document.createElement('canvas')
     canvas.className = 'pageCanvas'
     canvas.width = Math.ceil(viewport.width * outputScale)
@@ -178,7 +177,6 @@ async function renderPage(pdf, pageNumber) {
 
     const synctexIndicator = document.createElement('div')
     synctexIndicator.className = 'synctexIndicator'
-
     const context = canvas.getContext('2d', { alpha: false })
     context.scale(outputScale, outputScale)
 
@@ -323,7 +321,6 @@ function flashSyncTeXIndicator(indicator, left, top) {
         indicator.classList.remove('active')
     }, 1200)
 }
-
 function reportError(error) {
     const message = error instanceof Error ? error.message : String(error)
     statusText.textContent = 'Failed to load PDF'
