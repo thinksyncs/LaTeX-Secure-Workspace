@@ -76,6 +76,14 @@
         "latex-workshop.view.pdf.external.viewer.args",
         "latex-workshop.view.pdf.external.synctex.command",
         "latex-workshop.view.pdf.external.synctex.args",
+        "latex-workshop.kpsewhich.path",
+        "latex-workshop.synctex.path",
+        "latex-workshop.linting.chktex.exec.path",
+        "latex-workshop.linting.lacheck.exec.path",
+        "latex-workshop.formatting.latexindent.path",
+        "latex-workshop.formatting.tex-fmt.path",
+        "latex-workshop.texdoc.path",
+        "latex-workshop.texdoc.args",
         "latex-workshop.linting.chktex.exec.args",
         "latex-workshop.formatting.latexindent.args",
         "latex-workshop.formatting.tex-fmt.args"
@@ -1338,6 +1346,21 @@
           "type": "string",
           "default": "kpsewhich",
           "markdownDescription": "Define the location of the kpsewhich executable file."
+        },
+        "latex-workshop.texdoc.path": {
+          "scope": "window",
+          "type": "string",
+          "default": "texdoc",
+          "markdownDescription": "Define the location of the texdoc executable file. Workspace-scoped overrides are blocked in this secure build."
+        },
+        "latex-workshop.texdoc.args": {
+          "scope": "window",
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [],
+          "markdownDescription": "Additional arguments passed to texdoc. Workspace-scoped overrides are blocked in this secure build."
         },
         "latex-workshop.kpsewhich.class.enabled": {
           "scope": "window",

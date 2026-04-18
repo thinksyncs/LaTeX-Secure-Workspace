@@ -306,9 +306,9 @@ function shouldUseExternalViewerForForwardSyncTeX(
     forcedViewer: 'auto' | 'tabOrBrowser' | 'external',
     pdfViewerMode: unknown
 ) {
-    return forcedViewer === 'external'
-        || forcedViewer === 'tabOrBrowser'
-        || (forcedViewer === 'auto' && pdfViewerMode === 'external')
+    void forcedViewer
+    void pdfViewerMode
+    return false
 }
 
 /**

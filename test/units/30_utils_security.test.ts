@@ -4,21 +4,11 @@ import { assert, hooks } from './utils'
 import { confirmWorkspaceCommandExecution, getSecureConfigurationValue } from '../../src/utils/security'
 
 describe('30_utils_security:', () => {
-    const envKey = 'LATEXWORKSHOP_CITEST'
-    let originalEnv: string | undefined
-
     beforeEach(() => {
         hooks.beforeEach()
-        originalEnv = process.env[envKey]
-        delete process.env[envKey]
     })
 
     afterEach(function (this: Mocha.Context) {
-        if (originalEnv === undefined) {
-            delete process.env[envKey]
-        } else {
-            process.env[envKey] = originalEnv
-        }
         sinon.restore()
         return hooks.afterEach.call(this)
     })
@@ -70,8 +60,7 @@ describe('30_utils_security:', () => {
         assert.ok(showWarningStub.calledOnce)
     })
 
-    it('should auto-approve workspace-scoped commands during CI tests', async () => {
-        process.env[envKey] = '1'
+    it('should still block workspace-scoped commands during CI tests', async () => {
         const showWarningStub = sinon.stub(vscode.window, 'showWarningMessage')
         sinon.stub(vscode.workspace, 'getConfiguration').returns({
             inspect: sinon.stub().withArgs('formatting.latexindent.path').returns({
@@ -82,7 +71,7 @@ describe('30_utils_security:', () => {
 
         const approved = await confirmWorkspaceCommandExecution(undefined, 'formatting.latexindent.path', process.execPath)
 
-        assert.strictEqual(approved, true)
-        assert.ok(showWarningStub.notCalled)
+        assert.strictEqual(approved, false)
+        assert.ok(showWarningStub.calledOnce)
     })
 })

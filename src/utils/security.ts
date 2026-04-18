@@ -51,12 +51,6 @@ export async function confirmWorkspaceCommandExecution(scope: vscode.Configurati
         return true
     }
 
-    if (process.env.LATEXWORKSHOP_CITEST === '1') {
-        approvedWorkspaceCommands.add(key)
-        logger.log(`Workspace-scoped command auto-approved in tests for latex-workshop.${section}: ${command}`)
-        return true
-    }
-
     if (blockedWorkspaceCommands.has(key)) {
         return false
     }
@@ -95,7 +89,7 @@ export function warnWorkspaceCommandSetting(scope: vscode.ConfigurationScope | u
     }
 
     const key = `${section}:${command}:${configScope}:${getScopeKey(scope)}`
-    if (warnedWorkspaceCommands.has(key) || process.env.LATEXWORKSHOP_CITEST === '1') {
+    if (warnedWorkspaceCommands.has(key)) {
         return
     }
     warnedWorkspaceCommands.add(key)
@@ -113,10 +107,6 @@ export function warnWorkspaceCommandSetting(scope: vscode.ConfigurationScope | u
 }
 
 export async function confirmNoWorkspaceConfigurationOverride(scope: vscode.ConfigurationScope | undefined, section: string): Promise<boolean> {
-    if (process.env.LATEXWORKSHOP_CITEST === '1') {
-        return true
-    }
-
     const configuration = vscode.workspace.getConfiguration('latex-workshop', scope)
     const inspect = configuration.inspect(section)
     if (!inspect) {

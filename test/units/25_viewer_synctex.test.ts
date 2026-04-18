@@ -98,9 +98,9 @@ describe(path.basename(__filename).split('.')[0] + ':', () => {
         }, pdfUri))
     })
 
-    it('should keep internal tab viewer on the internal SyncTeX path', () => {
+    it('should keep forward SyncTeX on the internal path in the secure build', () => {
         assert.strictEqual(synctex.components.shouldUseExternalViewerForForwardSyncTeX('auto', 'tab'), false)
-        assert.strictEqual(synctex.components.shouldUseExternalViewerForForwardSyncTeX('auto', 'external'), true)
-        assert.strictEqual(synctex.components.shouldUseExternalViewerForForwardSyncTeX('tabOrBrowser', 'tab'), true)
+        assert.strictEqual(synctex.components.shouldUseExternalViewerForForwardSyncTeX('auto', 'external'), false)
+        assert.strictEqual(synctex.components.shouldUseExternalViewerForForwardSyncTeX('tabOrBrowser', 'tab'), false)
     })
 })

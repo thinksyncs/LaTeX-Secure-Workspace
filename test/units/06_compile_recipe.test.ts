@@ -219,22 +219,28 @@ describe(path.basename(__filename).split('.')[0] + ':', () => {
     })
 
     describe('lw.compile->recipe config propagation', () => {
-        it('should set the LATEXWORKSHOP_DOCKER_LATEX environment variable based on configuration', async () => {
+        it('should ignore workspace overrides for LATEXWORKSHOP_DOCKER_LATEX', async () => {
             const expectedImageName = 'your-docker-image'
+            const showWarningStub = sinon.stub(vscode.window, 'showWarningMessage').resolves(undefined)
 
             await set.codeConfig('docker.image.latex', expectedImageName)
             await sleep(150)
+            showWarningStub.restore()
 
-            assert.strictEqual(process.env['LATEXWORKSHOP_DOCKER_LATEX'], expectedImageName)
+            assert.strictEqual(process.env['LATEXWORKSHOP_DOCKER_LATEX'], '')
+            assert.ok(showWarningStub.calledOnce)
         })
 
-        it('should set the LATEXWORKSHOP_DOCKER_PATH environment variable based on configuration', async () => {
+        it('should ignore workspace overrides for LATEXWORKSHOP_DOCKER_PATH', async () => {
             const expectedDockerPath = '/usr/local/bin/docker'
+            const showWarningStub = sinon.stub(vscode.window, 'showWarningMessage').resolves(undefined)
 
             await set.codeConfig('docker.path', expectedDockerPath)
             await sleep(150)
+            showWarningStub.restore()
 
-            assert.strictEqual(process.env['LATEXWORKSHOP_DOCKER_PATH'], expectedDockerPath)
+            assert.strictEqual(process.env['LATEXWORKSHOP_DOCKER_PATH'], 'docker')
+            assert.ok(showWarningStub.calledOnce)
         })
     })
 })
