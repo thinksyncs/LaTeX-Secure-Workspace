@@ -62,6 +62,15 @@ body {
     border: 1px solid var(--page-border);
 }
 
+.pageCanvasPlaceholder {
+    background:
+        linear-gradient(
+            135deg,
+            rgba(255, 255, 255, 0.94),
+            rgba(245, 245, 245, 0.94)
+        );
+}
+
 .synctexIndicator {
     position: absolute;
     width: 18px;
