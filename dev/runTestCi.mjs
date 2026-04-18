@@ -3,6 +3,17 @@ import { fileURLToPath } from 'node:url'
 import path from 'node:path'
 
 const workspaceRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
+const blockedEnvKeys = new Set([
+    'ELECTRON_RUN_AS_NODE',
+    'LD_PRELOAD',
+    'LD_LIBRARY_PATH',
+    'NODE_OPTIONS',
+    'NODE_PATH'
+])
+const blockedEnvPrefixes = [
+    'DYLD_',
+    'VSCODE_'
+]
 const filteredSubstrings = [
     'product.json#extensionEnabledApiProposals',
     'Failed to connect to the bus:',
@@ -13,20 +24,19 @@ const filteredSubstrings = [
     'error messaging the mach port for IMKCFRunLoopWakeUpReliable'
 ]
 
-const useXvfb = process.env.CI_USE_XVFB === '1'
-const command = useXvfb ? 'xvfb-run' : process.execPath
-const args = useXvfb ? ['-a', process.execPath, './out/test/runTest.js'] : ['./out/test/runTest.js']
+export function sanitizeTestEnvironment(env = process.env) {
+    const sanitizedEnv = { ...env }
+    for (const key of Object.keys(sanitizedEnv)) {
+        if (blockedEnvKeys.has(key) || blockedEnvPrefixes.some(prefix => key.startsWith(prefix))) {
+            delete sanitizedEnv[key]
+        }
+    }
+    return sanitizedEnv
+}
 
-const child = spawn(command, args, {
-    cwd: workspaceRoot,
-    env: process.env,
-    stdio: ['ignore', 'pipe', 'pipe']
-})
-
-child.on('error', error => {
-    console.error(error.message)
-    process.exit(1)
-})
+export function shouldBlockSandboxedElectron(platform = process.platform, env = process.env) {
+    return platform === 'darwin' && env.CODEX_SANDBOX === 'seatbelt' && env.LATEXWORKSHOP_ALLOW_SANDBOX_ELECTRON !== '1'
+}
 
 function shouldFilter(line) {
     return filteredSubstrings.some(substring => line.includes(substring))
@@ -54,9 +64,39 @@ function pipeFiltered(stream, output) {
     })
 }
 
-pipeFiltered(child.stdout, process.stdout)
-pipeFiltered(child.stderr, process.stderr)
+function main() {
+    const env = sanitizeTestEnvironment(process.env)
 
-child.on('close', code => {
-    process.exit(code ?? 1)
-})
+    if (shouldBlockSandboxedElectron(process.platform, env)) {
+        console.error('Electron integration tests cannot run inside the Codex seatbelt sandbox on macOS.')
+        console.error('Run `npm run test:ci` from a normal terminal session, or rerun with sandbox access disabled.')
+        console.error('Set LATEXWORKSHOP_ALLOW_SANDBOX_ELECTRON=1 only if you explicitly want to try the crash-prone sandbox path.')
+        process.exit(1)
+    }
+
+    const useXvfb = env.CI_USE_XVFB === '1'
+    const command = useXvfb ? 'xvfb-run' : process.execPath
+    const args = useXvfb ? ['-a', process.execPath, './out/test/runTest.js'] : ['./out/test/runTest.js']
+
+    const child = spawn(command, args, {
+        cwd: workspaceRoot,
+        env,
+        stdio: ['ignore', 'pipe', 'pipe']
+    })
+
+    child.on('error', error => {
+        console.error(error.message)
+        process.exit(1)
+    })
+
+    pipeFiltered(child.stdout, process.stdout)
+    pipeFiltered(child.stderr, process.stderr)
+
+    child.on('close', code => {
+        process.exit(code ?? 1)
+    })
+}
+
+if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+    main()
+}
