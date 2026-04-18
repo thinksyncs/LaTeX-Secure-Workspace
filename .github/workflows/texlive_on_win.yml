@@ -1,6 +1,7 @@
 name: TeX Live (current) on Windows
 env:
   cache-version: tl-current-v1
+  TEXLIVE_BOOTSTRAP_REPOSITORY: https://ctan.net/systems/texlive/tlnet
   TEXLIVE_KEY_FINGERPRINT: C78B82D8C79512F79CC0D7C80D5E5D9106BAB6BC
 on: [push, pull_request]
 
@@ -30,15 +31,18 @@ jobs:
           ${{ env.cache-version }}-${{ runner.os }}-texlive-essential
     - name: Download install-tl.zip
       run: |
+        if ! command -v gpg >/dev/null 2>&1; then
+          choco.exe install gnupg --no-progress -y
+          export PATH="/c/ProgramData/chocolatey/bin:/c/Program Files (x86)/GnuPG/bin:/c/Program Files/GnuPG/bin:$PATH"
+        fi
+        gpg --version
         download_and_verify() {
-          INSTALLER_URL="$(curl.exe --fail --show-error --silent --location --output /dev/null --write-out '%{url_effective}' --proto "=https" --tlsv1.2 https://mirror.ctan.org/systems/texlive/tlnet/install-tl.zip)"
-          INSTALLER_BASE="${INSTALLER_URL%/*}"
-          curl.exe --fail --show-error --silent --location --proto "=https" --tlsv1.2 -o install-tl.zip "$INSTALLER_URL"
-          curl.exe --fail --show-error --silent --location --proto "=https" --tlsv1.2 -o install-tl.zip.sha512 "$INSTALLER_BASE/install-tl.zip.sha512"
-          curl.exe --fail --show-error --silent --location --proto "=https" --tlsv1.2 -o install-tl.zip.sha512.asc "$INSTALLER_BASE/install-tl.zip.sha512.asc"
+          curl.exe --fail --show-error --silent --location --proto "=https" --tlsv1.2 -o install-tl.zip "$TEXLIVE_BOOTSTRAP_REPOSITORY/install-tl.zip"
+          curl.exe --fail --show-error --silent --location --proto "=https" --tlsv1.2 -o install-tl.zip.sha512 "$TEXLIVE_BOOTSTRAP_REPOSITORY/install-tl.zip.sha512"
+          curl.exe --fail --show-error --silent --location --proto "=https" --tlsv1.2 -o install-tl.zip.sha512.asc "$TEXLIVE_BOOTSTRAP_REPOSITORY/install-tl.zip.sha512.asc"
           sha512sum --check install-tl.zip.sha512 || return 1
           gpg --batch --verify install-tl.zip.sha512.asc install-tl.zip.sha512 || return 1
-          echo "TEXLIVE_REPOSITORY=$INSTALLER_BASE" >> "$GITHUB_ENV"
+          echo "TEXLIVE_REPOSITORY=$TEXLIVE_BOOTSTRAP_REPOSITORY" >> "$GITHUB_ENV"
         }
         curl.exe --fail --show-error --silent --location --proto "=https" --tlsv1.2 -O https://tug.org/texlive/files/texlive.asc
         test "$(gpg --show-keys --with-colons texlive.asc | awk -F: '/^fpr:/ {print $10; exit}')" = "$TEXLIVE_KEY_FINGERPRINT"
