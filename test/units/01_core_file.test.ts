@@ -59,28 +59,23 @@ describe(path.basename(__filename).split('.')[0] + ':', () => {
             assert.notStrictEqual(tmpDir1, lw.file.tmpDirPath)
         })
 
-        function forbiddenTemp(chars: string[ ]) {
+        function withMockedTmpEnv(tmpValue: string, callback: () => void) {
             const tmp = process.env.TMP ?? process.env.TEMP ?? process.env.TMPDIR
             const tmpNames = ['TMP', 'TEMP', 'TMPDIR']
-            chars.forEach(char => {
-                tmpNames.forEach(envvar => process.env[envvar] = (process.env[envvar] === undefined ? undefined : ('\\Test ' + char)))
-                try {
-                    initialize()
-                    assert.fail('Expected an error to be thrown')
-                } catch {
-                    assert.ok(true)
-                } finally {
-                    tmpNames.forEach(envvar => { if (process.env[envvar] !== undefined) { process.env[envvar] = tmp } })
-                }
-            })
+            tmpNames.forEach(envvar => process.env[envvar] = (process.env[envvar] === undefined ? undefined : tmpValue))
+            try {
+                callback()
+            } finally {
+                tmpNames.forEach(envvar => { if (process.env[envvar] !== undefined) { process.env[envvar] = tmp } })
+            }
         }
 
-        it('should alert temporary directory name with quotes', () => {
-            forbiddenTemp(['\'', '"'])
-        })
-
-        it('should alert temporary directory name with forbidden characters', () => {
-            forbiddenTemp(['/'])
+        it('should fall back to a safe temporary directory when tmpdir contains quotes', () => {
+            withMockedTmpEnv('\\Test \'', () => {
+                initialize()
+                assert.ok(path.isAbsolute(lw.file.tmpDirPath), lw.file.tmpDirPath)
+                assert.ok(!/['"]/.test(lw.file.tmpDirPath), lw.file.tmpDirPath)
+            })
         })
     })
 

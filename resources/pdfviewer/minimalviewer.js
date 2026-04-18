@@ -1,3 +1,10 @@
+import {
+    createPdfDocumentInit,
+    PDF_VIEWER_LIMITS,
+    computeOutputScale,
+    pickPageNumbersToRender,
+} from './renderlimits.mjs'
+
 const vscode = acquireVsCodeApi()
 const configElement = document.getElementById('pdf-preview-config')
 const statusText = document.getElementById('statusText')
@@ -17,11 +24,13 @@ const state = {
 let pdfjsLibPromise
 let renderEpoch = 0
 let currentPdf = undefined
+let renderQueueTimer = undefined
 let resizeTimer = undefined
 let stateTimer = undefined
 let synctexIndicatorTimer = undefined
+let documentCleanupTimer = undefined
 let pendingSyncTeX = undefined
-const renderedPages = new Map()
+const pageEntries = new Map()
 const reverseSyncTeXKeybinding = config.appearance?.keybindings?.synctex ?? 'ctrl-click'
 
 window.addEventListener('message', (event) => {
@@ -54,6 +63,7 @@ window.addEventListener('unhandledrejection', (event) => {
 
 viewerContainer.addEventListener('scroll', () => {
     queueStatePost()
+    queueVisiblePageRender()
 }, { passive: true })
 
 window.addEventListener('resize', () => {
@@ -119,11 +129,14 @@ async function renderDocument({ preserveScroll }) {
     const epoch = ++renderEpoch
     const previousScrollTop = viewerContainer.scrollTop
     const previousScrollLeft = viewerContainer.scrollLeft
+    clearTimeout(renderQueueTimer)
+    clearTimeout(documentCleanupTimer)
+    clearPageEntries()
     pagesRoot.replaceChildren()
-    renderedPages.clear()
     statusText.textContent = 'Loading PDF…'
 
     try {
+        currentPdf?.cleanup?.()
         if (currentPdf?.destroy) {
             await currentPdf.destroy()
         }
@@ -132,13 +145,7 @@ async function renderDocument({ preserveScroll }) {
     currentPdf = undefined
 
     const pdfjsLib = await loadPdfJs()
-    const loadingTask = pdfjsLib.getDocument({
-        url: config.path,
-        cMapPacked: true,
-        cMapUrl: config.cMapUrl,
-        standardFontDataUrl: config.standardFontDataUrl,
-        wasmUrl: config.wasmUrl,
-    })
+    const loadingTask = pdfjsLib.getDocument(createPdfDocumentInit(config))
     const pdf = await loadingTask.promise
     if (epoch !== renderEpoch) {
         await pdf.destroy()
@@ -147,14 +154,9 @@ async function renderDocument({ preserveScroll }) {
 
     currentPdf = pdf
     statusText.textContent = `${pdf.numPages} page${pdf.numPages === 1 ? '' : 's'}`
-
-    for (let pageNumber = 1; pageNumber <= pdf.numPages; pageNumber++) {
-        if (epoch !== renderEpoch) {
-            return
-        }
-        const renderedPage = await renderPage(pdf, pageNumber)
-        pagesRoot.append(renderedPage.shell)
-        renderedPages.set(pageNumber, renderedPage)
+    await buildPageShells(pdf, epoch)
+    if (epoch !== renderEpoch) {
+        return
     }
 
     if (preserveScroll) {
@@ -162,18 +164,41 @@ async function renderDocument({ preserveScroll }) {
         viewerContainer.scrollLeft = previousScrollLeft
     }
 
+    queueVisiblePageRender()
     applyPendingSyncTeX()
     queueStatePost()
     vscode.postMessage({ type: 'document-loaded' })
 }
 
-async function renderPage(pdf, pageNumber) {
-    const page = await pdf.getPage(pageNumber)
-    const unitViewport = page.getViewport({ scale: 1 })
-    const scale = resolveScale(unitViewport)
-    const viewport = page.getViewport({ scale })
-    const outputScale = window.devicePixelRatio || 1
+async function buildPageShells(pdf, epoch) {
+    const fragment = document.createDocumentFragment()
 
+    for (let pageNumber = 1; pageNumber <= pdf.numPages; pageNumber++) {
+        if (epoch !== renderEpoch) {
+            return
+        }
+
+        const page = await pdf.getPage(pageNumber)
+        try {
+            const unitViewport = page.getViewport({ scale: 1 })
+            const viewport = page.getViewport({ scale: resolveScale(unitViewport) })
+            const entry = createPageEntry(pageNumber, viewport)
+            pageEntries.set(pageNumber, entry)
+            fragment.append(entry.shell)
+        } finally {
+            page.cleanup?.()
+        }
+
+        if (pageNumber % PDF_VIEWER_LIMITS.pageCleanupBatchSize === 0) {
+            await pdf.cleanup?.()
+        }
+    }
+
+    pagesRoot.append(fragment)
+    await pdf.cleanup?.()
+}
+
+function createPageEntry(pageNumber, viewport) {
     const shell = document.createElement('section')
     shell.className = 'pageShell'
     shell.dataset.pageNumber = String(pageNumber)
@@ -186,30 +211,71 @@ async function renderPage(pdf, pageNumber) {
     canvasWrap.className = 'pageCanvasWrap'
     const canvas = document.createElement('canvas')
     canvas.className = 'pageCanvas'
-    canvas.width = Math.ceil(viewport.width * outputScale)
-    canvas.height = Math.ceil(viewport.height * outputScale)
-    canvas.style.width = `${Math.ceil(viewport.width)}px`
-    canvas.style.height = `${Math.ceil(viewport.height)}px`
+    resetCanvasToPlaceholder(canvas, viewport)
 
     const synctexIndicator = document.createElement('div')
     synctexIndicator.className = 'synctexIndicator'
-    const context = canvas.getContext('2d', { alpha: false })
-    context.scale(outputScale, outputScale)
-
-    await page.render({
-        canvasContext: context,
-        viewport,
-        intent: 'display',
-    }).promise
 
     canvasWrap.append(canvas, synctexIndicator)
     shell.append(label, canvasWrap)
     installReverseSyncTeXHandlers(canvasWrap, viewport, pageNumber)
+
     return {
         canvas,
+        canvasWrap,
+        isRendered: false,
+        isRendering: false,
+        pageNumber,
+        renderTask: undefined,
         shell,
         synctexIndicator,
         viewport,
+    }
+}
+
+async function renderPage(entry, epoch) {
+    if (!currentPdf || entry.isRendered || entry.isRendering || epoch !== renderEpoch) {
+        return
+    }
+
+    entry.isRendering = true
+    const page = await currentPdf.getPage(entry.pageNumber)
+
+    try {
+        const outputScale = getOutputScale(entry.viewport)
+        entry.canvas.classList.remove('pageCanvasPlaceholder')
+        entry.canvas.width = Math.max(1, Math.ceil(entry.viewport.width * outputScale))
+        entry.canvas.height = Math.max(1, Math.ceil(entry.viewport.height * outputScale))
+        entry.canvas.style.width = `${Math.ceil(entry.viewport.width)}px`
+        entry.canvas.style.height = `${Math.ceil(entry.viewport.height)}px`
+
+        const context = entry.canvas.getContext('2d', { alpha: false })
+        if (!context) {
+            throw new Error(`Unable to acquire a 2D canvas context for page ${entry.pageNumber}.`)
+        }
+        context.scale(outputScale, outputScale)
+
+        entry.renderTask = page.render({
+            canvasContext: context,
+            viewport: entry.viewport,
+            intent: 'display',
+        })
+        await entry.renderTask.promise
+
+        if (epoch !== renderEpoch) {
+            return
+        }
+
+        entry.isRendered = true
+        applyPendingSyncTeX()
+    } catch (error) {
+        if (!isRenderCancellation(error)) {
+            throw error
+        }
+    } finally {
+        entry.renderTask = undefined
+        entry.isRendering = false
+        page.cleanup?.()
     }
 }
 
@@ -275,6 +341,105 @@ function resolveScale(viewport) {
     return availableWidth / viewport.width
 }
 
+function getOutputScale(viewport) {
+    return computeOutputScale(viewport, window.devicePixelRatio || 1)
+}
+
+function queueVisiblePageRender() {
+    clearTimeout(renderQueueTimer)
+    renderQueueTimer = setTimeout(() => {
+        void updateVisiblePages(renderEpoch)
+    }, 50)
+}
+
+async function updateVisiblePages(epoch) {
+    if (epoch !== renderEpoch || !currentPdf || pageEntries.size === 0) {
+        return
+    }
+
+    const targetPageNumbers = getPagesNearViewport()
+    for (const [pageNumber, entry] of pageEntries) {
+        if (!targetPageNumbers.has(pageNumber)) {
+            releaseRenderedPage(entry)
+        }
+    }
+
+    for (const pageNumber of targetPageNumbers) {
+        if (epoch !== renderEpoch) {
+            return
+        }
+        const entry = pageEntries.get(pageNumber)
+        if (!entry) {
+            continue
+        }
+        await renderPage(entry, epoch)
+    }
+
+    queueDocumentCleanup(epoch)
+}
+
+function getPagesNearViewport() {
+    const top = viewerContainer.scrollTop
+    const height = Math.max(1, viewerContainer.clientHeight)
+    const pendingPageNumber = getPendingPageNumber()
+    const pageMetrics = [...pageEntries.entries()].map(([pageNumber, entry]) => ({
+        pageBottom: entry.shell.offsetTop + entry.shell.offsetHeight,
+        pageNumber,
+        pageTop: entry.shell.offsetTop,
+    }))
+    return new Set(pickPageNumbersToRender(pageMetrics, top, height, pendingPageNumber))
+}
+
+function releaseRenderedPage(entry) {
+    if (!entry.isRendered && !entry.isRendering) {
+        return
+    }
+
+    entry.renderTask?.cancel?.()
+    entry.renderTask = undefined
+    entry.isRendered = false
+    entry.isRendering = false
+    resetCanvasToPlaceholder(entry.canvas, entry.viewport)
+}
+
+function clearPageEntries() {
+    for (const entry of pageEntries.values()) {
+        releaseRenderedPage(entry)
+    }
+    pageEntries.clear()
+}
+
+function queueDocumentCleanup(epoch = renderEpoch) {
+    clearTimeout(documentCleanupTimer)
+    documentCleanupTimer = setTimeout(() => {
+        void cleanupDocumentIfIdle(epoch)
+    }, PDF_VIEWER_LIMITS.documentCleanupDelayMs)
+}
+
+async function cleanupDocumentIfIdle(epoch) {
+    if (epoch !== renderEpoch || !currentPdf) {
+        return
+    }
+    for (const entry of pageEntries.values()) {
+        if (entry.isRendering) {
+            queueDocumentCleanup(epoch)
+            return
+        }
+    }
+    try {
+        await currentPdf.cleanup?.()
+    } catch (_error) {
+    }
+}
+
+function resetCanvasToPlaceholder(canvas, viewport) {
+    canvas.classList.add('pageCanvasPlaceholder')
+    canvas.width = PDF_VIEWER_LIMITS.minPlaceholderCanvasSize
+    canvas.height = PDF_VIEWER_LIMITS.minPlaceholderCanvasSize
+    canvas.style.width = `${Math.ceil(viewport.width)}px`
+    canvas.style.height = `${Math.ceil(viewport.height)}px`
+}
+
 function queueStatePost() {
     clearTimeout(stateTimer)
     stateTimer = setTimeout(() => {
@@ -297,12 +462,38 @@ function pickSyncTeXRecord(data) {
     return undefined
 }
 
+function getPendingPageNumber() {
+    const record = pickSyncTeXRecord(pendingSyncTeX)
+    if (!record || typeof record.page !== 'number') {
+        return undefined
+    }
+    return record.page
+}
+
+function normalizeSyncTeXData(data) {
+    if (Array.isArray(data)) {
+        return data.filter(isSyncTeXRecord)
+    }
+    if (isSyncTeXRecord(data)) {
+        return data
+    }
+    return undefined
+}
+
+function isSyncTeXRecord(value) {
+    return typeof value === 'object'
+        && value !== null
+        && typeof value.page === 'number'
+        && typeof value.x === 'number'
+        && typeof value.y === 'number'
+}
+
 function applyPendingSyncTeX() {
     const record = pickSyncTeXRecord(pendingSyncTeX)
     if (!record) {
         return
     }
-    const renderedPage = renderedPages.get(record.page)
+    const renderedPage = pageEntries.get(record.page)
     if (!renderedPage) {
         return
     }
@@ -320,11 +511,17 @@ function applyPendingSyncTeX() {
         state: nextState
     })
     queueStatePost()
+    queueVisiblePageRender()
 
-    if (record.indicator) {
+    if (record.indicator && renderedPage.isRendered) {
         flashSyncTeXIndicator(renderedPage.synctexIndicator, point[0], point[1])
+        pendingSyncTeX = undefined
+        return
     }
-    pendingSyncTeX = undefined
+
+    if (!record.indicator) {
+        pendingSyncTeX = undefined
+    }
 }
 
 function flashSyncTeXIndicator(indicator, left, top) {
@@ -347,4 +544,12 @@ function reportError(error) {
     const message = error instanceof Error ? error.message : String(error)
     statusText.textContent = 'Failed to load PDF'
     vscode.postMessage({ type: 'document-error', message })
+}
+
+function isRenderCancellation(error) {
+    return Boolean(error) && (
+        error.name === 'RenderingCancelledException'
+        || error.name === 'AbortException'
+        || /cancel/i.test(String(error.message ?? error))
+    )
 }

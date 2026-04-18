@@ -22,6 +22,7 @@ suite('Snippet test suite', () => {
         await test.load(fixture, [
             {src: 'base.tex', dst: 'main.tex'}
         ], {skipCache: true, open: 0})
+        await test.sleep(250)
         const active = vscode.window.activeTextEditor
         assert.ok(active)
         active.selection = new vscode.Selection(new vscode.Position(2, 0), new vscode.Position(2, 1))

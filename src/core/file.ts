@@ -1,7 +1,7 @@
 import * as vscode from 'vscode'
 import * as os from 'os'
+import * as fs from 'fs'
 import * as path from 'path'
-import * as tmp from 'tmp'
 import { confirmWorkspaceCommandExecution, warnWorkspaceCommandSetting } from '../utils/security'
 import * as utils from '../utils/utils'
 import { lw } from '../lw'
@@ -78,13 +78,51 @@ function warnKpsewhichPathSetting() {
  */
 function createTmpDir(): string {
     try {
-        return tmp.dirSync({ unsafeCleanup: true }).name.split(path.sep).join('/')
+        return fs.mkdtempSync(path.join(resolveSafeTmpRoot(), 'latex-workshop-')).split(path.sep).join('/')
     } catch (error) {
         if (error instanceof Error) {
             handleTmpDirError(error)
         }
         throw error
     }
+}
+
+function resolveSafeTmpRoot(): string {
+    const tmpRootCandidates = getTmpRootCandidates()
+
+    for (const candidate of tmpRootCandidates) {
+        if (!candidate || /['"]/.test(candidate)) {
+            continue
+        }
+
+        try {
+            fs.mkdirSync(candidate, { recursive: true })
+            fs.accessSync(candidate, fs.constants.W_OK)
+            return candidate
+        } catch {
+        }
+    }
+
+    throw new Error(`Unable to determine a writable temporary directory from candidates: ${JSON.stringify(tmpRootCandidates)}`)
+}
+
+function getTmpRootCandidates(): string[] {
+    const candidates = [
+        process.env.TMPDIR,
+        process.env.TMP,
+        process.env.TEMP,
+        os.tmpdir(),
+    ]
+
+    if (process.platform === 'win32') {
+        candidates.push(path.join(process.env.SystemRoot ?? 'C:\\Windows', 'Temp'))
+    } else {
+        candidates.push('/tmp', '/private/tmp')
+    }
+
+    return [...new Set(candidates
+        .filter((candidate): candidate is string => typeof candidate === 'string' && candidate.trim() !== '')
+        .map(candidate => path.resolve(candidate)))]
 }
 
 /**
@@ -102,7 +140,7 @@ function createTmpDir(): string {
  */
 function handleTmpDirError(error: Error) {
     if (/['"]/.exec(os.tmpdir())) {
-        const msg = `The path of tmpdir cannot include single quotes and double quotes: ${os.tmpdir()}`
+        const msg = `The default tmpdir contains quotes and could not be used safely: ${os.tmpdir()}`
         void vscode.window.showErrorMessage(msg)
         logger.log(msg)
     } else {
