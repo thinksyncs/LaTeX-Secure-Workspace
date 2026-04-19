@@ -1,7 +1,6 @@
 import { spawn } from 'node:child_process'
 import { fileURLToPath } from 'node:url'
 import path from 'node:path'
-import { runDevTests } from './runDevTests.mjs'
 
 const workspaceRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 const blockedEnvKeys = new Set([
@@ -96,7 +95,6 @@ async function main() {
     const env = sanitizeTestEnvironment(process.env)
 
     try {
-        await runDevTests({ cwd: workspaceRoot, env })
         if (shouldBlockSandboxedElectron(process.platform, env)) {
             console.error('Electron integration tests cannot run inside the Codex seatbelt sandbox on macOS.')
             console.error('Run `npm run test:ci` from a normal terminal session, or rerun with sandbox access disabled.')

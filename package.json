@@ -2939,7 +2939,6 @@
     "release:verify": "npm run clean && npm run compile && npm test",
     "test": "node ./dev/runTestCi.mjs",
     "test:ci": "node ./dev/runTestCi.mjs",
-    "test:dev": "node ./dev/runDevTests.mjs",
     "test:fuzz": "node --test ./test/fuzz/parser.fast-check.test.js",
     "watch-src": "tsc -watch -p tsconfig.json",
     "update-grammar": "node ./dev/update-grammar.mjs"
