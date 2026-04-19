@@ -14,6 +14,7 @@ test('sanitizeTestEnvironment removes env-based injection vectors and keeps CI f
         HOME: '/tmp/home',
         LATEXWORKSHOP_ALLOW_SANDBOX_ELECTRON: '1',
         LATEXWORKSHOP_CITEST: '1',
+        LD_LIBRARY_PATH: '/tmp/evil-lib',
         LD_PRELOAD: '/tmp/evil.so',
         NODE_OPTIONS: '--require /tmp/evil.js',
         NODE_PATH: '/tmp/node-path',
@@ -31,6 +32,7 @@ test('sanitizeTestEnvironment removes env-based injection vectors and keeps CI f
     assert.equal(sanitized.PATH, '/usr/bin:/bin')
     assert.equal(sanitized.DYLD_INSERT_LIBRARIES, undefined)
     assert.equal(sanitized.ELECTRON_RUN_AS_NODE, undefined)
+    assert.equal(sanitized.LD_LIBRARY_PATH, undefined)
     assert.equal(sanitized.LD_PRELOAD, undefined)
     assert.equal(sanitized.NODE_OPTIONS, undefined)
     assert.equal(sanitized.NODE_PATH, undefined)

@@ -1,6 +1,7 @@
 import { spawn } from 'node:child_process'
 import { fileURLToPath } from 'node:url'
 import path from 'node:path'
+import { runDevTests } from './runDevTests.mjs'
 
 const workspaceRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 const blockedEnvKeys = new Set([
@@ -64,37 +65,49 @@ function pipeFiltered(stream, output) {
     })
 }
 
-function main() {
+function runElectronTests(env) {
+    return new Promise((resolve, reject) => {
+        const useXvfb = env.CI_USE_XVFB === '1'
+        const command = useXvfb ? 'xvfb-run' : process.execPath
+        const args = useXvfb ? ['-a', process.execPath, './out/test/runTest.js'] : ['./out/test/runTest.js']
+
+        const child = spawn(command, args, {
+            cwd: workspaceRoot,
+            env,
+            stdio: ['ignore', 'pipe', 'pipe']
+        })
+
+        child.on('error', reject)
+
+        pipeFiltered(child.stdout, process.stdout)
+        pipeFiltered(child.stderr, process.stderr)
+
+        child.on('close', code => {
+            if (code === 0) {
+                resolve()
+                return
+            }
+            reject(new Error(`Electron integration tests failed with exit code ${code ?? 1}.`))
+        })
+    })
+}
+
+async function main() {
     const env = sanitizeTestEnvironment(process.env)
 
-    if (shouldBlockSandboxedElectron(process.platform, env)) {
-        console.error('Electron integration tests cannot run inside the Codex seatbelt sandbox on macOS.')
-        console.error('Run `npm run test:ci` from a normal terminal session, or rerun with sandbox access disabled.')
-        console.error('Set LATEXWORKSHOP_ALLOW_SANDBOX_ELECTRON=1 only if you explicitly want to try the crash-prone sandbox path.')
-        process.exit(1)
-    }
-
-    const useXvfb = env.CI_USE_XVFB === '1'
-    const command = useXvfb ? 'xvfb-run' : process.execPath
-    const args = useXvfb ? ['-a', process.execPath, './out/test/runTest.js'] : ['./out/test/runTest.js']
-
-    const child = spawn(command, args, {
-        cwd: workspaceRoot,
-        env,
-        stdio: ['ignore', 'pipe', 'pipe']
-    })
-
-    child.on('error', error => {
+    try {
+        await runDevTests({ cwd: workspaceRoot, env })
+        if (shouldBlockSandboxedElectron(process.platform, env)) {
+            console.error('Electron integration tests cannot run inside the Codex seatbelt sandbox on macOS.')
+            console.error('Run `npm run test:ci` from a normal terminal session, or rerun with sandbox access disabled.')
+            console.error('Set LATEXWORKSHOP_ALLOW_SANDBOX_ELECTRON=1 only if you explicitly want to try the crash-prone sandbox path.')
+            process.exit(1)
+        }
+        await runElectronTests(env)
+    } catch (error) {
         console.error(error.message)
         process.exit(1)
-    })
-
-    pipeFiltered(child.stdout, process.stdout)
-    pipeFiltered(child.stderr, process.stderr)
-
-    child.on('close', code => {
-        process.exit(code ?? 1)
-    })
+    }
 }
 
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {

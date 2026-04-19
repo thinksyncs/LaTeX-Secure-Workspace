@@ -1,12 +1,12 @@
 const test = require('node:test')
 const assert = require('node:assert/strict')
 const path = require('node:path')
-const { pathToFileURL } = require('node:url')
+const { loadTsModule } = require('./loadTsModule.cjs')
 
-const moduleUrl = pathToFileURL(path.resolve(__dirname, '../../out/test/runTest.js')).href
+const runTestModule = loadTsModule(path.resolve(__dirname, '../runTest.ts'))
 
-test('shouldBackgroundMacOsTestHost only enables background launch on local macOS by default', async () => {
-    const { shouldBackgroundMacOsTestHost } = await import(moduleUrl)
+test('shouldBackgroundMacOsTestHost only enables background launch on local macOS by default', () => {
+    const { shouldBackgroundMacOsTestHost } = runTestModule
 
     assert.equal(
         shouldBackgroundMacOsTestHost('darwin', {}),
@@ -26,8 +26,8 @@ test('shouldBackgroundMacOsTestHost only enables background launch on local macO
     )
 })
 
-test('getMacOsApplicationPath extracts the app bundle path from the executable', async () => {
-    const { getMacOsApplicationPath } = await import(moduleUrl)
+test('getMacOsApplicationPath extracts the app bundle path from the executable', () => {
+    const { getMacOsApplicationPath } = runTestModule
 
     assert.equal(
         getMacOsApplicationPath('/tmp/vscode/Visual Studio Code.app/Contents/MacOS/Electron'),
