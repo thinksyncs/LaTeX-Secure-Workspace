@@ -10,6 +10,8 @@ const logger = lw.log('Viewer', 'CustomEditor')
 const VIEW_TYPE = 'tex-workspace-secure.pdf-preview'
 const viewerStates = new Map<string, Map<vscode.WebviewPanel, PdfViewerState>>()
 const pendingSyncTeX = new Map<string, SyncTeXRecordToPDF | SyncTeXRecordToPDFAll[]>()
+const pendingDeleteDisposals = new Map<vscode.WebviewPanel, NodeJS.Timeout>()
+const DELETE_DISPOSE_DELAY_MS = 300
 
 export class SecurePdfCustomEditorProvider implements vscode.CustomReadonlyEditorProvider {
     static readonly viewType = VIEW_TYPE
@@ -39,14 +41,16 @@ export class SecurePdfCustomEditorProvider implements vscode.CustomReadonlyEdito
 
         const watcher = vscode.workspace.createFileSystemWatcher(pdfUri.fsPath)
         const reload = async () => {
+            cancelPendingDeleteDisposal(webviewPanel)
             await webviewPanel.webview.postMessage({type: 'reload'})
         }
         const d1 = watcher.onDidChange(reload)
         const d2 = watcher.onDidCreate(reload)
         const d3 = watcher.onDidDelete(() => {
-            webviewPanel.dispose()
+            void schedulePanelDisposeAfterDelete(pdfUri, webviewPanel)
         })
         webviewPanel.onDidDispose(() => {
+            cancelPendingDeleteDisposal(webviewPanel)
             deleteViewerState(pdfUri, webviewPanel)
             d1.dispose()
             d2.dispose()
@@ -183,6 +187,34 @@ function getPanelViewerState(pdfUri: vscode.Uri, panel: vscode.WebviewPanel): Pd
     return viewerStates.get(toKey(pdfUri))?.get(panel)
 }
 
+async function schedulePanelDisposeAfterDelete(pdfUri: vscode.Uri, panel: vscode.WebviewPanel): Promise<void> {
+    cancelPendingDeleteDisposal(panel)
+    const timeout = setTimeout(() => {
+        pendingDeleteDisposals.delete(panel)
+        void confirmDeleteAndDispose(pdfUri, panel)
+    }, DELETE_DISPOSE_DELAY_MS)
+    pendingDeleteDisposals.set(panel, timeout)
+}
+
+function cancelPendingDeleteDisposal(panel: vscode.WebviewPanel): void {
+    const timeout = pendingDeleteDisposals.get(panel)
+    if (!timeout) {
+        return
+    }
+    clearTimeout(timeout)
+    pendingDeleteDisposals.delete(panel)
+}
+
+async function confirmDeleteAndDispose(pdfUri: vscode.Uri, panel: vscode.WebviewPanel): Promise<void> {
+    try {
+        await vscode.workspace.fs.stat(pdfUri)
+        await panel.webview.postMessage({type: 'reload'})
+        return
+    } catch {
+        panel.dispose()
+    }
+}
+
 function deleteViewerState(pdfUri: vscode.Uri, panel: vscode.WebviewPanel): void {
     const key = toKey(pdfUri)
     const panelStates = viewerStates.get(key)
@@ -202,6 +234,8 @@ function deleteViewerState(pdfUri: vscode.Uri, panel: vscode.WebviewPanel): void
 export function resetCustomEditorStateForTest(): void {
     viewerStates.clear()
     pendingSyncTeX.clear()
+    pendingDeleteDisposals.forEach(timeout => clearTimeout(timeout))
+    pendingDeleteDisposals.clear()
 }
 
 /**
@@ -223,4 +257,11 @@ export async function deliverPendingSyncTeXForTest(pdfUri: vscode.Uri, panel?: v
  */
 export async function handleCustomEditorMessageForTest(pdfUri: vscode.Uri, panel: vscode.WebviewPanel, baseState: PdfViewerState, msg: unknown): Promise<void> {
     await handleCustomEditorMessage(pdfUri, panel, baseState, msg)
+}
+
+/**
+ * !! Test only
+ */
+export async function schedulePanelDisposeAfterDeleteForTest(pdfUri: vscode.Uri, panel: vscode.WebviewPanel): Promise<void> {
+    await schedulePanelDisposeAfterDelete(pdfUri, panel)
 }

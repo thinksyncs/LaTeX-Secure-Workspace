@@ -14,6 +14,9 @@ Property-based fuzz coverage for parser-facing code lives in `test/fuzz/` and is
 1. `runTest.ts` starts a new VS Code instance for each `fixture` directory and executes `suites/index.ts`.
 2. Tests in `*.test.ts` are executed through test `runTest()` function defined in `suites/utils.ts`, which skip tests in `*.test.ts` if they are not related to the current `fixture` directory.
 
+On macOS local runs, `runTest.ts` now starts the test host in the background by default to avoid stealing focus with an `Extension Development Host` window.
+Set `LATEXWORKSHOP_FOREGROUND_TESTS=1` if you explicitly want the foreground window back for debugging.
+
 ### How tests are executed via VS Code launch
 
 We have a `Run Tests` launch configuration in `.vscode/launch.json`.
