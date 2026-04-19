@@ -98,6 +98,48 @@ describe(path.basename(__filename).split('.')[0] + ':', () => {
         }, pdfUri))
     })
 
+    it('should keep the custom editor open when a deleted PDF reappears quickly', async () => {
+        const clock = sinon.useFakeTimers()
+        const pdfUri = vscode.Uri.file('/tmp/main.pdf')
+        const dispose = sinon.stub()
+        const postMessage = sinon.stub().resolves(true)
+        const panel = {
+            dispose,
+            webview: {
+                postMessage,
+            },
+        } as unknown as vscode.WebviewPanel
+        const stat = sinon.stub(vscode.workspace.fs, 'stat').resolves({type: vscode.FileType.File, ctime: 0, mtime: 0, size: 1})
+
+        await customEditor.schedulePanelDisposeAfterDeleteForTest(pdfUri, panel)
+        await clock.tickAsync(300)
+
+        assert.ok(stat.calledOnceWithExactly(pdfUri))
+        assert.ok(dispose.notCalled)
+        assert.ok(postMessage.calledOnceWithExactly({type: 'reload'}))
+    })
+
+    it('should dispose the custom editor when the deleted PDF stays missing', async () => {
+        const clock = sinon.useFakeTimers()
+        const pdfUri = vscode.Uri.file('/tmp/main.pdf')
+        const dispose = sinon.stub()
+        const postMessage = sinon.stub().resolves(true)
+        const panel = {
+            dispose,
+            webview: {
+                postMessage,
+            },
+        } as unknown as vscode.WebviewPanel
+        const stat = sinon.stub(vscode.workspace.fs, 'stat').rejects(new Error('missing'))
+
+        await customEditor.schedulePanelDisposeAfterDeleteForTest(pdfUri, panel)
+        await clock.tickAsync(300)
+
+        assert.ok(stat.calledOnceWithExactly(pdfUri))
+        assert.ok(dispose.calledOnce)
+        assert.ok(postMessage.notCalled)
+    })
+
     it('should keep forward SyncTeX on the internal path in the secure build', () => {
         assert.strictEqual(synctex.components.shouldUseExternalViewerForForwardSyncTeX('auto', 'tab'), false)
         assert.strictEqual(synctex.components.shouldUseExternalViewerForForwardSyncTeX('auto', 'external'), false)
