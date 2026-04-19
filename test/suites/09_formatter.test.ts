@@ -3,12 +3,13 @@ import * as path from 'path'
 import * as assert from 'assert'
 import * as test from './utils'
 import { existsSync, readFileSync, rmSync } from 'fs'
+import { testFileStem } from '../file-name'
 
 const extensionId = 'ToppyMicroServices.tex-workspace-secure'
 const mockLatexindentPath = path.resolve(__dirname, '../../..', 'test/fixtures/armory/formatter/mock-latexindent.cjs')
 
 suite('Formatter test suite', () => {
-    test.suite.name = path.basename(__filename).replace('.test.js', '')
+    test.suite.name = testFileStem(__filename)
     test.suite.fixture = 'testground'
     const userTarget = vscode.ConfigurationTarget.Global
 

@@ -6,8 +6,9 @@ import * as cs from 'cross-spawn'
 import { assert, get, log, mock, set, TextEditor } from './utils'
 import { lw } from '../../src/lw'
 import { autoBuild, build } from '../../src/compile/build'
+import { testFileSuiteName } from '../file-name'
 
-describe(path.basename(__filename).split('.')[0] + ':', () => {
+describe(testFileSuiteName(__filename), () => {
     let activeStub: sinon.SinonStub
     let findStub: sinon.SinonStub
 

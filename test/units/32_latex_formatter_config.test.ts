@@ -1,12 +1,12 @@
-import * as path from 'path'
 import * as sinon from 'sinon'
 import * as vscode from 'vscode'
 import { assert, mock, set, TextDocument, hooks } from './utils'
 import { formatter as latexFormatter } from '../../src/lint/latex-formatter'
 import * as quoteFixer from '../../src/extras/quote-fixer'
 import * as mathFixer from '../../src/extras/math-fixer'
+import { testFileSuiteName } from '../file-name'
 
-describe(path.basename(__filename).split('.')[0] + ':', () => {
+describe(testFileSuiteName(__filename), () => {
     beforeEach(() => {
         hooks.beforeEach()
         mock.config()

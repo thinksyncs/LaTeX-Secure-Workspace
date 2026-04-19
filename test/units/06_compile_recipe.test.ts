@@ -5,8 +5,9 @@ import { assert, get, mock, set, sleep } from './utils'
 import { lw } from '../../src/lw'
 import { build, initialize } from '../../src/compile/recipe'
 import { queue } from '../../src/compile/queue'
+import { testFileSuiteName } from '../file-name'
 
-describe(path.basename(__filename).split('.')[0] + ':', () => {
+describe(testFileSuiteName(__filename), () => {
     let getAuxDirStub: sinon.SinonStub
     let getIncludedTeXStub: sinon.SinonStub
     let mkdirStub: sinon.SinonStub

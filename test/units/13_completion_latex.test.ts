@@ -1,5 +1,4 @@
 import * as vscode from 'vscode'
-import * as path from 'path'
 import * as sinon from 'sinon'
 import { lw } from '../../src/lw'
 import { assert, get, mock, type TextDocument } from './utils'
@@ -14,8 +13,9 @@ import { inputProvider, importProvider, subimportProvider } from '../../src/comp
 import { provider as glossaryProvider } from '../../src/completion/completer/glossary'
 import { provider as subsuperscriptProvider } from '../../src/completion/completer/subsuperscript'
 import { provider as closeenvProvider } from '../../src/completion/completer/closeenv'
+import { testFileSuiteName } from '../file-name'
 
-describe(path.basename(__filename).split('.')[0] + ':', () => {
+describe(testFileSuiteName(__filename), () => {
     let document: TextDocument
     let citationSpy: sinon.SinonSpy
     let referenceSpy: sinon.SinonSpy

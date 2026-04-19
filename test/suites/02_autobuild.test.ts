@@ -1,10 +1,10 @@
 import * as vscode from 'vscode'
-import * as path from 'path'
 import * as test from './utils'
 import assert from 'assert'
+import { testFileStem } from '../file-name'
 
 suite.skip('Auto-build test suite', () => {
-    test.suite.name = path.basename(__filename).replace('.test.js', '')
+    test.suite.name = testFileStem(__filename)
     test.suite.fixture = 'testground'
 
     suiteSetup(async () => {

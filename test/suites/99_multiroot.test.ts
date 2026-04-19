@@ -3,13 +3,14 @@ import * as fs from 'fs'
 import * as path from 'path'
 import * as assert from 'assert'
 import * as test from './utils'
+import { testFileStem } from '../file-name'
 
 function resolve(fixture: string, fileName: string, ws: string) {
     return path.resolve(path.dirname(fixture), ws, path.basename(fixture), fileName)
 }
 
 suite('Multi-root workspace test suite', () => {
-    test.suite.name = path.basename(__filename).replace('.test.js', '')
+    test.suite.name = testFileStem(__filename)
     test.suite.fixture = 'multiroot'
 
     suiteSetup(async () => {

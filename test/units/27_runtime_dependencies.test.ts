@@ -1,8 +1,9 @@
 import * as fs from 'fs'
 import * as path from 'path'
 import { assert } from './utils'
+import { testFileSuiteName } from '../file-name'
 
-describe(path.basename(__filename).split('.')[0] + ':', () => {
+describe(testFileSuiteName(__filename), () => {
     it('should keep unified runtime helpers in production dependencies', () => {
         const packageJson = JSON.parse(
             fs.readFileSync(path.resolve(__dirname, '../../../package.json'), 'utf8')

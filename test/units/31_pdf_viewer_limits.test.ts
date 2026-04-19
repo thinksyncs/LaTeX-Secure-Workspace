@@ -2,6 +2,7 @@ import * as fs from 'fs'
 import * as path from 'path'
 import * as vm from 'vm'
 import { assert } from './utils'
+import { testFileSuiteName } from '../file-name'
 
 type RenderLimitsModule = {
     PDF_VIEWER_LIMITS: {
@@ -51,7 +52,7 @@ type RenderLimitsModule = {
     ) => number[]
 }
 
-describe(path.basename(__filename).split('.')[0] + ':', () => {
+describe(testFileSuiteName(__filename), () => {
     let renderLimits: RenderLimitsModule
 
     before(() => {

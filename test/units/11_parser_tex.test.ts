@@ -1,12 +1,12 @@
 import * as vscode from 'vscode'
-import * as path from 'path'
 import * as sinon from 'sinon'
 import { lw } from '../../src/lw'
 import { assert, mock, set } from './utils'
 import { parser } from '../../src/parse/parser'
 import type * as Ast from '@unified-latex/unified-latex-types'
+import { testFileSuiteName } from '../file-name'
 
-describe(path.basename(__filename).split('.')[0] + ':', () => {
+describe(testFileSuiteName(__filename), () => {
     before(() => {
         mock.init(lw, 'parser')
         ;(lw.cache.paths as sinon.SinonStub).returns([])

@@ -3,9 +3,10 @@ import * as path from 'path'
 import * as sinon from 'sinon'
 import { assert, get, mock, set, sleep } from './utils'
 import { lw } from '../../src/lw'
+import { testFileStem, testFileSuiteName } from '../file-name'
 
-describe(path.basename(__filename).split('.')[0] + ':', () => {
-    const fixture = path.basename(__filename).split('.')[0]
+describe(testFileSuiteName(__filename), () => {
+    const fixture = testFileStem(__filename)
 
     before(() => {
         mock.init(lw, 'watcher', 'cache', 'root')

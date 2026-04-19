@@ -1,11 +1,11 @@
 import * as vscode from 'vscode'
-import * as path from 'path'
 import * as sinon from 'sinon'
 import { assert, mock, TextEditor, set } from './utils'
 import { lw } from '../../src/lw'
 import * as commands from '../../src/core/commands'
+import { testFileSuiteName } from '../file-name'
 
-describe(path.basename(__filename).split('.')[0] + ':', () => {
+describe(testFileSuiteName(__filename), () => {
     before(() => {
         mock.init(lw)
     })

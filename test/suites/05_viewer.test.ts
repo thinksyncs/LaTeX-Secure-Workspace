@@ -3,9 +3,10 @@ import * as path from 'path'
 import * as assert from 'assert'
 import { lw } from '../../src/lw'
 import * as test from './utils'
+import { testFileStem } from '../file-name'
 
 suite.skip('PDF viewer test suite', () => {
-    test.suite.name = path.basename(__filename).replace('.test.js', '')
+    test.suite.name = testFileStem(__filename)
     test.suite.fixture = 'testground'
 
     suiteSetup(async () => {

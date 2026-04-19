@@ -1,12 +1,12 @@
 import * as vscode from 'vscode'
-import * as path from 'path'
 import * as assert from 'assert'
 import * as test from './utils'
 import { lw } from '../../src/lw'
 import type { CompletionItem } from '../../src/types'
+import { testFileStem } from '../file-name'
 
 suite('Snippet test suite', () => {
-    test.suite.name = path.basename(__filename).replace('.test.js', '')
+    test.suite.name = testFileStem(__filename)
     test.suite.fixture = 'testground'
 
     suiteSetup(async () => {

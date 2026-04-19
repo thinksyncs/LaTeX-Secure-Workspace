@@ -7,9 +7,10 @@ import * as sinon from 'sinon'
 import { assert, get, mock, set } from './utils'
 import { lw } from '../../src/lw'
 import { initialize } from '../../src/core/file'
+import { testFileStem, testFileSuiteName } from '../file-name'
 
-describe(path.basename(__filename).split('.')[0] + ':', () => {
-    const fixture = path.basename(__filename).split('.')[0]
+describe(testFileSuiteName(__filename), () => {
+    const fixture = testFileStem(__filename)
 
     function mockKpsewhichProcess({ stdout = '', stderr = '', code = 0, error }: { stdout?: string, stderr?: string, code?: number | null, error?: Error }): ReturnType<typeof lw.external.spawn> {
         const proc = new EventEmitter() as EventEmitter & { stdout: PassThrough, stderr: PassThrough }

@@ -1,10 +1,10 @@
-import * as path from 'path'
 import * as sinon from 'sinon'
 import { assert, mock } from './utils'
 import { lw } from '../../src/lw'
 import { queue } from '../../src/compile/queue'
+import { testFileSuiteName } from '../file-name'
 
-describe(path.basename(__filename).split('.')[0] + ':', () => {
+describe(testFileSuiteName(__filename), () => {
     before(() => {
         mock.init(lw)
     })
