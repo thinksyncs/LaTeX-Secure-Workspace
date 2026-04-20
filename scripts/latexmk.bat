@@ -1,1 +1,1 @@
-@%LATEXWORKSHOP_DOCKER_PATH% run -i --rm -w /data -v "%cd%:/data" %LATEXWORKSHOP_DOCKER_LATEX% latexmk %*
+@%LATEXWORKSHOP_DOCKER_PATH% run -i --rm --pull=never --network=none --cap-drop=ALL --security-opt=no-new-privileges -w /data -v "%cd%:/data" %LATEXWORKSHOP_DOCKER_LATEX% latexmk %*

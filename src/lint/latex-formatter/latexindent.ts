@@ -4,7 +4,7 @@ import * as cs from 'cross-spawn'
 import * as path from 'path'
 import * as fs from 'fs'
 import { lw } from '../../lw'
-import { confirmWorkspaceCommandExecution, getSecureConfigurationValue } from '../../utils/security'
+import { confirmWorkspaceCommandExecution, getSecureConfigurationValue, getSecureConfigurationValueSync } from '../../utils/security'
 import { replaceArgumentPlaceholders } from '../../utils/utils'
 import type { LaTeXFormatter } from '../../types'
 
@@ -32,8 +32,9 @@ async function formatDocument(document: vscode.TextDocument, range?: vscode.Rang
     }
     formatting = true
     const configuration = vscode.workspace.getConfiguration('latex-workshop', document.uri)
+    const useDocker = getSecureConfigurationValueSync(document.uri, 'docker.enabled', false)
     const pathMeta = configuration.get('formatting.latexindent.path') as string
-    if (!(configuration.get('docker.enabled') as boolean) && !await confirmWorkspaceCommandExecution(document.uri, 'formatting.latexindent.path', pathMeta)) {
+    if (!useDocker && !await confirmWorkspaceCommandExecution(document.uri, 'formatting.latexindent.path', pathMeta)) {
         return
     }
     formatterArgs = await getSecureConfigurationValue(document.uri, 'formatting.latexindent.args', [] as string[])
@@ -58,8 +59,7 @@ async function formatDocument(document: vscode.TextDocument, range?: vscode.Rang
 
 
 function checkPath(): Thenable<boolean> {
-    const configuration = vscode.workspace.getConfiguration('latex-workshop')
-    const useDocker = configuration.get('docker.enabled') as boolean
+    const useDocker = getSecureConfigurationValueSync(undefined, 'docker.enabled', false)
     if (useDocker) {
         logger.log('Use Docker to invoke the command.')
         if (process.platform === 'win32') {
@@ -119,8 +119,7 @@ function checkPath(): Thenable<boolean> {
 
 function format(document: vscode.TextDocument, range?: vscode.Range): Thenable<vscode.TextEdit | undefined> {
     return new Promise((resolve, _reject) => {
-        const configuration = vscode.workspace.getConfiguration('latex-workshop')
-        const useDocker = configuration.get('docker.enabled') as boolean
+        const useDocker = getSecureConfigurationValueSync(document.uri, 'docker.enabled', false)
 
         if (!vscode.window.activeTextEditor) {
             logger.log('Exit formatting. The active textEditor is undefined.')

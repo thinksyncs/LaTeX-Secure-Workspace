@@ -1,7 +1,7 @@
 import * as sinon from 'sinon'
 import * as vscode from 'vscode'
 import { assert, hooks } from './utils'
-import { confirmWorkspaceCommandExecution, getSecureConfigurationValue } from '../../src/utils/security'
+import { confirmWorkspaceCommandExecution, getSecureConfigurationValue, getSecureConfigurationValueSync } from '../../src/utils/security'
 
 describe('30_utils_security:', () => {
     beforeEach(() => {
@@ -42,6 +42,23 @@ describe('30_utils_security:', () => {
         const value = await getSecureConfigurationValue(undefined, 'formatting.tex-fmt.args', [] as string[])
 
         assert.deepStrictEqual(value, ['--nowrap', '--tabsize', '4'])
+        assert.ok(showWarningStub.notCalled)
+    })
+
+    it('should ignore workspace-scoped sync overrides in synchronous reads', () => {
+        const showWarningStub = sinon.stub(vscode.window, 'showWarningMessage')
+        sinon.stub(vscode.workspace, 'getConfiguration').returns({
+            inspect: sinon.stub().withArgs('docker.enabled').returns({
+                defaultValue: false,
+                globalValue: false,
+                workspaceValue: true
+            }),
+            get: sinon.stub().withArgs('docker.enabled', sinon.match.any).returns(true)
+        } as unknown as vscode.WorkspaceConfiguration)
+
+        const value = getSecureConfigurationValueSync(undefined, 'docker.enabled', false)
+
+        assert.strictEqual(value, false)
         assert.ok(showWarningStub.notCalled)
     })
 

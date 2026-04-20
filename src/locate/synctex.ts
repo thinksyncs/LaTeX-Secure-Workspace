@@ -5,7 +5,7 @@ import * as cs from 'cross-spawn'
 import { lw } from '../lw'
 import type { SyncTeXRecordToPDF, SyncTeXRecordToPDFAll, SyncTeXRecordToTeX } from '../types'
 import { syncTeXToPDF, syncTeXToTeX } from './synctex/worker'
-import { confirmWorkspaceCommandExecution } from '../utils/security'
+import { confirmWorkspaceCommandExecution, getSecureConfigurationValueSync } from '../utils/security'
 import { replaceArgumentPlaceholders } from '../utils/utils'
 import { isSameRealPath } from '../utils/pathnormalize'
 import type { ClientRequest } from '../../types/latex-workshop-protocol-types'
@@ -331,7 +331,7 @@ function callSyncTeXToPDF(line: number, col: number, filePath: string, pdfUri: v
 function callSyncTeXToPDF(line: number, col: number, filePath: string, pdfUri: vscode.Uri, indicator: 'none' | 'circle' | 'rectangle'): Promise<SyncTeXRecordToPDFAll[]>
 function callSyncTeXToPDF(line: number, col: number, filePath: string, pdfUri: vscode.Uri, indicator: 'none' | 'circle' | 'rectangle'): Promise<SyncTeXRecordToPDF> | Promise<SyncTeXRecordToPDFAll[]> {
     const configuration = vscode.workspace.getConfiguration('latex-workshop')
-    const docker = configuration.get('docker.enabled')
+    const docker = getSecureConfigurationValueSync(pdfUri, 'docker.enabled', false)
 
     const args = ['view', '-i'].concat([
         `${line}${indicator === 'rectangle' ? ':0' : `:${col + 1}`}:${docker ? path.basename(filePath) : filePath}`,
