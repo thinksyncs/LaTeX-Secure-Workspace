@@ -21,6 +21,7 @@ test/fixtures/**/*.synctex*
 test/fixtures/**/*.fdb_latexmk
 test/fixtures/**/*.blg
 test/fixtures/**/*.out
+**/.lw-security/
 samples/sample/*.aux
 samples/sample/*.fdb_latexmk
 samples/sample/*.fls

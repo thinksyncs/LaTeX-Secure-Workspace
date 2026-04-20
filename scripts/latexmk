@@ -1,9 +1,15 @@
 #!/bin/sh
 USER_ARGS=""
+SOURCE_DIR_CONTAINER="${LATEXWORKSHOP_DOCKER_SOURCE_DIR_CONTAINER:-/latex-workshop/src}"
+OUTPUT_DIR_CONTAINER="${LATEXWORKSHOP_DOCKER_OUTPUT_DIR_CONTAINER:-/latex-workshop/out}"
+OUTPUT_DIR_HOST="${LATEXWORKSHOP_DOCKER_OUTPUT_DIR_HOST:-$(pwd)}"
 if command -v id >/dev/null 2>&1; then
     USER_ARGS="--user $(id -u):$(id -g)"
 fi
 
 exec "$LATEXWORKSHOP_DOCKER_PATH" run -i --rm --pull=never --network=none \
     --cap-drop=ALL --security-opt=no-new-privileges $USER_ARGS \
-    -w "$(pwd)" -v "$(pwd):$(pwd)" "$LATEXWORKSHOP_DOCKER_LATEX" latexmk "$@"
+    -w "$SOURCE_DIR_CONTAINER" \
+    -v "$(pwd):$SOURCE_DIR_CONTAINER:ro" \
+    -v "$OUTPUT_DIR_HOST:$OUTPUT_DIR_CONTAINER" \
+    "$LATEXWORKSHOP_DOCKER_LATEX" latexmk "$@"

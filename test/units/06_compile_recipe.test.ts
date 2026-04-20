@@ -59,7 +59,7 @@ describe(testFileSuiteName(__filename), () => {
             assert.strictEqual(step.name, 'latexmk')
             assert.strictEqual(step.command, 'latexmk')
             assert.ok(buildLoop.calledOnce)
-            assert.pathStrictEqual(lw.compile.compiledPDFPath, rootFile.replace('.tex', '.pdf'))
+            assert.pathStrictEqual(lw.compile.compiledPDFPath, path.join(path.dirname(rootFile), '.lw-security', 'main.pdf'))
         })
 
         it('should create auxiliary subfolders relative to the root directory', async () => {
@@ -70,7 +70,7 @@ describe(testFileSuiteName(__filename), () => {
 
             await build(rootFile, 'latex', async () => {})
 
-            assert.hasLog(`auxDir: ${path.dirname(rootFile)} .`)
+            assert.hasLog(`auxDir: ${path.join(path.dirname(rootFile), '.lw-security')} .`)
         })
     })
 
@@ -155,7 +155,7 @@ describe(testFileSuiteName(__filename), () => {
         it('should replace placeholders in the fixed latexmk arguments', async () => {
             const rootFile = set.root('main.tex')
             const normalizedRootFile = rootFile.replace(/\\/g, '/')
-            const normalizedRootDir = path.dirname(rootFile).replace(/\\/g, '/')
+            const normalizedRootDir = path.join(path.dirname(rootFile), '.lw-security').replace(/\\/g, '/')
 
             await build(rootFile, 'latex', async () => {})
 
@@ -168,30 +168,39 @@ describe(testFileSuiteName(__filename), () => {
         })
 
         it('should modify the fixed command when Docker is enabled on Windows', async () => {
+            const rootFile = set.root('main.tex')
             set.config('docker.enabled', true)
             setPlatform('win32')
             lw.extensionRoot = '/path/to/extension'
 
-            await build('dummy.tex', 'latex', async () => {})
+            await build(rootFile, 'latex', async () => {})
 
             const step = queue.getStep()
             assert.ok(step)
             assert.pathStrictEqual(step.command, path.resolve('/path/to/extension', './scripts/latexmk.bat'))
+            assert.ok(step.args?.includes('-outdir=/latex-workshop/out'))
+            assert.ok(step.args?.includes('-auxdir=/latex-workshop/out'))
         })
 
         it('should modify the fixed command when Docker is enabled on non-Windows', async () => {
+            const rootFile = set.root('main.tex')
             set.config('docker.enabled', true)
             setPlatform('linux')
             lw.extensionRoot = '/path/to/extension'
 
             const chmodStub = sinon.stub(lw.external, 'chmodSync')
-            await build('dummy.tex', 'latex', async () => {})
+            await build(rootFile, 'latex', async () => {})
             chmodStub.restore()
 
             const step = queue.getStep()
             assert.ok(step)
             assert.pathStrictEqual(step.command, path.resolve('/path/to/extension', './scripts/latexmk'))
             assert.strictEqual(chmodStub.getCall(0).args?.[1], 0o755)
+            assert.ok(step.args?.includes('-outdir=/latex-workshop/out'))
+            assert.ok(step.args?.includes('-auxdir=/latex-workshop/out'))
+            assert.strictEqual(step.env?.LATEXWORKSHOP_DOCKER_SOURCE_DIR_CONTAINER, '/latex-workshop/src')
+            assert.strictEqual(step.env?.LATEXWORKSHOP_DOCKER_OUTPUT_DIR_CONTAINER, '/latex-workshop/out')
+            assert.pathStrictEqual(step.env?.LATEXWORKSHOP_DOCKER_OUTPUT_DIR_HOST ?? '', path.join(path.dirname(rootFile), '.lw-security'))
         })
 
         it('should append max print line to the fixed latexmk invocation on MiKTeX', async () => {

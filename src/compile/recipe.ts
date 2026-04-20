@@ -8,6 +8,8 @@ import type { Recipe, Tool } from '../types'
 import { queue } from './queue'
 
 const logger = lw.log('Build', 'Recipe')
+const DOCKER_SECURE_SOURCE_DIR = '/latex-workshop/src'
+const DOCKER_SECURE_OUTPUT_DIR = '/latex-workshop/out'
 
 const FIXED_SECURE_RECIPE_NAME = 'secure-latexmk'
 const FIXED_SECURE_TOOL: Tool = {
@@ -18,8 +20,8 @@ const FIXED_SECURE_TOOL: Tool = {
         '-interaction=nonstopmode',
         '-file-line-error',
         '-pdf',
-        '-outdir=%DIR%',
-        '-auxdir=%DIR%',
+        '-outdir=%DOCFILE%',
+        '-auxdir=%DOCFILE%',
         '%DOC%'
     ],
     env: {}
@@ -131,6 +133,25 @@ async function createAuxSubFolders(rootFile: string) {
         auxDir = path.resolve(rootDir, auxDir)
     }
     logger.log(`auxDir: ${auxDir} .`)
+    try {
+        const auxDirStat = await lw.file.exists(auxDir)
+        if (
+            !auxDirStat ||
+            ![vscode.FileType.Directory, vscode.FileType.Directory | vscode.FileType.SymbolicLink].includes(
+                auxDirStat.type
+            )
+        ) {
+            lw.external.mkdirSync(auxDir, { recursive: true })
+        }
+    } catch (e) {
+        if (e instanceof Error) {
+            logger.log(`Unexpected Error: ${e.name}: ${e.message} .`)
+        } else {
+            logger.log('Unexpected Error: please see the console log of the Developer Tools of VS Code.')
+            logger.refreshStatus('x', 'errorForeground')
+            throw(e)
+        }
+    }
     for (const file of lw.cache.getIncludedTeX(rootFile)) {
         const relativePath = path.dirname(file.replace(rootDir, '.'))
         const fullAuxDir = path.resolve(auxDir, relativePath)
@@ -296,8 +317,11 @@ function findRecipe(rootFile: string, langId: string, recipeName?: string): Reci
 function populateTools(rootFile: string, buildTools: Tool[]): Tool[] {
     const configuration = vscode.workspace.getConfiguration('latex-workshop', lw.file.toUri(rootFile))
     const docker = getSecureConfigurationValueSync(lw.file.toUri(rootFile), 'docker.enabled', false)
+    const secureOutDir = path.resolve(path.dirname(rootFile), lw.file.getSecurityOutDir(rootFile)).split(path.sep).join('/')
+    const secureAuxDir = path.resolve(path.dirname(rootFile), lw.file.getSecurityAuxDir(rootFile)).split(path.sep).join('/')
 
     buildTools.forEach(tool => {
+        const isLatexmk = tool.command === 'latexmk'
         if (docker) {
             switch (tool.command) {
                 case 'latexmk':
@@ -308,6 +332,12 @@ function populateTools(rootFile: string, buildTools: Tool[]): Tool[] {
                         tool.command = path.resolve(lw.extensionRoot, './scripts/latexmk')
                         lw.external.chmodSync(tool.command, 0o755)
                     }
+                    tool.env = {
+                        ...tool.env,
+                        LATEXWORKSHOP_DOCKER_SOURCE_DIR_CONTAINER: DOCKER_SECURE_SOURCE_DIR,
+                        LATEXWORKSHOP_DOCKER_OUTPUT_DIR_CONTAINER: DOCKER_SECURE_OUTPUT_DIR,
+                        LATEXWORKSHOP_DOCKER_OUTPUT_DIR_HOST: path.resolve(path.dirname(rootFile), lw.file.getSecurityOutDir(rootFile))
+                    }
                     break
                 default:
                     logger.log(`Do not use Docker to invoke the command: ${tool.command}.`)
@@ -315,11 +345,24 @@ function populateTools(rootFile: string, buildTools: Tool[]): Tool[] {
             }
         }
         tool.args = tool.args?.map(replaceArgumentPlaceholders(rootFile, lw.file.tmpDirPath))
-        lw.file.setTeXDirs(
-            rootFile,
-            tool.args?.filter(arg => arg.startsWith('-out-directory') || arg.startsWith('-outdir'))[0]?.replace(/^-out-directory=|^-outdir=/, ''),
-            tool.args?.filter(arg => arg.startsWith('-aux-directory') || arg.startsWith('-auxdir'))[0]?.replace(/^-aux-directory=|^-auxdir=/, '')
-        )
+        if (isLatexmk) {
+            tool.args = tool.args?.map(arg => {
+                if (arg.startsWith('-out-directory=') || arg.startsWith('-outdir=')) {
+                    return `${arg.startsWith('-out-directory=') ? '-out-directory=' : '-outdir='}${docker ? DOCKER_SECURE_OUTPUT_DIR : secureOutDir}`
+                }
+                if (arg.startsWith('-aux-directory=') || arg.startsWith('-auxdir=')) {
+                    return `${arg.startsWith('-aux-directory=') ? '-aux-directory=' : '-auxdir='}${docker ? DOCKER_SECURE_OUTPUT_DIR : secureAuxDir}`
+                }
+                return arg
+            })
+            lw.file.setTeXDirs(rootFile, secureOutDir, secureAuxDir)
+        } else {
+            lw.file.setTeXDirs(
+                rootFile,
+                tool.args?.filter(arg => arg.startsWith('-out-directory') || arg.startsWith('-outdir'))[0]?.replace(/^-out-directory=|^-outdir=/, ''),
+                tool.args?.filter(arg => arg.startsWith('-aux-directory') || arg.startsWith('-auxdir'))[0]?.replace(/^-aux-directory=|^-auxdir=/, '')
+            )
+        }
         const env = tool.env ?? {}
         Object.entries(env).forEach(([key, value]) => {
             env[key] = value && replaceArgumentPlaceholders(rootFile, lw.file.tmpDirPath)(value)

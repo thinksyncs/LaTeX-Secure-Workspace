@@ -7,6 +7,7 @@ import * as utils from '../utils/utils'
 import { lw } from '../lw'
 
 const logger = lw.log('File')
+const SECURITY_BUILD_DIR = '.lw-security'
 
 let extraTeXExts: string[]
 export const file = {
@@ -357,7 +358,7 @@ function getOutDir(texPath?: string): string {
 }
 
 function getSecurityOutDir(_texPath?: string): string {
-    return './'
+    return SECURITY_BUILD_DIR
 }
 
 
@@ -400,7 +401,7 @@ function getAuxDir(texPath?: string): string {
 }
 
 function getSecurityAuxDir(_texPath?: string): string {
-    return './'
+    return SECURITY_BUILD_DIR
 }
 
 /**
