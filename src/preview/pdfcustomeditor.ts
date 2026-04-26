@@ -207,7 +207,7 @@ function cancelPendingDeleteDisposal(panel: vscode.WebviewPanel): void {
 
 async function confirmDeleteAndDispose(pdfUri: vscode.Uri, panel: vscode.WebviewPanel): Promise<void> {
     try {
-        await vscode.workspace.fs.stat(pdfUri)
+        await lw.external.stat(pdfUri)
         await panel.webview.postMessage({type: 'reload'})
         return
     } catch {

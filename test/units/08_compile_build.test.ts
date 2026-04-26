@@ -107,7 +107,7 @@ describe(testFileSuiteName(__filename), () => {
 
             await build()
 
-            assert.ok(viewStub.calledOnceWithExactly(vscode.Uri.file(get.path('main.pdf')), 'tab'))
+            assert.ok(viewStub.calledOnceWithExactly(vscode.Uri.file(get.path('.lw-security', 'main.pdf')), 'tab'))
         })
 
         it('should refresh the built pdf when it is already open', async () => {
@@ -118,7 +118,7 @@ describe(testFileSuiteName(__filename), () => {
 
             await build()
 
-            assert.ok(refreshStub.calledOnceWithExactly(vscode.Uri.file(get.path('main.pdf'))))
+            assert.ok(refreshStub.calledOnceWithExactly(vscode.Uri.file(get.path('.lw-security', 'main.pdf'))))
             assert.ok(viewStub.notCalled)
         })
     })

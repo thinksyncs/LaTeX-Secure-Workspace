@@ -109,7 +109,7 @@ describe(testFileSuiteName(__filename), () => {
                 postMessage,
             },
         } as unknown as vscode.WebviewPanel
-        const stat = sinon.stub(vscode.workspace.fs, 'stat').resolves({type: vscode.FileType.File, ctime: 0, mtime: 0, size: 1})
+        const stat = sinon.stub(lw.external, 'stat').resolves({type: vscode.FileType.File, ctime: 0, mtime: 0, size: 1})
 
         await customEditor.schedulePanelDisposeAfterDeleteForTest(pdfUri, panel)
         await clock.tickAsync(300)
@@ -130,7 +130,7 @@ describe(testFileSuiteName(__filename), () => {
                 postMessage,
             },
         } as unknown as vscode.WebviewPanel
-        const stat = sinon.stub(vscode.workspace.fs, 'stat').rejects(new Error('missing'))
+        const stat = sinon.stub(lw.external, 'stat').rejects(new Error('missing'))
 
         await customEditor.schedulePanelDisposeAfterDeleteForTest(pdfUri, panel)
         await clock.tickAsync(300)
