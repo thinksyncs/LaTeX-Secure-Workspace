@@ -108,7 +108,7 @@ suite('Multi-root workspace test suite', () => {
             {src: 'empty', dst: 'empty', ws: 'B'}
         ], {skipCache: true})
         await test.build(fixture, 'main.tex', 'A')
-        assert.ok(fs.existsSync(resolve(fixture, 'main.pdf', 'A')))
+        assert.ok(fs.existsSync(resolve(fixture, '.lw-security/main.pdf', 'A')))
         assert.ok(!fs.existsSync(resolve(fixture, 'fake.pdf', 'A')))
     })
 
@@ -128,7 +128,7 @@ suite('Multi-root workspace test suite', () => {
             {src: 'empty', dst: 'empty', ws: 'B'}
         ], {skipCache: true})
         await test.build(fixture, 'main.tex', 'A')
-        assert.ok(fs.existsSync(resolve(fixture, 'main.pdf', 'A')))
+        assert.ok(fs.existsSync(resolve(fixture, '.lw-security/main.pdf', 'A')))
         assert.ok(!fs.existsSync(resolve(fixture, 'fake.pdf', 'A')))
     })
 
@@ -139,7 +139,7 @@ suite('Multi-root workspace test suite', () => {
             {src: 'empty', dst: 'empty', ws: 'B'}
         ], {skipCache: true})
         await test.build(fixture, 'main.tex', 'A')
-        assert.ok(fs.existsSync(resolve(fixture, 'main.pdf', 'A')))
+        assert.ok(fs.existsSync(resolve(fixture, '.lw-security/main.pdf', 'A')))
     })
 
     test.run('build with enableMagicComments: false', async (fixture: string) => {
@@ -150,7 +150,7 @@ suite('Multi-root workspace test suite', () => {
             {src: 'empty', dst: 'empty', ws: 'B'}
         ], {skipCache: true})
         await test.build(fixture, 'main.tex', 'A')
-        assert.ok(fs.existsSync(resolve(fixture, 'main.pdf', 'A')))
+        assert.ok(fs.existsSync(resolve(fixture, '.lw-security/main.pdf', 'A')))
     })
 
     test.run('auto build with subfiles and onSave', async (fixture: string) => {
