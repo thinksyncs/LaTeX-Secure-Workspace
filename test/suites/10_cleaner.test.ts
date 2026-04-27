@@ -26,25 +26,25 @@ suite('Cleaner test suite', () => {
     test.run('fixed clean removes standard aux files but not unrelated files', async (fixture: string) => {
         await test.load(fixture, [
             {src: 'base.tex', dst: 'main.tex'},
-            {src: 'empty', dst: 'main.aux'},
-            {src: 'empty', dst: 'main.fls'},
+            {src: 'empty', dst: '.lw-security/main.aux'},
+            {src: 'empty', dst: '.lw-security/main.fls'},
             {src: 'empty', dst: 'sub.aux'}
         ], {skipCache: true})
         await lw.extra.clean(path.resolve(fixture, 'main.tex'))
-        assert.ok(!fs.existsSync(path.resolve(fixture, 'main.aux')))
-        assert.ok(!fs.existsSync(path.resolve(fixture, 'main.fls')))
+        assert.ok(!fs.existsSync(path.resolve(fixture, '.lw-security/main.aux')))
+        assert.ok(!fs.existsSync(path.resolve(fixture, '.lw-security/main.fls')))
         assert.ok(fs.existsSync(path.resolve(fixture, 'sub.aux')))
     })
 
     test.run('fixed clean never removes the built pdf', async (fixture: string) => {
         await test.load(fixture, [
             {src: 'base.tex', dst: 'main.tex'},
-            {src: 'empty', dst: 'main.aux'},
-            {src: 'empty', dst: 'main.pdf'}
+            {src: 'empty', dst: '.lw-security/main.aux'},
+            {src: 'empty', dst: '.lw-security/main.pdf'}
         ], {skipCache: true})
         await lw.extra.clean(path.resolve(fixture, 'main.tex'))
-        assert.ok(!fs.existsSync(path.resolve(fixture, 'main.aux')))
-        assert.ok(fs.existsSync(path.resolve(fixture, 'main.pdf')))
+        assert.ok(!fs.existsSync(path.resolve(fixture, '.lw-security/main.aux')))
+        assert.ok(fs.existsSync(path.resolve(fixture, '.lw-security/main.pdf')))
     })
 
     test.run('fixed clean ignores external clean command settings', async (fixture: string) => {
@@ -52,10 +52,10 @@ suite('Cleaner test suite', () => {
         await vscode.workspace.getConfiguration('latex-workshop').update('latex.clean.args', ['should-not-run'])
         await test.load(fixture, [
             {src: 'base.tex', dst: 'main.tex'},
-            {src: 'empty', dst: 'main.aux'}
+            {src: 'empty', dst: '.lw-security/main.aux'}
         ], {skipCache: true})
         await lw.extra.clean(path.resolve(fixture, 'main.tex'))
-        assert.ok(!fs.existsSync(path.resolve(fixture, 'main.aux')))
+        assert.ok(!fs.existsSync(path.resolve(fixture, '.lw-security/main.aux')))
     })
 
     test.run('build failure does not trigger auto clean or retry', async (fixture: string) => {
