@@ -2972,6 +2972,9 @@
     "speech-rule-engine": {
       "@xmldom/xmldom": "0.9.10"
     },
+    "@azure/msal-node": {
+      "uuid": "^14.0.0"
+    },
     "micromatch": {
       "picomatch": "^2.3.2"
     },
