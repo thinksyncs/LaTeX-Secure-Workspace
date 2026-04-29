@@ -5,9 +5,6 @@ inputs:
     description: Cache version prefix for TeX Live
     required: false
     default: tl-current-v1
-env:
-  TEXLIVE_BOOTSTRAP_REPOSITORY: https://ctan.net/systems/texlive/tlnet
-  TEXLIVE_KEY_FINGERPRINT: C78B82D8C79512F79CC0D7C80D5E5D9106BAB6BC
 runs:
   using: composite
   steps:
@@ -26,6 +23,9 @@ runs:
     - name: Download and verify install-tl archive
       if: steps.cache-texlive.outputs.cache-hit != 'true'
       shell: bash
+      env:
+        TEXLIVE_BOOTSTRAP_REPOSITORY: https://ctan.net/systems/texlive/tlnet
+        TEXLIVE_KEY_FINGERPRINT: C78B82D8C79512F79CC0D7C80D5E5D9106BAB6BC
       run: |
         if ! command -v gpg >/dev/null 2>&1; then
           sudo apt-get update
@@ -66,6 +66,8 @@ runs:
         install-tl-dir/install-tl --repository "$TEXLIVE_REPOSITORY" --profile "$GITHUB_WORKSPACE/test/config/texlive_linux.profile"
     - name: Trust TeX Live signing key
       shell: bash
+      env:
+        TEXLIVE_KEY_FINGERPRINT: C78B82D8C79512F79CC0D7C80D5E5D9106BAB6BC
       run: |
         if ! command -v gpg >/dev/null 2>&1; then
           sudo apt-get update
@@ -85,6 +87,8 @@ runs:
         tlmgr --verify-repo=all install chktex lacheck latexindent
     - name: Verify TeX Live repository metadata
       shell: bash
+      env:
+        TEXLIVE_BOOTSTRAP_REPOSITORY: https://ctan.net/systems/texlive/tlnet
       run: |
         tlmgr --verify-repo=all --repository "$TEXLIVE_BOOTSTRAP_REPOSITORY" update --list 2>&1 | tee tlmgr-verify.log
         grep -qi '(verified)' tlmgr-verify.log
