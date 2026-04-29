@@ -86,8 +86,10 @@ jobs:
         }
         New-Item -ItemType Directory -Path $tlGnuPgHome | Out-Null
         & gpg --homedir $tlGnuPgHome --batch --import texlive.asc
+        & gpg --homedir $tlGnuPgHome --list-keys $env:TEXLIVE_KEY_FINGERPRINT
         & 'D:\texlive\bin\windows\tlmgr.bat' key add texlive.asc
-        "TL_GNUPGHOME=$tlGnuPgHome" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+        $tlGnuPgHomeForTl = $tlGnuPgHome -replace '\\', '/'
+        "TL_GNUPGHOME=$tlGnuPgHomeForTl" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
     - name: Run tlmgr install
       shell: pwsh
       run: |
