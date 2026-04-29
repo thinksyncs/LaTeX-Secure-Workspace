@@ -15,6 +15,10 @@ The canonical repository expects:
 Forks skip registry publication when those secrets are absent, but the canonical repository fails the stable release workflow instead so shipping gaps are visible immediately.
 The release jobs run VS Code integration tests on Linux under `xvfb-run` so Electron can start in a headless GitHub Actions environment.
 
+## Dependency Audit
+
+The `npm-audit.yml` workflow intentionally runs both `npm run audit:prod` and `npm run audit:full` on pushes and pull requests. The production gate keeps shipped dependencies clean, while the full gate mirrors Dependabot's dynamic npm audit behavior so dev-only advisories fail fast before they reappear as separate Dependabot update failures.
+
 We run tests on GitHub Actions on Windows, macOS, and Linux with the minimal installations of TeX Live.
 
 We can see [preinstalled software](https://docs.github.com/en/actions/using-github-hosted-runners/about-github-hosted-runners#preinstalled-software) on each platform. Perl 5 is installed even on Windows. So, all we have to do is just installing TeX Live.

@@ -20,4 +20,6 @@ jobs:
         with:
           node-version: '20'
       - name: Audit production dependencies from lockfile
-        run: npm audit --omit=dev --package-lock-only
+        run: npm run audit:prod
+      - name: Audit all dependencies from lockfile
+        run: npm run audit:full
