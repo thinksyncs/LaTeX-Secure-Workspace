@@ -71,12 +71,17 @@ jobs:
     - name: Trust TeX Live signing key
       shell: pwsh
       run: |
-        if (-not (Get-Command gpg -ErrorAction SilentlyContinue)) {
-          choco.exe install gnupg --no-progress -y
-          $env:PATH = "C:\ProgramData\chocolatey\bin;C:\Program Files (x86)\GnuPG\bin;C:\Program Files\GnuPG\bin;$env:PATH"
+        choco.exe install gnupg --no-progress -y
+        $env:PATH = "C:\ProgramData\chocolatey\bin;C:\Program Files (x86)\GnuPG\bin;C:\Program Files\GnuPG\bin;$env:PATH"
+        $gpg = 'C:\ProgramData\chocolatey\bin\gpg.exe'
+        if (-not (Test-Path $gpg)) {
+          $gpg = 'C:\Program Files (x86)\GnuPG\bin\gpg.exe'
+        }
+        if (-not (Test-Path $gpg)) {
+          $gpg = 'C:\Program Files\GnuPG\bin\gpg.exe'
         }
         curl.exe --fail --show-error --silent --location --proto "=https" --tlsv1.2 -o texlive.asc https://tug.org/texlive/files/texlive.asc
-        $fingerprint = (& gpg --show-keys --with-colons texlive.asc | Select-String '^fpr:' | Select-Object -First 1).ToString().Split(':')[9]
+        $fingerprint = (& $gpg --show-keys --with-colons texlive.asc | Select-String '^fpr:' | Select-Object -First 1).ToString().Split(':')[9]
         if ($fingerprint -ne $env:TEXLIVE_KEY_FINGERPRINT) {
           throw "Unexpected TeX Live key fingerprint: $fingerprint"
         }
@@ -87,9 +92,12 @@ jobs:
         New-Item -ItemType Directory -Path $tlGnuPgHome | Out-Null
         $tlGnuPgHomeForTl = $tlGnuPgHome -replace '\\', '/'
         $env:TL_GNUPGHOME = $tlGnuPgHomeForTl
-        & gpg --homedir $tlGnuPgHome --batch --import texlive.asc
+        $gpgForTl = $gpg -replace '\\', '/'
+        $env:TL_GNUPG = $gpgForTl
+        & $gpg --homedir $tlGnuPgHome --batch --import texlive.asc
         & 'D:\texlive\bin\windows\tlmgr.bat' key add texlive.asc
-        & gpg --homedir $tlGnuPgHome --keyring repository-keys.gpg --list-keys $env:TEXLIVE_KEY_FINGERPRINT
+        & $gpg --homedir $tlGnuPgHome --keyring repository-keys.gpg --list-keys $env:TEXLIVE_KEY_FINGERPRINT
+        "TL_GNUPG=$gpgForTl" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
         "TL_GNUPGHOME=$tlGnuPgHomeForTl" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
     - name: Run tlmgr install
       shell: pwsh

@@ -63,6 +63,7 @@ jobs:
             grep -q 'TL_GNUPGHOME' "$file" || { echo "Missing pinned GnuPG home for tlmgr verification in $file"; exit 1; }
             grep -q '(verified)' "$file" || { echo "Missing verified repository metadata assertion in $file"; exit 1; }
           done
+          grep -q 'TL_GNUPG' .github/workflows/texlive_on_win.yml || { echo "Missing pinned native GnuPG executable for Windows tlmgr verification"; exit 1; }
 
       - name: Ensure pull request installs disable npm lifecycle scripts
         run: |
