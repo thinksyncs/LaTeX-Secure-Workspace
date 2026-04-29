@@ -60,6 +60,7 @@ jobs:
           for file in .github/actions/setup-texlive-linux/action.yml .github/workflows/texlive_on_mac.yml .github/workflows/texlive_on_win.yml; do
             grep -q -- '--verify-repo=all' "$file" || { echo "Missing tlmgr --verify-repo=all in $file"; exit 1; }
             grep -q 'key add texlive.asc' "$file" || { echo "Missing tlmgr trusted key import in $file"; exit 1; }
+            grep -q 'TL_GNUPGHOME' "$file" || { echo "Missing pinned GnuPG home for tlmgr verification in $file"; exit 1; }
             grep -q '(verified)' "$file" || { echo "Missing verified repository metadata assertion in $file"; exit 1; }
           done
 

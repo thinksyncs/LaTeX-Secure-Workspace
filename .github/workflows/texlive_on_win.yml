@@ -80,7 +80,14 @@ jobs:
         if ($fingerprint -ne $env:TEXLIVE_KEY_FINGERPRINT) {
           throw "Unexpected TeX Live key fingerprint: $fingerprint"
         }
+        $tlGnuPgHome = Join-Path $pwd '.tl-gpg'
+        if (Test-Path $tlGnuPgHome) {
+          Remove-Item -Recurse -Force $tlGnuPgHome
+        }
+        New-Item -ItemType Directory -Path $tlGnuPgHome | Out-Null
+        & gpg --homedir $tlGnuPgHome --batch --import texlive.asc
         & 'D:\texlive\bin\windows\tlmgr.bat' key add texlive.asc
+        "TL_GNUPGHOME=$tlGnuPgHome" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
     - name: Run tlmgr install
       shell: pwsh
       run: |
