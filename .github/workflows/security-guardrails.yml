@@ -55,6 +55,14 @@ jobs:
             grep -q 'gpg' "$file" || { echo "Missing signature verification in $file"; exit 1; }
           done
 
+      - name: Ensure TeX Live package metadata verification is fail-closed
+        run: |
+          for file in .github/actions/setup-texlive-linux/action.yml .github/workflows/texlive_on_mac.yml .github/workflows/texlive_on_win.yml; do
+            grep -q -- '--verify-repo=all' "$file" || { echo "Missing tlmgr --verify-repo=all in $file"; exit 1; }
+            grep -q 'key add texlive.asc' "$file" || { echo "Missing tlmgr trusted key import in $file"; exit 1; }
+            grep -q '(verified)' "$file" || { echo "Missing verified repository metadata assertion in $file"; exit 1; }
+          done
+
       - name: Ensure pull request installs disable npm lifecycle scripts
         run: |
           for file in .github/workflows/texlive_on_linux.yml .github/workflows/texlive_on_mac.yml .github/workflows/texlive_on_win.yml; do

@@ -65,14 +65,27 @@ jobs:
       run: |
         install-tl-dir/install-tl --repository "$TEXLIVE_REPOSITORY" --profile test/config/texlive_mac.profile
       if: steps.cache-texlive.outputs.cache-hit != 'true'
+    - name: Trust TeX Live signing key
+      run: |
+        if ! command -v gpg >/dev/null 2>&1; then
+          brew update
+          brew install gnupg
+        fi
+        curl --fail --show-error --silent --location --proto '=https' --tlsv1.2 -o texlive.asc https://tug.org/texlive/files/texlive.asc
+        test "$(gpg --show-keys --with-colons texlive.asc | awk -F: '/^fpr:/ {print $10; exit}')" = "$TEXLIVE_KEY_FINGERPRINT"
+        tlmgr key add texlive.asc
     - name: Run tlmgr install
       run: |
-        tlmgr option repository "$TEXLIVE_REPOSITORY"
-        tlmgr update --self
-        tlmgr install collection-latex
-        tlmgr install import subfiles latexmk makeindex
-        tlmgr install chktex lacheck latexindent
+        tlmgr --verify-repo=all option repository "$TEXLIVE_REPOSITORY"
+        tlmgr --verify-repo=all update --self
+        tlmgr --verify-repo=all install collection-latex
+        tlmgr --verify-repo=all install import subfiles latexmk makeindex
+        tlmgr --verify-repo=all install chktex lacheck latexindent
       if: steps.cache-texlive.outputs.cache-hit != 'true'
+    - name: Verify TeX Live repository metadata
+      run: |
+        tlmgr --verify-repo=all --repository "$TEXLIVE_BOOTSTRAP_REPOSITORY" update --list 2>&1 | tee tlmgr-verify.log
+        grep -qi '(verified)' tlmgr-verify.log
     - name: Create latexindent wrapper
       run: |
         if command -v latexindent >/dev/null 2>&1; then

@@ -68,16 +68,37 @@ jobs:
         install-tl-dir\install-tl-windows.bat --repository %TEXLIVE_REPOSITORY% --profile test\config\texlive_windows.profile
       if: steps.cache-texlive.outputs.cache-hit != 'true'
       shell: cmd
+    - name: Trust TeX Live signing key
+      shell: pwsh
+      run: |
+        if (-not (Get-Command gpg -ErrorAction SilentlyContinue)) {
+          choco.exe install gnupg --no-progress -y
+          $env:PATH = "C:\ProgramData\chocolatey\bin;C:\Program Files (x86)\GnuPG\bin;C:\Program Files\GnuPG\bin;$env:PATH"
+        }
+        curl.exe --fail --show-error --silent --location --proto "=https" --tlsv1.2 -o texlive.asc https://tug.org/texlive/files/texlive.asc
+        $fingerprint = (& gpg --show-keys --with-colons texlive.asc | Select-String '^fpr:' | Select-Object -First 1).ToString().Split(':')[9]
+        if ($fingerprint -ne $env:TEXLIVE_KEY_FINGERPRINT) {
+          throw "Unexpected TeX Live key fingerprint: $fingerprint"
+        }
+        & 'D:\texlive\bin\windows\tlmgr.bat' key add texlive.asc
     - name: Run tlmgr install
       shell: pwsh
       run: |
         $tlmgr = 'D:\texlive\bin\windows\tlmgr.bat'
-        & $tlmgr option repository $env:TEXLIVE_REPOSITORY
-        & $tlmgr update --self
-        & $tlmgr install collection-latex
-        & $tlmgr install import subfiles latexmk makeindex
-        & $tlmgr install chktex lacheck latexindent
+        & $tlmgr --verify-repo=all option repository $env:TEXLIVE_REPOSITORY
+        & $tlmgr --verify-repo=all update --self
+        & $tlmgr --verify-repo=all install collection-latex
+        & $tlmgr --verify-repo=all install import subfiles latexmk makeindex
+        & $tlmgr --verify-repo=all install chktex lacheck latexindent
       if: steps.cache-texlive.outputs.cache-hit != 'true'
+    - name: Verify TeX Live repository metadata
+      shell: pwsh
+      run: |
+        $tlmgr = 'D:\texlive\bin\windows\tlmgr.bat'
+        & $tlmgr --verify-repo=all --repository $env:TEXLIVE_BOOTSTRAP_REPOSITORY update --list 2>&1 | Tee-Object -FilePath tlmgr-verify.log
+        if (-not (Select-String -Path tlmgr-verify.log -SimpleMatch '(verified)' -Quiet)) {
+          throw 'TeX Live repository metadata was not verified.'
+        }
     - name: Create latexindent wrapper
       run: |
         if (Get-Command latexindent -ErrorAction SilentlyContinue) { exit 0 }
