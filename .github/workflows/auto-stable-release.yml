@@ -1,0 +1,51 @@
+name: Auto Stable Release
+
+on:
+  workflow_run:
+    workflows:
+      - npm Audit
+      - Fuzzing
+      - Scorecard supply-chain security
+      - CodeQL
+      - TeX Live (current) on Linux
+      - TeX Live (current) on macOS
+      - TeX Live (current) on Windows
+    types: [completed]
+    branches: [master]
+  workflow_dispatch:
+
+permissions:
+  actions: write
+  contents: write
+
+concurrency:
+  group: auto-stable-release-${{ github.event.workflow_run.head_sha || github.sha }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    if: ${{ github.repository == 'thinksyncs/LaTeX-Secure-Workspace' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout release candidate
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+
+      - name: Set up Node.js
+        uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6
+        with:
+          node-version: '20'
+
+      - name: Create stable GitHub release after green CI
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          CANONICAL_REPOSITORY: thinksyncs/LaTeX-Secure-Workspace
+          AUTORELEASE_DEFAULT_BRANCH: master
+          AUTORELEASE_HEAD_SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
+          AUTORELEASE_HEAD_BRANCH: ${{ github.event.workflow_run.head_branch || github.ref_name }}
+          AUTORELEASE_REQUIRED_WORKFLOWS: npm Audit,Fuzzing,Scorecard supply-chain security,CodeQL,TeX Live (current) on Linux,TeX Live (current) on macOS,TeX Live (current) on Windows
+          AUTORELEASE_STABLE_WORKFLOW: stable-release.yml
+        run: node ./dev/createStableReleaseAfterCi.mjs
