@@ -40,10 +40,10 @@ function main() {
     })
 
     if (!plan.publishMarketplace) {
-        console.log('Skipping VS Marketplace publish because VSCE_PAT is not configured.')
+        console.error('Skipping VS Marketplace publish because VSCE_PAT is not configured.')
     }
     if ((process.env.PUBLISH_OPENVSX ?? 'true') === 'true' && !plan.publishOpenVsx) {
-        console.log('Skipping Open VSX publish because OVSX_PAT is not configured.')
+        console.error('Skipping Open VSX publish because OVSX_PAT is not configured.')
     }
 
     process.stdout.write(`publish_marketplace=${plan.publishMarketplace}\n`)
