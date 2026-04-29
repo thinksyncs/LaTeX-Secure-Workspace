@@ -86,8 +86,8 @@ jobs:
           Remove-Item -Recurse -Force $tlGnuPgHome
         }
         New-Item -ItemType Directory -Path $tlGnuPgHome | Out-Null
+        New-Item -ItemType File -Path (Join-Path $tlGnuPgHome 'repository-keys.gpg') | Out-Null
         $env:TL_GNUPGHOME = $tlGnuPgHome
-        & $gpg --homedir $tlGnuPgHome --batch --import texlive.asc
         & 'D:\texlive\bin\windows\tlmgr.bat' key add texlive.asc
         & $gpg --homedir $tlGnuPgHome --keyring repository-keys.gpg --list-keys $env:TEXLIVE_KEY_FINGERPRINT
         "TL_GNUPGHOME=$tlGnuPgHome" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
