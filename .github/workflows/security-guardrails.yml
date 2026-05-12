@@ -75,7 +75,8 @@ jobs:
         run: |
           file=.github/workflows/stable-release.yml
           grep -q 'uses: ./.github/actions/publish-extension' "$file" || { echo "Missing shared publish action in $file"; exit 1; }
-          grep -q "publish_openvsx: 'false'" "$file" || { echo "Open VSX must stay disabled until OVSX_PAT is configured."; exit 1; }
+          grep -q "publish_openvsx: 'true'" "$file" || { echo "Stable release must publish to Open VSX."; exit 1; }
+          grep -q 'OVSX_PAT' "$file" || { echo "Stable release must pass OVSX_PAT to the shared publish action."; exit 1; }
 
       - name: Ensure green CI can publish a stable release
         run: |

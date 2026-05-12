@@ -83,7 +83,7 @@ jobs:
         OVSX_PAT: ${{ secrets.OVSX_PAT }}
       with:
         vsix_path: ${{ steps.package.outputs.vsix_path }}
-        publish_openvsx: 'false'
+        publish_openvsx: 'true'
     - name: Upload VSIX to GitHub release
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
