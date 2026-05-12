@@ -46,6 +46,14 @@ jobs:
         vsix_path="artifacts/vsix/${{ steps.version.outputs.package_name }}-${{ steps.version.outputs.daily_version }}.vsix"
         npx vsce package --out "$vsix_path"
         echo "vsix_path=$vsix_path" >> "$GITHUB_OUTPUT"
+    - name: Publish daily Marketplace pre-release
+      uses: ./.github/actions/publish-extension
+      env:
+        VSCE_PAT: ${{ secrets.VSCE_PAT }}
+      with:
+        vsix_path: ${{ steps.package.outputs.vsix_path }}
+        pre_release: 'true'
+        publish_openvsx: 'false'
     - name: Build daily release notes
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
