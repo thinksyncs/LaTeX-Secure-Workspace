@@ -93,6 +93,7 @@ jobs:
         run: |
           file=.github/workflows/daily-release.yml
           grep -q 'uses: ./.github/actions/publish-extension' "$file" || { echo "Daily release must publish the Marketplace pre-release."; exit 1; }
+          grep -q 'vsce package --pre-release' "$file" || { echo "Daily release must package the VSIX as pre-release."; exit 1; }
           grep -q "pre_release: 'true'" "$file" || { echo "Daily release must publish to the Marketplace pre-release channel."; exit 1; }
           grep -q "publish_openvsx: 'false'" "$file" || { echo "Daily release must not publish to Open VSX."; exit 1; }
 
