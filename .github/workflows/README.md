@@ -2,11 +2,11 @@
 
 ## Release Flows
 
-The release automation now uses one public registry channel and one preview artifact flow.
+The release automation uses one public registry channel and one preview artifact flow.
 
 - `stable-release.yml`: builds from a published GitHub release tag, publishes the package to the VS Code Marketplace, uploads the VSIX to GitHub Releases, and fails closed in the canonical repository if the Marketplace credential is missing. Open VSX remains disabled until `OVSX_PAT` is configured and `LaTeX-Secure-Workspace-bxc` is resolved.
 - `auto-stable-release.yml`: watches the required push CI workflows on `master`, creates the matching stable GitHub release when they have all passed for the current `package.json` version, and dispatches `stable-release.yml` for that tag.
-- `daily-release.yml`: builds, tests, packages a daily preview VSIX, publishes it to the VS Code Marketplace pre-release channel, refreshes the rolling GitHub `daily` prerelease, and attaches summaries of open pull requests, CodeQL alerts, and Dependabot alerts. It does not publish to Open VSX.
+- `daily-release.yml`: builds, tests, packages a daily preview VSIX, refreshes the rolling GitHub `daily` prerelease, and attaches summaries of open pull requests, CodeQL alerts, and Dependabot alerts. It does not publish to extension registries.
 
 The canonical repository expects:
 

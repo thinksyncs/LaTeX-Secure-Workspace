@@ -72,7 +72,7 @@ const generatedAt = new Date().toISOString()
 const notes = [
     '# Daily Pre-release',
     '',
-    '- Channel: Marketplace pre-release',
+    '- Channel: GitHub daily prerelease artifact',
     `- Stable base version: ${stableVersion}`,
     `- Daily version: ${dailyVersion}`,
     `- GitHub run number: ${runNumber}`,

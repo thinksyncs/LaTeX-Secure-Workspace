@@ -16,7 +16,7 @@ Secure LaTeX tools for [Visual Studio Code](https://code.visualstudio.com/) with
 ## Release Channels
 
 - Stable releases publish GitHub release tags to the VS Code Marketplace stable channel and Open VSX.
-- Daily releases build, test, and package a VSIX every day, refresh the rolling GitHub daily prerelease, publish to the VS Code Marketplace pre-release channel, and attach open PR, CodeQL, and Dependabot summaries.
+- Daily releases build, test, and package a VSIX every day, refresh the rolling GitHub daily prerelease, and attach open PR, CodeQL, and Dependabot summaries. They do not publish to extension registries.
 - The canonical repository fails release publication if the required registry credentials are missing, so security fixes do not silently miss distribution.
 - Stable versioning: `1.2.3 -> 1.2.4`, `1.2 -> 1.3.0`
 - Stable releases must keep the current major version line. Update the minor or patch version instead of bumping the major version.

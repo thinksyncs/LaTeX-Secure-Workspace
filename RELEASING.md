@@ -23,7 +23,6 @@ This repository has two release tracks: `stable` and `daily`.
 - `daily-release.yml` runs every day or on manual dispatch.
 - The workflow builds, tests, and packages a VSIX.
 - The workflow refreshes the rolling GitHub `daily` prerelease.
-- The workflow publishes to the Marketplace pre-release channel.
 - The workflow attaches a summary of open pull requests, CodeQL alerts, and Dependabot alerts to the daily prerelease notes.
 
 ## Versioning
@@ -36,4 +35,4 @@ This repository has two release tracks: `stable` and `daily`.
   - `1.2.3 -> 1.3.<run_number>`
   - `1.2 -> 1.3.<run_number>`
 
-The daily prerelease line intentionally stays ahead of the last stable minor version.
+The daily prerelease line intentionally stays ahead of the last stable minor version for GitHub preview artifacts only. Marketplace publication uses stable releases.

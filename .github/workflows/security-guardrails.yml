@@ -89,13 +89,13 @@ jobs:
           grep -q '/dispatches' dev/createStableReleaseAfterCi.mjs || { echo "Auto release helper must dispatch stable-release.yml after creating a release."; exit 1; }
           grep -q 'workflow_dispatch:' .github/workflows/stable-release.yml || { echo "Stable release must support workflow_dispatch from auto release."; exit 1; }
 
-      - name: Ensure daily release publishes Marketplace pre-release only
+      - name: Ensure daily release stays a GitHub-only preview artifact
         run: |
           file=.github/workflows/daily-release.yml
-          grep -q 'uses: ./.github/actions/publish-extension' "$file" || { echo "Daily release must publish the Marketplace pre-release."; exit 1; }
-          grep -q 'vsce package --pre-release' "$file" || { echo "Daily release must package the VSIX as pre-release."; exit 1; }
-          grep -q "pre_release: 'true'" "$file" || { echo "Daily release must publish to the Marketplace pre-release channel."; exit 1; }
-          grep -q "publish_openvsx: 'false'" "$file" || { echo "Daily release must not publish to Open VSX."; exit 1; }
+          ! grep -q 'uses: ./.github/actions/publish-extension' "$file" || { echo "Daily release must not publish to extension registries."; exit 1; }
+          ! grep -q -- '--pre-release' "$file" || { echo "Daily release must not use the Marketplace pre-release channel."; exit 1; }
+          grep -q 'gh release create daily' "$file" || { echo "Daily release must refresh the GitHub daily prerelease."; exit 1; }
+          grep -q -- '--prerelease' "$file" || { echo "Daily GitHub release must stay marked as prerelease."; exit 1; }
 
       - name: Ensure shared publish action covers both registry credentials
         run: |
