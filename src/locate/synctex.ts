@@ -5,7 +5,7 @@ import * as cs from 'cross-spawn'
 import { lw } from '../lw'
 import type { SyncTeXRecordToPDF, SyncTeXRecordToPDFAll, SyncTeXRecordToTeX } from '../types'
 import { syncTeXToPDF, syncTeXToTeX } from './synctex/worker'
-import { confirmWorkspaceCommandExecution, getSecureConfigurationValueSync } from '../utils/security'
+import { confirmWorkspaceCommandExecution, getSecureConfigurationValue, getSecureConfigurationValueSync } from '../utils/security'
 import { replaceArgumentPlaceholders } from '../utils/utils'
 import { isSameRealPath } from '../utils/pathnormalize'
 import type { ClientRequest } from '../../types/latex-workshop-protocol-types'
@@ -789,7 +789,7 @@ async function syncTeXExternal(line: number, pdfUri: vscode.Uri, rootFile: strin
     const texFile = editor.document.uri.fsPath
     const configuration = vscode.workspace.getConfiguration('latex-workshop', pdfUri)
     const command = configuration.get('view.pdf.external.synctex.command') as string
-    let args = configuration.get('view.pdf.external.synctex.args') as string[]
+    let args = Array.from(await getSecureConfigurationValue(pdfUri, 'view.pdf.external.synctex.args', [] as string[]))
     if (command === '') {
         logger.log('The external SyncTeX command is empty.')
         return
