@@ -330,7 +330,6 @@ function shouldUseExternalViewerForForwardSyncTeX(
 function callSyncTeXToPDF(line: number, col: number, filePath: string, pdfUri: vscode.Uri, indicator: 'none' | 'circle' | 'rectangle'): Promise<SyncTeXRecordToPDF>
 function callSyncTeXToPDF(line: number, col: number, filePath: string, pdfUri: vscode.Uri, indicator: 'none' | 'circle' | 'rectangle'): Promise<SyncTeXRecordToPDFAll[]>
 function callSyncTeXToPDF(line: number, col: number, filePath: string, pdfUri: vscode.Uri, indicator: 'none' | 'circle' | 'rectangle'): Promise<SyncTeXRecordToPDF> | Promise<SyncTeXRecordToPDFAll[]> {
-    const configuration = vscode.workspace.getConfiguration('latex-workshop')
     const docker = getSecureConfigurationValueSync(pdfUri, 'docker.enabled', false)
 
     const args = ['view', '-i'].concat([
@@ -339,7 +338,7 @@ function callSyncTeXToPDF(line: number, col: number, filePath: string, pdfUri: v
         docker ? path.basename(pdfUri.fsPath) : pdfUri.fsPath
     ])
 
-    let command = configuration.get('synctex.path') as string
+    let command = getSecureConfigurationValueSync(pdfUri, 'synctex.path', 'synctex')
     if (docker) {
         if (process.platform === 'win32') {
             command = path.resolve(lw.extensionRoot, './scripts/synctex.bat')

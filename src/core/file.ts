@@ -2,7 +2,7 @@ import * as vscode from 'vscode'
 import * as os from 'os'
 import * as fs from 'fs'
 import * as path from 'path'
-import { confirmWorkspaceCommandExecution, warnWorkspaceCommandSetting } from '../utils/security'
+import { confirmWorkspaceCommandExecution, getSecureConfigurationValueSync, warnWorkspaceCommandSetting } from '../utils/security'
 import * as utils from '../utils/utils'
 import { lw } from '../lw'
 
@@ -533,14 +533,14 @@ async function kpsewhich(target: string, isBib: boolean = false): Promise<string
         logger.log(`kpsewhich promise cache hit on ${query} .`)
         return kpsewhichPromises[query]
     }
-    const command = vscode.workspace.getConfiguration('latex-workshop').get('kpsewhich.path') as string
+    const scope = lw.root.file.path ? toUri(lw.root.file.path) : vscode.workspace.workspaceFolders?.[0]?.uri
+    const command = getSecureConfigurationValueSync(scope, 'kpsewhich.path', 'kpsewhich')
     logger.log(`Calling ${command} to resolve ${query} .`)
 
     const request = (async () => {
         try {
             const args = isBib ? ['-format=.bib', target] : [target]
             const cwd = lw.root.dir.path || vscode.workspace.workspaceFolders?.[0]?.uri.fsPath
-            const scope = lw.root.file.path ? toUri(lw.root.file.path) : vscode.workspace.workspaceFolders?.[0]?.uri
             if (!await confirmWorkspaceCommandExecution(scope, 'kpsewhich.path', command)) {
                 return undefined
             }

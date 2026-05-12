@@ -49,8 +49,7 @@ async function lintFile(document: vscode.TextDocument) {
 }
 
 async function chktexWrapper(linterid: string, configScope: vscode.ConfigurationScope, filePath: string, requiredArgs: string[], content?: string): Promise<string | undefined> {
-    const configuration = vscode.workspace.getConfiguration('latex-workshop', configScope)
-    const command = configuration.get('linting.chktex.exec.path') as string
+    const command = await getSecureConfigurationValue(configScope, 'linting.chktex.exec.path', 'chktex')
     if (!await confirmWorkspaceCommandExecution(configScope, 'linting.chktex.exec.path', command)) {
         return
     }
