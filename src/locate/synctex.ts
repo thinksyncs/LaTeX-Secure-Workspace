@@ -5,7 +5,7 @@ import * as cs from 'cross-spawn'
 import { lw } from '../lw'
 import type { SyncTeXRecordToPDF, SyncTeXRecordToPDFAll, SyncTeXRecordToTeX } from '../types'
 import { syncTeXToPDF, syncTeXToTeX } from './synctex/worker'
-import { confirmWorkspaceCommandExecution, getSecureConfigurationValueSync } from '../utils/security'
+import { confirmWorkspaceCommandExecution, getSecureConfigurationValue, getSecureConfigurationValueSync } from '../utils/security'
 import { replaceArgumentPlaceholders } from '../utils/utils'
 import { isSameRealPath } from '../utils/pathnormalize'
 import type { ClientRequest } from '../../types/latex-workshop-protocol-types'
@@ -330,7 +330,6 @@ function shouldUseExternalViewerForForwardSyncTeX(
 function callSyncTeXToPDF(line: number, col: number, filePath: string, pdfUri: vscode.Uri, indicator: 'none' | 'circle' | 'rectangle'): Promise<SyncTeXRecordToPDF>
 function callSyncTeXToPDF(line: number, col: number, filePath: string, pdfUri: vscode.Uri, indicator: 'none' | 'circle' | 'rectangle'): Promise<SyncTeXRecordToPDFAll[]>
 function callSyncTeXToPDF(line: number, col: number, filePath: string, pdfUri: vscode.Uri, indicator: 'none' | 'circle' | 'rectangle'): Promise<SyncTeXRecordToPDF> | Promise<SyncTeXRecordToPDFAll[]> {
-    const configuration = vscode.workspace.getConfiguration('latex-workshop')
     const docker = getSecureConfigurationValueSync(pdfUri, 'docker.enabled', false)
 
     const args = ['view', '-i'].concat([
@@ -339,7 +338,7 @@ function callSyncTeXToPDF(line: number, col: number, filePath: string, pdfUri: v
         docker ? path.basename(pdfUri.fsPath) : pdfUri.fsPath
     ])
 
-    let command = configuration.get('synctex.path') as string
+    let command = getSecureConfigurationValueSync(pdfUri, 'synctex.path', 'synctex')
     if (docker) {
         if (process.platform === 'win32') {
             command = path.resolve(lw.extensionRoot, './scripts/synctex.bat')
@@ -789,7 +788,7 @@ async function syncTeXExternal(line: number, pdfUri: vscode.Uri, rootFile: strin
     const texFile = editor.document.uri.fsPath
     const configuration = vscode.workspace.getConfiguration('latex-workshop', pdfUri)
     const command = configuration.get('view.pdf.external.synctex.command') as string
-    let args = configuration.get('view.pdf.external.synctex.args') as string[]
+    let args = Array.from(await getSecureConfigurationValue(pdfUri, 'view.pdf.external.synctex.args', [] as string[]))
     if (command === '') {
         logger.log('The external SyncTeX command is empty.')
         return

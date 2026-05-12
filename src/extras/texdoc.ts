@@ -9,9 +9,8 @@ export {
 }
 
 async function runTexdoc(packageName: string) {
-    const configuration = vscode.workspace.getConfiguration('latex-workshop')
-    const texdocPath = configuration.get('texdoc.path') as string
     const scope = lw.root.file.path ? lw.file.toUri(lw.root.file.path) : vscode.window.activeTextEditor?.document.uri ?? vscode.workspace.workspaceFolders?.[0]?.uri
+    const texdocPath = await getSecureConfigurationValue(scope, 'texdoc.path', 'texdoc')
     const texdocArgs = Array.from(await getSecureConfigurationValue(scope, 'texdoc.args', [] as string[]))
 
     if (!await confirmWorkspaceCommandExecution(scope, 'texdoc.path', texdocPath)) {

@@ -31,9 +31,8 @@ async function formatDocument(document: vscode.TextDocument, range?: vscode.Rang
         logger.log('Formatting in progress. Aborted.')
     }
     formatting = true
-    const configuration = vscode.workspace.getConfiguration('latex-workshop', document.uri)
     const useDocker = getSecureConfigurationValueSync(document.uri, 'docker.enabled', false)
-    const pathMeta = configuration.get('formatting.latexindent.path') as string
+    const pathMeta = await getSecureConfigurationValue(document.uri, 'formatting.latexindent.path', 'latexindent')
     if (!useDocker && !await confirmWorkspaceCommandExecution(document.uri, 'formatting.latexindent.path', pathMeta)) {
         return
     }

@@ -13,8 +13,7 @@ export const texfmt: LaTeXFormatter = {
 }
 
 async function formatDocument(document: vscode.TextDocument, range?: vscode.Range): Promise<vscode.TextEdit | undefined> {
-    const config = vscode.workspace.getConfiguration('latex-workshop', document.uri)
-    const program = config.get('formatting.tex-fmt.path') as string
+    const program = await getSecureConfigurationValue(document.uri, 'formatting.tex-fmt.path', 'tex-fmt')
     if (!await confirmWorkspaceCommandExecution(document.uri, 'formatting.tex-fmt.path', program)) {
         return
     }
