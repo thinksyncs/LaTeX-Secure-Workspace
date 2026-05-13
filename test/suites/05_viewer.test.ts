@@ -30,7 +30,15 @@ suite('PDF viewer test suite', () => {
         ], {skipCache: true})
 
         await test.build(fixture, 'main.tex')
-        await test.view(fixture, 'main.pdf')
+        const pdfUri = vscode.Uri.file(path.resolve(fixture, 'main.pdf'))
+        await lw.commands.view()
+        let status = lw.viewer.getViewerState(pdfUri)[0]
+        for (let retry = 0; retry < 20 && !status; retry++) {
+            await test.sleep(250)
+            status = lw.viewer.getViewerState(pdfUri)[0]
+        }
+        assert.ok(status)
+        assert.strictEqual(status.pdfFileUri, pdfUri.toString(true))
     })
 
     test.skip('view in singleton tab', async (fixture: string) => {
