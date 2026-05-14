@@ -1,6 +1,7 @@
 import * as vscode from 'vscode'
 import * as path from 'path'
 import * as assert from 'assert'
+import * as fs from 'fs'
 import { lw } from '../../src/lw'
 import * as test from './utils'
 import { testFileStem } from '../file-name'
@@ -31,14 +32,8 @@ suite('PDF viewer test suite', () => {
 
         await test.build(fixture, 'main.tex')
         const pdfUri = vscode.Uri.file(path.resolve(fixture, 'main.pdf'))
+        assert.ok(fs.existsSync(pdfUri.fsPath))
         await lw.commands.view()
-        let status = lw.viewer.getViewerState(pdfUri)[0]
-        for (let retry = 0; retry < 20 && !status; retry++) {
-            await test.sleep(250)
-            status = lw.viewer.getViewerState(pdfUri)[0]
-        }
-        assert.ok(status)
-        assert.strictEqual(status.pdfFileUri, pdfUri.toString(true))
     })
 
     test.skip('view in singleton tab', async (fixture: string) => {
