@@ -31,8 +31,8 @@ suite('PDF viewer test suite', () => {
         ], {skipCache: true})
 
         await test.build(fixture, 'main.tex')
-        const pdfUri = vscode.Uri.file(path.resolve(fixture, 'main.pdf'))
-        assert.ok(fs.existsSync(pdfUri.fsPath))
+        assert.ok(fs.existsSync(lw.compile.compiledPDFPath))
+        assert.strictEqual(lw.compile.compiledPDFPath, path.resolve(fixture, '.lw-security', 'main.pdf'))
         await lw.commands.view()
     })
 
