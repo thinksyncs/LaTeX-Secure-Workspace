@@ -10,7 +10,7 @@ export const PDF_VIEWER_LIMITS = Object.freeze({
     maxCanvasPixels: 1_500_000,
     maxImageSize: 1_500_000,
     maxOutputScale: 1.25,
-    maxRenderedPages: 1,
+    maxRenderedPages: 2,
     minOutputScale: 0.1,
     minPlaceholderCanvasSize: 1,
     pageCleanupBatchSize: 4,

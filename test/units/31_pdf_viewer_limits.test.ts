@@ -85,7 +85,7 @@ describe(testFileSuiteName(__filename), () => {
         assert.strictEqual(renderLimits.PDF_VIEWER_LIMITS.maxCanvasDimension, 3072)
         assert.strictEqual(renderLimits.PDF_VIEWER_LIMITS.maxCanvasPixels, 1_500_000)
         assert.strictEqual(renderLimits.PDF_VIEWER_LIMITS.maxImageSize, 1_500_000)
-        assert.strictEqual(renderLimits.PDF_VIEWER_LIMITS.maxRenderedPages, 1)
+        assert.strictEqual(renderLimits.PDF_VIEWER_LIMITS.maxRenderedPages, 2)
         assert.strictEqual(renderLimits.PDF_VIEWER_LIMITS.maxOutputScale, 1.25)
         assert.strictEqual(renderLimits.PDF_VIEWER_LIMITS.minOutputScale, 0.1)
         assert.strictEqual(renderLimits.PDF_VIEWER_LIMITS.minPlaceholderCanvasSize, 1)
@@ -131,6 +131,16 @@ describe(testFileSuiteName(__filename), () => {
             { pageNumber: 3, pageTop: 1840, pageBottom: 2740 },
         ], 950, 800, 3).sort((left, right) => left - right)
 
-        assert.deepStrictEqual([...pages], [3])
+        assert.deepStrictEqual([...pages], [2, 3])
+    })
+
+    it('should keep adjacent visible pages rendered while scrolling', () => {
+        const pages = renderLimits.pickPageNumbersToRender([
+            { pageNumber: 1, pageTop: 0, pageBottom: 900 },
+            { pageNumber: 2, pageTop: 920, pageBottom: 1820 },
+            { pageNumber: 3, pageTop: 1840, pageBottom: 2740 },
+        ], 550, 800).sort((left, right) => left - right)
+
+        assert.deepStrictEqual([...pages], [1, 2])
     })
 })
