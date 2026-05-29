@@ -2958,7 +2958,7 @@
     "pdfjs-dist": "5.4.394",
     "tmp": "^0.2.4",
     "workerpool": "^9.2.0",
-    "ws": "^8.18.0"
+    "ws": "^8.20.1"
   },
   "overrides": {
     "@vscode/vsce": {
