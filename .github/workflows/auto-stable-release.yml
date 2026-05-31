@@ -11,7 +11,7 @@ on:
       - TeX Live (current) on macOS
       - TeX Live (current) on Windows
     types: [completed]
-    branches: [master]
+    branches: [master, main]
   workflow_dispatch:
 
 permissions:
@@ -43,7 +43,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_REPOSITORY: ${{ github.repository }}
           CANONICAL_REPOSITORY: thinksyncs/LaTeX-Secure-Workspace
-          AUTORELEASE_DEFAULT_BRANCH: master
+          AUTORELEASE_DEFAULT_BRANCH: ${{ github.event.repository.default_branch || 'master' }}
           AUTORELEASE_HEAD_SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
           AUTORELEASE_HEAD_BRANCH: ${{ github.event.workflow_run.head_branch || github.ref_name }}
           AUTORELEASE_REQUIRED_WORKFLOWS: npm Audit,Fuzzing,Scorecard supply-chain security,CodeQL,TeX Live (current) on Linux,TeX Live (current) on macOS,TeX Live (current) on Windows
