@@ -42,8 +42,8 @@ jobs:
     - name: Package daily VSIX
       id: package
       run: |
-        mkdir -p artifacts/vsix
-        vsix_path="artifacts/vsix/${{ steps.version.outputs.package_name }}-${{ steps.version.outputs.daily_version }}.vsix"
+        mkdir -p "$RUNNER_TEMP/vsix"
+        vsix_path="$RUNNER_TEMP/vsix/${{ steps.version.outputs.package_name }}-${{ steps.version.outputs.daily_version }}.vsix"
         npx vsce package --out "$vsix_path"
         echo "vsix_path=$vsix_path" >> "$GITHUB_OUTPUT"
     - name: Build daily release notes

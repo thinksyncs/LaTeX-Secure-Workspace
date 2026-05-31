@@ -72,8 +72,8 @@ jobs:
       run: |
         package_name="$(node -p "require('./package.json').name")"
         package_version="$(node -p "require('./package.json').version")"
-        mkdir -p artifacts/vsix
-        vsix_path="artifacts/vsix/${package_name}-${package_version}.vsix"
+        mkdir -p "$RUNNER_TEMP/vsix"
+        vsix_path="$RUNNER_TEMP/vsix/${package_name}-${package_version}.vsix"
         npx vsce package --out "$vsix_path"
         echo "vsix_path=$vsix_path" >> "$GITHUB_OUTPUT"
     - name: Publish stable extension registries
