@@ -215,14 +215,15 @@ export async function load(fixture: string, files: {src: string, dst: string, ws
 
 export async function open(filePath: string) {
     const doc = await vscode.workspace.openTextDocument(filePath)
-    for (let retry = 0; retry < 5; retry++) {
+    for (let retry = 0; retry < 20; retry++) {
         await vscode.window.showTextDocument(doc, { preview: false, preserveFocus: false })
         if (vscode.window.activeTextEditor?.document.uri.fsPath === filePath) {
             await sleep(250)
             return
         }
-        await sleep(100)
+        await sleep(250)
     }
+    strictEqual(vscode.window.activeTextEditor?.document.uri.fsPath, filePath)
 }
 
 export async function find(fixture: string, openFile: string, ws?: string) {
