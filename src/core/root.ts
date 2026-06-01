@@ -424,13 +424,8 @@ async function findInWorkspace(): Promise<string | undefined> {
                 candidates.push(fileUri.fsPath)
             }
         }
-        if (root.file.path && candidates.includes(root.file.path)) {
-            logger.log(`Found files that might be root including the current root: ${candidates} .`)
-            return root.file.path
-        } else if (candidates.length > 0) {
-            const best = selectBestCandidate(candidates)
-            logger.log(`Found files that might be root, choose the closest one: ${best} from ${candidates} .`)
-            return best
+        if (candidates.length > 0) {
+            return selectWorkspaceRootCandidate(candidates, 'root')
         }
     } catch (err) {
         logger.logError('Error finding root file in workspace', err)
@@ -471,19 +466,34 @@ async function findSecurityInWorkspace(): Promise<string | undefined> {
                 candidates.push(fileUri.fsPath)
             }
         }
-        if (root.file.path && candidates.includes(root.file.path)) {
-            logger.log(`Found files that might be secure roots including the current root: ${candidates} .`)
-            return root.file.path
-        }
         if (candidates.length > 0) {
-            const best = selectBestCandidate(candidates)
-            logger.log(`Found files that might be secure roots, choose the closest one: ${best} from ${candidates} .`)
-            return best
+            return selectWorkspaceRootCandidate(candidates, 'secure roots')
         }
     } catch (err) {
         logger.logError('Error finding secure root file in workspace', err)
     }
     return
+}
+
+function selectWorkspaceRootCandidate(candidates: string[], label: string): string {
+    const currentRoot = root.file.path
+    const activeFilePath = getEditorForRootDetection()?.document.fileName
+    if (currentRoot && candidates.includes(currentRoot)) {
+        if (!activeFilePath) {
+            logger.log(`Found files that might be ${label} including the current root: ${candidates} .`)
+            return currentRoot
+        }
+        const best = selectBestCandidate(candidates)
+        if (scoreCandidate(currentRoot, activeFilePath) >= scoreCandidate(best, activeFilePath)) {
+            logger.log(`Found files that might be ${label} including the current root: ${candidates} .`)
+            return currentRoot
+        }
+        logger.log(`Found files that might be ${label}, choose the closest one: ${best} from ${candidates} .`)
+        return best
+    }
+    const best = selectBestCandidate(candidates)
+    logger.log(`Found files that might be ${label}, choose the closest one: ${best} from ${candidates} .`)
+    return best
 }
 
 function selectBestCandidate(candidates: string[]): string {

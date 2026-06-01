@@ -4,6 +4,7 @@ import * as path from 'path'
 import * as assert from 'assert'
 import * as test from './utils'
 import { testFileStem } from '../file-name'
+import { lw } from '../../src/lw'
 
 function resolve(fixture: string, fileName: string, ws: string) {
     return path.resolve(path.dirname(fixture), ws, path.basename(fixture), fileName)
@@ -82,10 +83,16 @@ suite('Multi-root workspace test suite', () => {
 
     test.run('switching rootFile', async (fixture: string) => {
         await test.load(fixture, [
-            {src: 'base.tex', dst: 'main.tex', ws: 'A'},
+            {src: 'input_base.tex', dst: 'main.tex', ws: 'A'},
+            {src: 'plain.tex', dst: 'sub/s.tex', ws: 'A'},
+            {src: 'base.tex', dst: 'stale/main.tex', ws: 'A'},
             {src: 'base.tex', dst: 'main.tex', ws: 'B'}
-        ], {root: -1, skipCache: true})
-        let roots = await test.find(fixture, 'main.tex', 'A')
+        ], {root: -1})
+        const staleRoot = resolve(fixture, 'stale/main.tex', 'A')
+        lw.root.file.path = staleRoot
+        lw.root.file.langId = 'latex'
+        lw.root.dir.path = path.dirname(staleRoot)
+        let roots = await test.find(fixture, 'sub/s.tex', 'A')
         assert.strictEqual(roots.root, resolve(fixture, 'main.tex', 'A'))
         roots = await test.find(fixture, 'main.tex', 'B')
         assert.strictEqual(roots.root, resolve(fixture, 'main.tex', 'B'))

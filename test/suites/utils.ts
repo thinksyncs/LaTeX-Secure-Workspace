@@ -118,6 +118,7 @@ export async function reset() {
     lw.compile.compiledPDFPath = ''
     lw.compile.compiledPDFWriting = 0
     lw.root.file.path = undefined
+    lw.root.dir.path = undefined
     lw.root.subfiles.path = undefined
     lw.completion.input.reset()
     lw.lint.label.reset()
