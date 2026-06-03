@@ -87,7 +87,7 @@ suite('Multi-root workspace test suite', () => {
             {src: 'plain.tex', dst: 'sub/s.tex', ws: 'A'},
             {src: 'base.tex', dst: 'stale/main.tex', ws: 'A'},
             {src: 'base.tex', dst: 'main.tex', ws: 'B'}
-        ], {root: -1})
+        ], {root: -1, skipCache: true})
         const staleRoot = resolve(fixture, 'stale/main.tex', 'A')
         lw.root.file.path = staleRoot
         lw.root.file.langId = 'latex'
