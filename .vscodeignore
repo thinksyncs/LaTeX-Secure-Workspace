@@ -53,6 +53,9 @@ viewer/lib/web/viewer.mjs
 syntax/README.md
 
 install-tl*
+texlive.asc
+tlmgr-verify.log
+.tl-gpg/
 
 **/*.map
 node_modules/**
