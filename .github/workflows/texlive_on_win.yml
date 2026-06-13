@@ -138,6 +138,20 @@ jobs:
         npm run compile
     - name: Run tests
       run: npm run test:ci
+    - name: Package VSIX
+      shell: pwsh
+      run: |
+        $vsixDir = Join-Path $env:RUNNER_TEMP 'vsix'
+        New-Item -ItemType Directory -Path $vsixDir -Force | Out-Null
+        $packageName = node -p "require('./package.json').name"
+        $packageVersion = node -p "require('./package.json').version"
+        $vsixPath = Join-Path $vsixDir "$packageName-$packageVersion.vsix"
+        npx vsce package --out $vsixPath
+    - name: Archive VSIX artifact
+      uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7
+      with:
+        name: vsix-windows
+        path: ${{ runner.temp }}/vsix/*.vsix
     - name: Archive test logs
       if: always()
       uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7
