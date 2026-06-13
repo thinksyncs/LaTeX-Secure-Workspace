@@ -76,14 +76,13 @@ jobs:
         vsix_path="$RUNNER_TEMP/vsix/${package_name}-${package_version}.vsix"
         npx vsce package --out "$vsix_path"
         echo "vsix_path=$vsix_path" >> "$GITHUB_OUTPUT"
-    - name: Publish stable extension registries
+    - name: Publish stable extension to Marketplace
       uses: ./.github/actions/publish-extension
       env:
         VSCE_PAT: ${{ secrets.VSCE_PAT }}
-        OVSX_PAT: ${{ secrets.OVSX_PAT }}
       with:
         vsix_path: ${{ steps.package.outputs.vsix_path }}
-        publish_openvsx: 'true'
+        publish_openvsx: 'false'
     - name: Upload VSIX to GitHub release
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
