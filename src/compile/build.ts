@@ -322,9 +322,17 @@ function handleProcessError(env: ProcessEnv, stderr: string, err: Error) {
     logger.log(`Does the executable exist? $PATH: ${env['PATH']}, $Path: ${env['Path']}, $SHELL: ${process.env.SHELL}`)
     logger.log(`${stderr}`)
     logger.refreshStatus('x', 'errorForeground', undefined, 'error')
-    void logger.showErrorMessageWithExtensionLogButton(`Recipe terminated with fatal error: ${err.message}.`)
+    void logger.showErrorMessageWithExtensionLogButton(getProcessErrorMessage(err))
     lw.compile.process = undefined
     queue.clear()
+}
+
+function getProcessErrorMessage(err: Error): string {
+    const code = (err as NodeJS.ErrnoException).code
+    if (code === 'ENOENT') {
+        return `Recipe terminated with fatal error: ${err.message}. The secure build uses latexmk to compile LaTeX to PDF; on Linux, install the latexmk package or ensure latexmk is on PATH.`
+    }
+    return `Recipe terminated with fatal error: ${err.message}.`
 }
 
 /**

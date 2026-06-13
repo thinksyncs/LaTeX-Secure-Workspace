@@ -38,13 +38,11 @@ export async function onGraphics(document: vscode.TextDocument, position: vscode
 
 export async function graph2md(filePath: string, opts: { height: number, width: number, pageNumber?: number }): Promise<vscode.MarkdownString | undefined> {
     const filePathUriString = lw.file.toUri(filePath).toString()
-    if (/\.(bmp|jpg|jpeg|gif|png)$/i.exec(filePath)) {
-        // Workaround for https://github.com/microsoft/vscode/issues/137632
-        if (vscode.env.remoteName) {
-            const md = new vscode.MarkdownString(`![img](${filePathUriString})`)
-            return md
-        }
-        const md = new vscode.MarkdownString(`<img src="${filePathUriString}" height="${opts.height}">`)
+    const imageMimeType = getImageMimeType(filePath)
+    if (imageMimeType) {
+        const dataUrl = await readImageAsDataUrl(filePath, imageMimeType)
+        const imageSource = dataUrl ?? filePathUriString
+        const md = new vscode.MarkdownString(`<img src="${imageSource}" height="${opts.height}">`)
         md.supportHtml = true
         return md
     }
@@ -66,6 +64,35 @@ export async function graph2md(filePath: string, opts: { height: number, width: 
         }
     }
     return
+}
+
+function getImageMimeType(filePath: string): string | undefined {
+    const ext = path.extname(filePath).toLowerCase()
+    switch (ext) {
+        case '.bmp':
+            return 'image/bmp'
+        case '.gif':
+            return 'image/gif'
+        case '.jpg':
+        case '.jpeg':
+            return 'image/jpeg'
+        case '.png':
+            return 'image/png'
+        case '.svg':
+            return 'image/svg+xml'
+        default:
+            return
+    }
+}
+
+async function readImageAsDataUrl(filePath: string, mimeType: string): Promise<string | undefined> {
+    try {
+        const data = await fs.promises.readFile(filePath)
+        return `data:${mimeType};base64,${data.toString('base64')}`
+    } catch (e: unknown) {
+        logger.logError(`Failed reading graphics file as data url with ${filePath}`, e)
+        return
+    }
 }
 
 async function renderPdfFileAsDataUrl(pdfFilePath: string, opts: { height: number, width: number, pageNumber: number }): Promise<string | undefined> {
