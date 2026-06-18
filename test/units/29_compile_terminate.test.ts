@@ -6,6 +6,7 @@ import { queue } from '../../src/compile/queue'
 
 describe('29_compile_terminate:', () => {
     let platform: PropertyDescriptor | undefined
+    let killStub: sinon.SinonStub
 
     const setPlatform = (newPlatform: NodeJS.Platform) => {
         Object.defineProperty(process, 'platform', { value: newPlatform })
@@ -19,9 +20,10 @@ describe('29_compile_terminate:', () => {
         hooks.beforeEach()
         sinon.stub(queue, 'clear')
         sinon.stub(lw.external, 'spawnSync')
+        killStub = sinon.stub()
         lw.compile.process = {
             pid: 4242,
-            kill: sinon.stub()
+            kill: killStub
         } as unknown as typeof lw.compile.process
     })
 
@@ -36,7 +38,6 @@ describe('29_compile_terminate:', () => {
 
     it('should use pkill arguments instead of a shell command on unix', () => {
         setPlatform('darwin')
-        const killStub = lw.compile.process?.kill as unknown as sinon.SinonStub
 
         terminate()
 
@@ -47,16 +48,16 @@ describe('29_compile_terminate:', () => {
 
     it('should use taskkill arguments instead of a shell command on windows', () => {
         setPlatform('win32')
-        const killStub = sinon.stub()
+        const windowsKillStub = sinon.stub()
         lw.compile.process = {
             pid: 4242,
-            kill: killStub
+            kill: windowsKillStub
         } as unknown as typeof lw.compile.process
 
         terminate()
 
         assert.ok((lw.external.spawnSync as sinon.SinonStub).calledOnceWithExactly('taskkill', ['/F', '/T', '/PID', '4242'], { timeout: 1000 }))
-        assert.ok(killStub.calledOnce)
+        assert.ok(windowsKillStub.calledOnce)
         assert.ok((queue.clear as sinon.SinonStub).calledOnce)
     })
 })

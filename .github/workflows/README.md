@@ -15,11 +15,14 @@ The canonical repository expects:
 Open VSX publishing remains available in the shared publish action for a future explicit opt-in, but stable releases keep it disabled.
 Forks skip registry publication when the Marketplace secret is absent, but the canonical repository fails the stable release workflow instead so shipping gaps are visible immediately.
 The release jobs run VS Code integration tests on Linux under `xvfb-run` so Electron can start in a headless GitHub Actions environment.
+All workflows that run VS Code integration tests set `LATEXWORKSHOP_ALLOW_VSCODE_TEST_DOWNLOAD=1` and `LATEXWORKSHOP_VSCODE_TEST_VERSION` explicitly. Local test runs should instead prefer `LATEXWORKSHOP_VSCODE_TEST_PATH` when a preinstalled VS Code build is being audited.
 Stable Marketplace publication is therefore automatic only after the required push CI is green on the current `master` commit and no GitHub release already exists for the `package.json` version.
 
 ## Dependency Audit
 
 The `npm-audit.yml` workflow intentionally runs both `npm run audit:prod` and `npm run audit:full` on pushes and pull requests. The production gate keeps shipped dependencies clean, while the full gate mirrors Dependabot's dynamic npm audit behavior so dev-only advisories fail fast before they reappear as separate Dependabot update failures.
+
+The security guardrails also run `npm run audit:native`, which scans `package-lock.json` for native addon and prebuild indicators. Dev-only packaging dependencies may be reported for review, but runtime native addon indicators fail the guardrail unless explicitly reviewed.
 
 We run tests on GitHub Actions on Windows, macOS, and Linux with the minimal installations of TeX Live.
 

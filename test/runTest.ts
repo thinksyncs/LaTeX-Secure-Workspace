@@ -5,6 +5,12 @@ import * as tmpFile from 'tmp'
 import { downloadAndUnzipVSCode, TestRunFailedError, runTests } from '@vscode/test-electron'
 
 type TempDir = ReturnType<typeof tmpFile.dirSync>
+type VSCodeTestHost = {
+    version?: string,
+    vscodeExecutablePath?: string
+}
+
+export const DEFAULT_VSCODE_TEST_VERSION = '1.96.0'
 
 const blockedEnvKeys = new Set([
     'ELECTRON_RUN_AS_NODE',
@@ -44,6 +50,25 @@ export function getMacOsApplicationPath(vscodeExecutablePath: string) {
     return vscodeExecutablePath.slice(0, markerIndex + appMarker.length - 1)
 }
 
+export function resolveVSCodeTestHost(env: NodeJS.ProcessEnv = process.env): VSCodeTestHost {
+    const vscodeExecutablePath = env.LATEXWORKSHOP_VSCODE_TEST_PATH?.trim()
+    if (vscodeExecutablePath) {
+        return { vscodeExecutablePath }
+    }
+
+    if (env.LATEXWORKSHOP_ALLOW_VSCODE_TEST_DOWNLOAD !== '1') {
+        throw new Error([
+            'VS Code integration tests require an explicit test host.',
+            'Set LATEXWORKSHOP_VSCODE_TEST_PATH to an existing VS Code executable,',
+            'or set LATEXWORKSHOP_ALLOW_VSCODE_TEST_DOWNLOAD=1 to let @vscode/test-electron download the pinned test host.'
+        ].join(' '))
+    }
+
+    return {
+        version: env.LATEXWORKSHOP_VSCODE_TEST_VERSION?.trim() || DEFAULT_VSCODE_TEST_VERSION
+    }
+}
+
 function ensureSupportedElectronTestHost() {
     if (!shouldBlockSandboxedElectron()) {
         return
@@ -74,12 +99,13 @@ function restoreEnv(snapshot: NodeJS.ProcessEnv) {
 }
 
 async function runMacOsTestsInBackground(options: {
-    extensionDevelopmentPath: string
-    extensionTestsPath: string
-    launchArgs: string[]
+    extensionDevelopmentPath: string,
+    extensionTestsPath: string,
+    launchArgs: string[],
     extensionTestsEnv: NodeJS.ProcessEnv
 }) {
-    const vscodeExecutablePath = await downloadAndUnzipVSCode({ version: '1.96.0' })
+    const testHost = resolveVSCodeTestHost()
+    const vscodeExecutablePath = testHost.vscodeExecutablePath ?? await downloadAndUnzipVSCode({ version: testHost.version })
     const appPath = getMacOsApplicationPath(vscodeExecutablePath)
     if (!appPath) {
         throw new Error(`Unable to derive macOS app bundle from VS Code executable: ${vscodeExecutablePath}`)
@@ -153,7 +179,7 @@ async function runTestSuites(fixture: 'testground' | 'multiroot' | 'unittest') {
             })
         } else {
             await runTests({
-                version: '1.96.0',
+                ...resolveVSCodeTestHost(),
                 extensionDevelopmentPath,
                 extensionTestsPath,
                 launchArgs,

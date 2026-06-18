@@ -17,6 +17,10 @@ Property-based fuzz coverage for parser-facing code lives in `test/fuzz/` and is
 On macOS local runs, `runTest.ts` now starts the test host in the background by default to avoid stealing focus with an `Extension Development Host` window.
 Set `LATEXWORKSHOP_FOREGROUND_TESTS=1` if you explicitly want the foreground window back for debugging.
 
+The CLI test runner does not download VS Code unless that is explicitly requested. Set `LATEXWORKSHOP_VSCODE_TEST_PATH` to an existing VS Code executable, or set `LATEXWORKSHOP_ALLOW_VSCODE_TEST_DOWNLOAD=1` to let `@vscode/test-electron` download the pinned test host. `LATEXWORKSHOP_VSCODE_TEST_VERSION` overrides the default pinned version.
+
+To capture evidence for a PDF tab viewer renderer exit, run `npm run diagnose:pdf-viewer -- --pdf path/to/repro.pdf` soon after the crash. The bundle is written under `artifacts/pdf-viewer-crash/`.
+
 ### How tests are executed via VS Code launch
 
 We have a `Run Tests` launch configuration in `.vscode/launch.json`.

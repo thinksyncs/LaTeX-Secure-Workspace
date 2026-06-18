@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-require-imports */
 import * as fs from 'fs'
 import * as path from 'path'
 import { lw } from './lw'

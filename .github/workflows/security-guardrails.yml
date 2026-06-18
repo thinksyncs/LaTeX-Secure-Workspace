@@ -22,12 +22,12 @@ jobs:
 
       - name: "Ensure `shell: true` is not used in src"
         run: |
-          MATCHES="$(git grep -n 'shell: true' -- src || true)"
+          MATCHES="$(git grep -n "shell: true" -- src || true)"
           if [ -z "$MATCHES" ]; then
             exit 0
           fi
           echo "$MATCHES"
-          echo 'Unexpected `shell: true` usage found in src'
+          echo "Unexpected \`shell: true\` usage found in src"
           exit 1
 
       - name: "Ensure `pull_request_target` is not introduced"
@@ -70,6 +70,9 @@ jobs:
           for file in .github/workflows/texlive_on_linux.yml .github/workflows/texlive_on_mac.yml .github/workflows/texlive_on_win.yml; do
             grep -q 'npm ci --ignore-scripts' "$file" || { echo "Missing npm --ignore-scripts hardening in $file"; exit 1; }
           done
+
+      - name: Ensure runtime dependencies do not use native addons
+        run: node ./dev/auditNativeAddons.mjs
 
       - name: Ensure stable release uses the shared Marketplace publish action
         run: |

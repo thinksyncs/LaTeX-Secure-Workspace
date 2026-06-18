@@ -19,6 +19,7 @@ export default [{
         "dev/*.js",
         "types/**/*.ts",
         "resources/**/*.js",
+        "test/fuzz/*.js",
         "**/out",
         "**/node_modules",
         "**/.idea/",
@@ -30,6 +31,14 @@ export default [{
         ".vscode-test/",
         "**/vscode.proposed.d.ts",
     ],
+}, {
+    files: ["**/*.mjs", "test/fixtures/**/*.cjs"],
+    languageOptions: {
+        globals: {
+            ...globals.node,
+            fetch: "readonly",
+        },
+    },
 }, ...compat.extends("eslint:recommended", "plugin:@typescript-eslint/recommended"), {
     files: ["**/*.ts", "**/*.js"],
 
@@ -184,5 +193,11 @@ export default [{
             named: "never",
             asyncArrow: "always",
         }],
+    },
+}, {
+    files: ["**/*.mjs", "test/fixtures/**/*.cjs"],
+    rules: {
+        "@typescript-eslint/no-require-imports": "off",
+        "no-redeclare": "off",
     },
 }];

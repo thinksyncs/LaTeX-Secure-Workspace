@@ -1,6 +1,8 @@
 name: TeX Live (current) on Windows
 env:
   cache-version: tl-current-v1
+  LATEXWORKSHOP_ALLOW_VSCODE_TEST_DOWNLOAD: '1'
+  LATEXWORKSHOP_VSCODE_TEST_VERSION: '1.96.0'
   TEXLIVE_BOOTSTRAP_REPOSITORY: https://ctan.net/systems/texlive/tlnet
   TEXLIVE_KEY_FINGERPRINT: C78B82D8C79512F79CC0D7C80D5E5D9106BAB6BC
 on: [push, pull_request]
@@ -18,8 +20,8 @@ jobs:
     - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
     - name: Set up PATH
       run: |
-        echo "C:\strawberry\c\bin;C:\strawberry\perl\site\bin;C:\strawberry\perl\bin" >> $GITHUB_PATH
-        echo "D:\texlive\bin\windows" >> $GITHUB_PATH
+        printf '%s\n' 'C:\strawberry\c\bin;C:\strawberry\perl\site\bin;C:\strawberry\perl\bin' >> "$GITHUB_PATH"
+        printf '%s\n' 'D:\texlive\bin\windows' >> "$GITHUB_PATH"
       shell: bash
     - name: Cache TeX Live
       id: cache-texlive
@@ -46,7 +48,8 @@ jobs:
         }
         curl.exe --fail --show-error --silent --location --proto "=https" --tlsv1.2 -O https://tug.org/texlive/files/texlive.asc
         test "$(gpg --show-keys --with-colons texlive.asc | awk -F: '/^fpr:/ {print $10; exit}')" = "$TEXLIVE_KEY_FINGERPRINT"
-        export GNUPGHOME="$(mktemp -d)"
+        GNUPGHOME="$(mktemp -d)"
+        export GNUPGHOME
         gpg --batch --import texlive.asc
         for attempt in 1 2 3 4 5; do
           if download_and_verify; then

@@ -2926,7 +2926,9 @@
   "scripts": {
     "clean": "rimraf out/ .eslintcache",
     "build:extension-bundle": "node ./dev/build-extension-bundle.mjs",
+    "diagnose:pdf-viewer": "node ./dev/collectPdfViewerCrashArtifacts.mjs",
     "audit:full": "npm audit --package-lock-only",
+    "audit:native": "node ./dev/auditNativeAddons.mjs",
     "audit:prod": "npm audit --omit=dev --package-lock-only",
     "compile": "tsc -p tsconfig.json && npm run build:extension-bundle",
     "coverage": "c8 --check-coverage npm run test --src out/src/",

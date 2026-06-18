@@ -15,6 +15,9 @@ jobs:
   publish:
     runs-on: ubuntu-latest
     timeout-minutes: 45
+    env:
+      LATEXWORKSHOP_ALLOW_VSCODE_TEST_DOWNLOAD: '1'
+      LATEXWORKSHOP_VSCODE_TEST_VERSION: '1.96.0'
     permissions:
       contents: write
       pull-requests: read

@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-require-imports */
 import * as vscode from 'vscode'
 import { lw } from './lw'
 import { log } from './utils/logger'

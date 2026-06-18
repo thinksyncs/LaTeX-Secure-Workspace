@@ -6,14 +6,14 @@ import type * as Ast from '@unified-latex/unified-latex-types'
 import { bibtexParser } from 'latex-utensils'
 
 type UnifiedModule = {
-    attachMacroArgs: (ast: Ast.Root, macros: Ast.MacroInfoRecord) => void
+    attachMacroArgs: (ast: Ast.Root, macros: Ast.MacroInfoRecord) => void,
     getParser: (opts: { macros?: Ast.MacroInfoRecord, environments?: Ast.EnvInfoRecord, flags: { autodetectExpl3AndAtLetter: boolean } }) => UnifiedParser
 }
 
 type UnifiedParser = { parse: (content: string) => Ast.Root }
+// eslint-disable-next-line @typescript-eslint/no-require-imports
 const { getParser, attachMacroArgs } = require(path.resolve(__dirname, '../../../../resources/unified.js')) as UnifiedModule
 
-// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call
 let unifiedParser: UnifiedParser = getParser({ flags: { autodetectExpl3AndAtLetter: true } })
 
 function parseLaTeX(content: string): Ast.Root {
@@ -21,12 +21,10 @@ function parseLaTeX(content: string): Ast.Root {
 }
 
 function parseArgs(ast: Ast.Root, macros: Ast.MacroInfoRecord) {
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-call
     attachMacroArgs(ast, macros)
 }
 
 function reset(macros: Ast.MacroInfoRecord, environments: Ast.EnvInfoRecord) {
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call
     unifiedParser = getParser({ macros, environments, flags: { autodetectExpl3AndAtLetter: true } })
 }
 

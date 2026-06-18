@@ -85,7 +85,8 @@ describe(testFileSuiteName(__filename), () => {
 
             await build()
 
-            assert.pathStrictEqual(spawnStub.getCall(0)?.args?.[2].cwd?.toString(), path.dirname(get.path('main.tex')))
+            const spawnOptions = spawnStub.getCall(0)?.args?.[2] as { cwd?: string } | undefined
+            assert.pathStrictEqual(spawnOptions?.cwd?.toString(), path.dirname(get.path('main.tex')))
         })
 
         it('should keep using the resolved main root when subfiles are detected', async () => {
@@ -102,7 +103,8 @@ describe(testFileSuiteName(__filename), () => {
 
         it('should open the built pdf when the viewer is not already open', async () => {
             const viewStub = lw.viewer.view as sinon.SinonStub
-            sinon.stub(lw.file, 'exists').resolves({ type: vscode.FileType.File } as vscode.FileStat)
+            const fileStat = { type: vscode.FileType.File }
+            sinon.stub(lw.file, 'exists').resolves(fileStat as vscode.FileStat)
             ;(lw.viewer.isViewing as sinon.SinonStub).returns(false)
 
             await build()
@@ -113,7 +115,8 @@ describe(testFileSuiteName(__filename), () => {
         it('should refresh the built pdf when it is already open', async () => {
             const viewStub = lw.viewer.view as sinon.SinonStub
             const refreshStub = lw.viewer.refresh as sinon.SinonStub
-            sinon.stub(lw.file, 'exists').resolves({ type: vscode.FileType.File } as vscode.FileStat)
+            const fileStat = { type: vscode.FileType.File }
+            sinon.stub(lw.file, 'exists').resolves(fileStat as vscode.FileStat)
             ;(lw.viewer.isViewing as sinon.SinonStub).returns(true)
 
             await build()

@@ -62,6 +62,8 @@ async function getSecureDockerSetting<T>(section: string, fallback: T): Promise<
     return getSecureConfigurationValue(undefined, section, fallback)
 }
 
+// Public command callers await this hook even though the secure recipe set is static.
+// eslint-disable-next-line @typescript-eslint/require-await
 export async function getAvailableRecipes(scope?: vscode.ConfigurationScope): Promise<Recipe[]> {
     void scope
     return [{
@@ -84,7 +86,7 @@ export async function getAvailableRecipes(scope?: vscode.ConfigurationScope): Pr
  */
 export async function build(rootFile: string, langId: string, buildLoop: () => Promise<void>, recipeName?: string) {
     logger.log(`Build root file ${rootFile}`)
-    let cwd: string = path.dirname(lw.file.toUri(rootFile).fsPath)
+    const cwd: string = path.dirname(lw.file.toUri(rootFile).fsPath)
 
     // Save all open files in the workspace
     await vscode.workspace.saveAll()

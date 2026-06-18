@@ -14,12 +14,12 @@ interface MinimalPdfViewerAppearance {
 }
 
 interface SecurePdfViewerWebviewSettings extends MinimalPdfViewerAppearance {
-    cMapUrl: string
-    defaults: MinimalPdfViewerDefaults
-    path: string
-    standardFontDataUrl: string
-    wasmUrl: string
-    workerSrc: string
+    cMapUrl: string,
+    defaults: MinimalPdfViewerDefaults,
+    path: string,
+    standardFontDataUrl: string,
+    wasmUrl: string,
+    workerSrc: string,
     pdfjsSrc: string
 }
 

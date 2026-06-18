@@ -101,12 +101,12 @@ async function handleCustomEditorMessage(pdfUri: vscode.Uri, webviewPanel: vscod
         return
     }
     const payload = msg as {
-        type?: string
-        message?: unknown
-        state?: PdfViewerState
-        pos?: [number, number]
-        page?: number
-        textBeforeSelection?: string
+        type?: string,
+        message?: unknown,
+        state?: PdfViewerState,
+        pos?: [number, number],
+        page?: number,
+        textBeforeSelection?: string,
         textAfterSelection?: string
     }
     if ((payload.type === 'viewer-log' || payload.type === 'log' || payload.type === 'document-error') && typeof payload.message === 'string') {
@@ -187,6 +187,8 @@ function getPanelViewerState(pdfUri: vscode.Uri, panel: vscode.WebviewPanel): Pd
     return viewerStates.get(toKey(pdfUri))?.get(panel)
 }
 
+// Test helpers await this path, but scheduling itself is synchronous.
+// eslint-disable-next-line @typescript-eslint/require-await
 async function schedulePanelDisposeAfterDelete(pdfUri: vscode.Uri, panel: vscode.WebviewPanel): Promise<void> {
     cancelPendingDeleteDisposal(panel)
     const timeout = setTimeout(() => {

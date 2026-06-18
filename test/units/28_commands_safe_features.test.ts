@@ -31,12 +31,13 @@ describe(testFileSuiteName(__filename), () => {
         assert.ok(buildStub.calledOnceWithExactly(false, undefined, undefined, 'secure-latexmk'))
     })
 
-    it('should delegate texdoc to the extras module', async () => {
+    it('should delegate texdoc to the extras module', () => {
         const texdocStub = sinon.stub().resolves()
-        lw.extra = {
+        const extra: typeof lw.extra = {
             ...lw.extra,
             texdoc: texdocStub,
-        } as typeof lw.extra
+        }
+        lw.extra = extra
 
         commands.texdoc('amsmath')
         commands.texdocUsepackages()

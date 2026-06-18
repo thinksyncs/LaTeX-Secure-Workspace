@@ -16,6 +16,7 @@ type UnifiedStringifier = {
 
 const logger = lw.log('Parser')
 const bibDiagnostics = vscode.languages.createDiagnosticCollection('BibTeX')
+// eslint-disable-next-line @typescript-eslint/no-require-imports
 const { toString } = require(path.join(lw.extensionRoot, 'resources', 'unified.js')) as UnifiedStringifier
 
 export const parser = {
@@ -69,7 +70,6 @@ async function bib(uri: vscode.Uri, s: string): Promise<bibtexParser.BibtexAst |
 }
 
 function stringify(ast: Ast.Ast): string {
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-return
     return toString(ast)
 }
 
