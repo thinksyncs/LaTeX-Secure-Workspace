@@ -1,10 +1,15 @@
 import * as path from 'path'
 import * as vscode from 'vscode'
 import { lw } from '../lw'
+import {
+    buildImageResolution,
+    buildUnsupportedExtensionCandidates,
+    collectGraphicspathDirs,
+    collectIncludeGraphics,
+    isUnsupportedImageExtension
+} from './graphics-diagnostics-utils'
 
 const diagnostics = vscode.languages.createDiagnosticCollection('LaTeX Graphics')
-const supportedImageExtensions = ['.pdf', '.png', '.jpg', '.jpeg']
-const knownButUnsupportedExtensions = ['.eps', '.svg', '.gif', '.tif', '.tiff', '.webp']
 const pendingUpdates = new Map<string, NodeJS.Timeout>()
 
 export const graphicsDiagnostics = {
@@ -73,19 +78,15 @@ async function collectDiagnostics(document: vscode.TextDocument): Promise<vscode
     const documentDir = path.dirname(document.uri.fsPath)
     const result: vscode.Diagnostic[] = []
     const text = document.getText()
-    const pattern = /\\includegraphics\s*(?:\[[^\]]*\]\s*)?(?:\[[^\]]*\]\s*)?\{([^}]+)\}/g
-    let match: RegExpExecArray | null
+    const graphicsPathDirs = collectGraphicspathDirs(text)
 
-    while ((match = pattern.exec(text)) !== null) {
-        const imagePath = match[1]?.trim()
-        if (!imagePath || shouldSkipImagePath(imagePath) || isCommentedOut(text, match.index)) {
-            continue
-        }
+    for (const include of collectIncludeGraphics(text)) {
+        const imagePath = include.imagePath
         const range = new vscode.Range(
-            document.positionAt(match.index + match[0].indexOf(imagePath)),
-            document.positionAt(match.index + match[0].indexOf(imagePath) + imagePath.length)
+            document.positionAt(include.index),
+            document.positionAt(include.index + include.length)
         )
-        const resolved = await resolveImagePath(imagePath, documentDir, rootDir)
+        const resolved = await resolveImagePath(imagePath, documentDir, rootDir, graphicsPathDirs)
         if (!resolved.exists) {
             const diagnostic = new vscode.Diagnostic(
                 range,
@@ -110,52 +111,27 @@ async function collectDiagnostics(document: vscode.TextDocument): Promise<vscode
     return result
 }
 
-function shouldSkipImagePath(imagePath: string): boolean {
-    return imagePath.includes('\\') || imagePath.includes('{') || imagePath.includes('}')
-}
-
-function isCommentedOut(text: string, offset: number): boolean {
-    const lineStart = text.lastIndexOf('\n', offset) + 1
-    const prefix = text.slice(lineStart, offset)
-    return /^\s*%/.test(prefix)
-}
-
-async function resolveImagePath(imagePath: string, documentDir: string, rootDir: string | undefined): Promise<{ exists: boolean, unsupportedExtension?: string }> {
-    const baseDirs = [...new Set([documentDir, rootDir].filter((dir): dir is string => Boolean(dir)))]
-    const parsedExt = path.extname(imagePath).toLowerCase()
-    const candidatePaths = parsedExt
-        ? baseDirs.map(dir => path.resolve(dir, imagePath))
-        : baseDirs.flatMap(dir => supportedImageExtensions.map(ext => path.resolve(dir, `${imagePath}${ext}`)))
-
-    for (const candidate of candidatePaths) {
+async function resolveImagePath(imagePath: string, documentDir: string, rootDir: string | undefined, graphicsPathDirs: string[]): Promise<{ exists: boolean, unsupportedExtension?: string }> {
+    const resolution = buildImageResolution(imagePath, documentDir, rootDir, graphicsPathDirs)
+    for (const candidate of resolution.candidates) {
         if (await fileExists(candidate)) {
             return {
                 exists: true,
-                unsupportedExtension: unsupportedExtension(candidate)
+                unsupportedExtension: isUnsupportedImageExtension(candidate) ? path.extname(candidate).toLowerCase() : undefined
             }
         }
     }
 
-    if (!parsedExt) {
-        for (const dir of baseDirs) {
-            for (const ext of knownButUnsupportedExtensions) {
-                const candidate = path.resolve(dir, `${imagePath}${ext}`)
-                if (await fileExists(candidate)) {
-                    return {
-                        exists: true,
-                        unsupportedExtension: ext
-                    }
-                }
+    for (const candidate of buildUnsupportedExtensionCandidates(imagePath, documentDir, rootDir, graphicsPathDirs)) {
+        if (await fileExists(candidate)) {
+            return {
+                exists: true,
+                unsupportedExtension: path.extname(candidate).toLowerCase()
             }
         }
     }
 
-    return { exists: false, unsupportedExtension: parsedExt && knownButUnsupportedExtensions.includes(parsedExt) ? parsedExt : undefined }
-}
-
-function unsupportedExtension(filePath: string): string | undefined {
-    const ext = path.extname(filePath).toLowerCase()
-    return knownButUnsupportedExtensions.includes(ext) ? ext : undefined
+    return { exists: false, unsupportedExtension: resolution.unsupportedExtension }
 }
 
 async function fileExists(filePath: string): Promise<boolean> {

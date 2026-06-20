@@ -108,6 +108,36 @@ nextMatchButton?.addEventListener('click', () => {
     selectSearchMatch(selectedSearchMatch + 1)
 })
 
+window.addEventListener('keydown', (event) => {
+    if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'f') {
+        event.preventDefault()
+        searchInput?.focus()
+        searchInput?.select()
+        return
+    }
+    if (event.key === 'Escape' && document.activeElement === searchInput) {
+        event.preventDefault()
+        clearSearch()
+        viewerContainer.focus()
+        return
+    }
+    if (document.activeElement === searchInput && event.key === 'Enter') {
+        event.preventDefault()
+        selectSearchMatch(selectedSearchMatch + (event.shiftKey ? -1 : 1))
+        return
+    }
+    if (event.target instanceof HTMLInputElement || event.target instanceof HTMLSelectElement) {
+        return
+    }
+    if (event.key === 'PageUp') {
+        event.preventDefault()
+        scrollToPage(state.page - 1)
+    } else if (event.key === 'PageDown' || event.key === ' ') {
+        event.preventDefault()
+        scrollToPage(state.page + 1)
+    }
+})
+
 window.addEventListener('resize', () => {
     clearTimeout(resizeTimer)
     resizeTimer = setTimeout(() => {
@@ -401,6 +431,7 @@ async function updateSearch(query) {
     const index = await getSearchIndex()
     searchMatches = index.filter(entry => entry.text.includes(normalizedQuery))
     if (searchMatches.length === 0) {
+        updateSearchHighlights()
         statusText.textContent = 'No matches'
         return
     }
@@ -415,7 +446,26 @@ function selectSearchMatch(nextIndex) {
     selectedSearchMatch = ((nextIndex % searchMatches.length) + searchMatches.length) % searchMatches.length
     const match = searchMatches[selectedSearchMatch]
     statusText.textContent = `${selectedSearchMatch + 1}/${searchMatches.length} page ${match.pageNumber}`
+    updateSearchHighlights(match.pageNumber)
     scrollToPage(match.pageNumber)
+}
+
+function clearSearch() {
+    if (searchInput) {
+        searchInput.value = ''
+    }
+    searchMatches = []
+    selectedSearchMatch = -1
+    updateSearchHighlights()
+    statusText.textContent = `${currentPdf?.numPages ?? 0} page${currentPdf?.numPages === 1 ? '' : 's'}`
+}
+
+function updateSearchHighlights(activePageNumber) {
+    const matchedPages = new Set(searchMatches.map(match => match.pageNumber))
+    for (const [pageNumber, entry] of pageEntries) {
+        entry.shell.classList.toggle('searchMatchPage', matchedPages.has(pageNumber))
+        entry.shell.classList.toggle('activeSearchMatchPage', pageNumber === activePageNumber)
+    }
 }
 
 async function getSearchIndex() {

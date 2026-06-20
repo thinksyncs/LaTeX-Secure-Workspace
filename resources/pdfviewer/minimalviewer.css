@@ -104,6 +104,16 @@ body {
 .pageCanvasWrap {
     position: relative;
 }
+
+.searchMatchPage .pageCanvas {
+    outline: 2px solid rgba(86, 156, 214, 0.55);
+    outline-offset: 3px;
+}
+
+.activeSearchMatchPage .pageCanvas {
+    outline-color: rgba(255, 204, 102, 0.95);
+}
+
 .pageCanvas {
     display: block;
     background: var(--page-background);
