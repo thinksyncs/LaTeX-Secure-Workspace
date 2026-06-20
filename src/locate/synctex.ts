@@ -21,7 +21,8 @@ export const synctex = {
         computeToTeX,
         openTeX,
         getCurrentEditorCoordinates,
-        shouldUseExternalViewerForForwardSyncTeX
+        shouldUseExternalViewerForForwardSyncTeX,
+        setSynctexToPDFCombinedForTest
     }
 }
 
@@ -237,6 +238,18 @@ async function synctexToPDFCombined(line: number, col: number, filePath: string,
     }
 }
 
+type SynctexToPDFCombined = typeof synctexToPDFCombined
+
+let synctexToPDFCombinedForTest: SynctexToPDFCombined | undefined
+
+function getSynctexToPDFCombined(): SynctexToPDFCombined {
+    return synctexToPDFCombinedForTest ?? synctexToPDFCombined
+}
+
+function setSynctexToPDFCombinedForTest(fn?: SynctexToPDFCombined) {
+    synctexToPDFCombinedForTest = fn
+}
+
 /**
  * Execute forward SyncTeX with respect to the provided arguments.
  *
@@ -295,7 +308,7 @@ function toPDF(pdfUri?: vscode.Uri, args?: {line: number, filePath: string}, for
         return
     }
 
-    void synctexToPDFCombined(line, column, filePath, targetPdfFile, configuration.get('synctex.indicator') as 'none' | 'circle' | 'rectangle').then(async (record) => {
+    void getSynctexToPDFCombined()(line, column, filePath, targetPdfFile, configuration.get('synctex.indicator') as 'none' | 'circle' | 'rectangle').then(async (record) => {
         await lw.viewer.locate(targetPdfFile, record)
     }).catch(e =>
         logger.logError('Forward SyncTeX failed.', e)

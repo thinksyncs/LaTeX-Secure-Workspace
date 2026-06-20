@@ -1,8 +1,5 @@
 import * as vscode from 'vscode'
 import * as sinon from 'sinon'
-import * as fs from 'fs'
-import * as os from 'os'
-import * as path from 'path'
 import { assert, mock, sleep } from './utils'
 import { lw } from '../../src/lw'
 import * as customEditor from '../../src/preview/pdfcustomeditor'
@@ -19,6 +16,7 @@ describe(testFileSuiteName(__filename), () => {
     })
 
     afterEach(() => {
+        synctex.components.setSynctexToPDFCombinedForTest(undefined)
         sinon.restore()
         customEditor.resetCustomEditorStateForTest()
     })
@@ -152,37 +150,18 @@ describe(testFileSuiteName(__filename), () => {
     it('should deliver forward SyncTeX records to the internal viewer', async () => {
         const rootFile = '/tmp/main.tex'
         const pdfUri = vscode.Uri.file('/tmp/.lw-security/main.pdf')
-        const oldPath = process.env.PATH
-        const binDir = fs.mkdtempSync(path.join(os.tmpdir(), 'lw-synctex-'))
-        const commandName = process.platform === 'win32' ? 'synctex.cmd' : 'synctex'
-        const commandPath = path.join(binDir, commandName)
-        const command = process.platform === 'win32'
-            ? '@echo off\r\necho SyncTeX result begin\r\necho Page:1\r\necho x:12\r\necho y:34\r\necho SyncTeX result end\r\n'
-            : '#!/bin/sh\necho "SyncTeX result begin"\necho "Page:1"\necho "x:12"\necho "y:34"\necho "SyncTeX result end"\n'
-        fs.writeFileSync(commandPath, command)
-        if (process.platform !== 'win32') {
-            fs.chmodSync(commandPath, 0o755)
-        }
-        process.env.PATH = `${binDir}${path.delimiter}${oldPath ?? ''}`
+        const record = { page: 1, x: 12, y: 34, indicator: true }
         lw.root.file.path = rootFile
         lw.root.file.langId = 'latex'
         mock.activeTextEditor(rootFile, '\\documentclass{article}\n\\begin{document}\nabc\n\\end{document}\n')
         const locateStub = sinon.stub(lw.viewer, 'locate').resolves()
-        try {
-            synctex.toPDF(pdfUri, { line: 1, filePath: rootFile })
+        synctex.components.setSynctexToPDFCombinedForTest(() => Promise.resolve(record))
 
-            for (let retry = 0; retry < 100 && locateStub.notCalled; retry++) {
-                await sleep(25)
-            }
-            assert.ok(locateStub.calledOnceWithExactly(pdfUri, {
-                page: 1,
-                x: 12,
-                y: 34,
-                indicator: true
-            }))
-        } finally {
-            process.env.PATH = oldPath
-            fs.rmSync(binDir, { recursive: true, force: true })
+        synctex.toPDF(pdfUri, { line: 1, filePath: rootFile })
+
+        for (let retry = 0; retry < 100 && locateStub.notCalled; retry++) {
+            await sleep(25)
         }
+        assert.ok(locateStub.calledOnceWithExactly(pdfUri, record))
     })
 })
