@@ -45,4 +45,19 @@ describe(testFileSuiteName(__filename), () => {
         assert.ok(texdocStub.firstCall.calledWithExactly('amsmath'))
         assert.ok(texdocStub.secondCall.calledWithExactly(undefined, true))
     })
+
+    it('should keep math preview commands as disabled compatibility no-ops', () => {
+        const warningStub = sinon.stub(vscode.window, 'showWarningMessage')
+
+        commands.openMathPreviewPanel()
+        commands.closeMathPreviewPanel()
+        commands.toggleMathPreviewPanel()
+
+        assert.strictEqual(warningStub.callCount, 3)
+        assert.deepStrictEqual(warningStub.getCalls().map(call => call.args[0]), [
+            'Math preview panel is disabled in this secure build.',
+            'Math preview panel is disabled in this secure build.',
+            'Math preview panel is disabled in this secure build.'
+        ])
+    })
 })

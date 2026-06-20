@@ -1,6 +1,8 @@
 import * as vscode from 'vscode'
 import * as sinon from 'sinon'
-import { assert, mock } from './utils'
+import { EventEmitter } from 'events'
+import * as cs from 'cross-spawn'
+import { assert, mock, sleep } from './utils'
 import { lw } from '../../src/lw'
 import * as customEditor from '../../src/preview/pdfcustomeditor'
 import { synctex } from '../../src/locate/synctex'
@@ -144,5 +146,41 @@ describe(testFileSuiteName(__filename), () => {
         assert.strictEqual(synctex.components.shouldUseExternalViewerForForwardSyncTeX('auto', 'tab'), false)
         assert.strictEqual(synctex.components.shouldUseExternalViewerForForwardSyncTeX('auto', 'external'), false)
         assert.strictEqual(synctex.components.shouldUseExternalViewerForForwardSyncTeX('tabOrBrowser', 'tab'), false)
+    })
+
+    it('should deliver forward SyncTeX records to the internal viewer', async () => {
+        const rootFile = '/tmp/main.tex'
+        const pdfUri = vscode.Uri.file('/tmp/.lw-security/main.pdf')
+        lw.root.file.path = rootFile
+        lw.root.file.langId = 'latex'
+        mock.activeTextEditor(rootFile, '\\documentclass{article}\n\\begin{document}\nabc\n\\end{document}\n')
+        const locateStub = sinon.stub(lw.viewer, 'locate').resolves()
+        const stdout = new EventEmitter() as EventEmitter & { setEncoding: (encoding: BufferEncoding) => void }
+        const stderr = new EventEmitter() as EventEmitter & { setEncoding: (encoding: BufferEncoding) => void }
+        stdout.setEncoding = () => undefined
+        stderr.setEncoding = () => undefined
+        const proc = new EventEmitter() as EventEmitter & {
+            stdout: typeof stdout,
+            stderr: typeof stderr
+        }
+        proc.stdout = stdout
+        proc.stderr = stderr
+        sinon.stub(cs, 'spawn').returns(proc as unknown as ReturnType<typeof cs.spawn>)
+
+        synctex.toPDF(pdfUri, { line: 1, filePath: rootFile })
+        process.nextTick(() => {
+            stdout.emit('data', 'SyncTeX result begin\nPage:1\nx:12\ny:34\nSyncTeX result end\n')
+            proc.emit('exit', 0)
+        })
+
+        for (let retry = 0; retry < 20 && locateStub.notCalled; retry++) {
+            await sleep(10)
+        }
+        assert.ok(locateStub.calledOnceWithExactly(pdfUri, {
+            page: 1,
+            x: 12,
+            y: 34,
+            indicator: true
+        }))
     })
 })

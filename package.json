@@ -2857,7 +2857,7 @@
           "scope": "window",
           "type": "boolean",
           "default": false,
-          "markdownDescription": "[Experimental] Render a cursor on the math preview panel. **This feature is experimental. If you report an issue to us on this feature, we will not fix it. We will not accept any pull requests.**"
+          "markdownDescription": "Compatibility setting retained from upstream. The math preview panel is disabled in this secure build, so this setting has no effect."
         },
         "latex-workshop.mathpreviewpanel.editorGroup": {
           "scope": "window",
@@ -2870,7 +2870,7 @@
             "above",
             "below"
           ],
-          "markdownDescription": "The editor group in which to open the math preview panel.",
+          "markdownDescription": "Compatibility setting retained from upstream. The math preview panel is disabled in this secure build, so this setting has no effect.",
           "enumDescriptions": [
             "Use the current editor group",
             "Put the math preview panel in a new group on the left of the current one",
