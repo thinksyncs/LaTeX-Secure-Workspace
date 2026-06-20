@@ -1,7 +1,8 @@
 import * as vscode from 'vscode'
 import * as sinon from 'sinon'
-import { EventEmitter } from 'events'
-import * as cs from 'cross-spawn'
+import * as fs from 'fs'
+import * as os from 'os'
+import * as path from 'path'
 import { assert, mock, sleep } from './utils'
 import { lw } from '../../src/lw'
 import * as customEditor from '../../src/preview/pdfcustomeditor'
@@ -151,36 +152,37 @@ describe(testFileSuiteName(__filename), () => {
     it('should deliver forward SyncTeX records to the internal viewer', async () => {
         const rootFile = '/tmp/main.tex'
         const pdfUri = vscode.Uri.file('/tmp/.lw-security/main.pdf')
+        const oldPath = process.env.PATH
+        const binDir = fs.mkdtempSync(path.join(os.tmpdir(), 'lw-synctex-'))
+        const commandName = process.platform === 'win32' ? 'synctex.cmd' : 'synctex'
+        const commandPath = path.join(binDir, commandName)
+        const command = process.platform === 'win32'
+            ? '@echo off\r\necho SyncTeX result begin\r\necho Page:1\r\necho x:12\r\necho y:34\r\necho SyncTeX result end\r\n'
+            : '#!/bin/sh\necho "SyncTeX result begin"\necho "Page:1"\necho "x:12"\necho "y:34"\necho "SyncTeX result end"\n'
+        fs.writeFileSync(commandPath, command)
+        if (process.platform !== 'win32') {
+            fs.chmodSync(commandPath, 0o755)
+        }
+        process.env.PATH = `${binDir}${path.delimiter}${oldPath ?? ''}`
         lw.root.file.path = rootFile
         lw.root.file.langId = 'latex'
         mock.activeTextEditor(rootFile, '\\documentclass{article}\n\\begin{document}\nabc\n\\end{document}\n')
         const locateStub = sinon.stub(lw.viewer, 'locate').resolves()
-        const stdout = new EventEmitter() as EventEmitter & { setEncoding: (encoding: BufferEncoding) => void }
-        const stderr = new EventEmitter() as EventEmitter & { setEncoding: (encoding: BufferEncoding) => void }
-        stdout.setEncoding = () => undefined
-        stderr.setEncoding = () => undefined
-        const proc = new EventEmitter() as EventEmitter & {
-            stdout: typeof stdout,
-            stderr: typeof stderr
-        }
-        proc.stdout = stdout
-        proc.stderr = stderr
-        sinon.stub(cs, 'spawn').returns(proc as unknown as ReturnType<typeof cs.spawn>)
+        try {
+            synctex.toPDF(pdfUri, { line: 1, filePath: rootFile })
 
-        synctex.toPDF(pdfUri, { line: 1, filePath: rootFile })
-        process.nextTick(() => {
-            stdout.emit('data', 'SyncTeX result begin\nPage:1\nx:12\ny:34\nSyncTeX result end\n')
-            proc.emit('exit', 0)
-        })
-
-        for (let retry = 0; retry < 20 && locateStub.notCalled; retry++) {
-            await sleep(10)
+            for (let retry = 0; retry < 20 && locateStub.notCalled; retry++) {
+                await sleep(10)
+            }
+            assert.ok(locateStub.calledOnceWithExactly(pdfUri, {
+                page: 1,
+                x: 12,
+                y: 34,
+                indicator: true
+            }))
+        } finally {
+            process.env.PATH = oldPath
+            fs.rmSync(binDir, { recursive: true, force: true })
         }
-        assert.ok(locateStub.calledOnceWithExactly(pdfUri, {
-            page: 1,
-            x: 12,
-            y: 34,
-            indicator: true
-        }))
     })
 })
