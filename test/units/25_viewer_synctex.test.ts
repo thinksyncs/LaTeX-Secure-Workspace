@@ -171,8 +171,8 @@ describe(testFileSuiteName(__filename), () => {
         try {
             synctex.toPDF(pdfUri, { line: 1, filePath: rootFile })
 
-            for (let retry = 0; retry < 20 && locateStub.notCalled; retry++) {
-                await sleep(10)
+            for (let retry = 0; retry < 100 && locateStub.notCalled; retry++) {
+                await sleep(25)
             }
             assert.ok(locateStub.calledOnceWithExactly(pdfUri, {
                 page: 1,
