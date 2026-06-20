@@ -1,6 +1,7 @@
 import * as path from 'path'
 import * as vscode from 'vscode'
 import { getAvailableRecipes } from '../compile/recipe'
+import { showSecureBuildStatus, showSecureModeReport } from './secure-status'
 import { lw } from '../lw'
 import { getSurroundingMacroRange, stripText } from '../utils/utils'
 
@@ -132,6 +133,16 @@ export async function view(mode?: 'tab' | 'browser' | 'external' | vscode.Uri) {
 export function refresh() {
     logger.log('REFRESH command invoked.')
     lw.viewer.refresh()
+}
+
+export async function secureBuildStatus() {
+    logger.log('SECURE BUILD STATUS command invoked.')
+    await showSecureBuildStatus()
+}
+
+export async function secureModeReport() {
+    logger.log('SECURE MODE REPORT command invoked.')
+    await showSecureModeReport()
 }
 
 export function kill() {

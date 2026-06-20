@@ -640,6 +640,18 @@
         "enablement": "!virtualWorkspace"
       },
       {
+        "command": "latex-workshop.secure-build-status",
+        "title": "%command.secure-build-status%",
+        "category": "LaTeX-Secure-Workspace",
+        "icon": "$(shield)"
+      },
+      {
+        "command": "latex-workshop.secure-mode-report",
+        "title": "%command.secure-mode-report%",
+        "category": "LaTeX-Secure-Workspace",
+        "icon": "$(checklist)"
+      },
+      {
         "command": "latex-workshop.kill",
         "title": "%command.kill%",
         "category": "LaTeX-Secure-Workspace",

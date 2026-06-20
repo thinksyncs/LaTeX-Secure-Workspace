@@ -23,6 +23,7 @@ async function buildCommandTree(): Promise<LaTeXCommand[]> {
     commands.push(buildRecipeCommand)
 
     node = buildNode(buildCommand, [
+        new LaTeXCommand(await lw.language.getLocaleString('command.secure-build-status'), {command: 'latex-workshop.secure-build-status'}, 'shield'),
         new LaTeXCommand(await lw.language.getLocaleString('command.clean'), {command: 'latex-workshop.clean'}, 'clear-all'),
         new LaTeXCommand(await lw.language.getLocaleString('command.kill'), {command: 'latex-workshop.kill'}, 'debug-stop')
     ])
@@ -54,7 +55,8 @@ async function buildCommandTree(): Promise<LaTeXCommand[]> {
     node = buildNode(miscCommand, [
         new LaTeXCommand(await lw.language.getLocaleString('command.citation'), {command: 'latex-workshop.citation'}),
         new LaTeXCommand(await lw.language.getLocaleString('command.saveWithoutBuilding'), {command: 'latex-workshop.saveWithoutBuilding'}, 'save'),
-        new LaTeXCommand(await lw.language.getLocaleString('command.revealoutput'), {command: 'latex-workshop.revealOutputDir'}, 'folder-opened')
+        new LaTeXCommand(await lw.language.getLocaleString('command.revealoutput'), {command: 'latex-workshop.revealOutputDir'}, 'folder-opened'),
+        new LaTeXCommand(await lw.language.getLocaleString('command.secure-mode-report'), {command: 'latex-workshop.secure-mode-report'}, 'checklist')
     ])
     commands.push(node)
 

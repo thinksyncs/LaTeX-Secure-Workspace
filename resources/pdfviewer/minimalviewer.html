@@ -16,6 +16,24 @@
     <body>
         <div id="app">
             <div id="statusBar">
+                <div id="viewerControls" aria-label="PDF controls">
+                    <button id="prevPage" type="button" title="Previous page" aria-label="Previous page">‹</button>
+                    <input id="pageInput" type="number" min="1" value="1" aria-label="Page number" />
+                    <span id="pageCount">/ –</span>
+                    <button id="nextPage" type="button" title="Next page" aria-label="Next page">›</button>
+                    <select id="zoomSelect" aria-label="Zoom">
+                        <option value="page-width">Width</option>
+                        <option value="page-fit">Fit</option>
+                        <option value="0.75">75%</option>
+                        <option value="1">100%</option>
+                        <option value="1.25">125%</option>
+                        <option value="1.5">150%</option>
+                        <option value="2">200%</option>
+                    </select>
+                    <input id="searchInput" type="search" placeholder="Search" aria-label="Search PDF text" />
+                    <button id="prevMatch" type="button" title="Previous match" aria-label="Previous match">↑</button>
+                    <button id="nextMatch" type="button" title="Next match" aria-label="Next match">↓</button>
+                </div>
                 <span id="statusText">Loading PDF…</span>
             </div>
             <div id="viewerContainer">

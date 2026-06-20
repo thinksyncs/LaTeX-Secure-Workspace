@@ -19,6 +19,8 @@
   "command.viewInBrowser": "View LaTeX PDF file in web browser",
   "command.viewExternal": "View LaTeX PDF file in external viewer",
   "command.refresh-viewer": "Refresh all LaTeX PDF viewers",
+  "command.secure-build-status": "Show secure build status",
+  "command.secure-mode-report": "Show secure mode report",
   "command.kill": "Kill LaTeX compiler process",
   "command.synctex": "SyncTeX from cursor",
   "command.clean": "Clean up auxiliary files",

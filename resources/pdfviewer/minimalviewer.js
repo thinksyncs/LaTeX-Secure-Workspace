@@ -10,11 +10,20 @@ const configElement = document.getElementById('pdf-preview-config')
 const statusText = document.getElementById('statusText')
 const viewerContainer = document.getElementById('viewerContainer')
 const pagesRoot = document.getElementById('pages')
+const prevPageButton = document.getElementById('prevPage')
+const nextPageButton = document.getElementById('nextPage')
+const pageInput = document.getElementById('pageInput')
+const pageCount = document.getElementById('pageCount')
+const zoomSelect = document.getElementById('zoomSelect')
+const searchInput = document.getElementById('searchInput')
+const prevMatchButton = document.getElementById('prevMatch')
+const nextMatchButton = document.getElementById('nextMatch')
 
 const config = JSON.parse(configElement?.dataset.config ?? '{}')
 const state = {
     path: config.path,
     pdfFileUri: config.path,
+    page: 1,
     scale: config.defaults?.scale ?? config.appearance?.scale ?? 'page-width',
     trim: config.appearance?.trim,
     scrollMode: config.appearance?.scrollMode,
@@ -30,6 +39,9 @@ let stateTimer = undefined
 let synctexIndicatorTimer = undefined
 let documentCleanupTimer = undefined
 let pendingSyncTeX = undefined
+let searchIndexPromise = undefined
+let searchMatches = []
+let selectedSearchMatch = -1
 const pageEntries = new Map()
 const reverseSyncTeXKeybinding = config.appearance?.keybindings?.synctex ?? 'ctrl-click'
 
@@ -62,9 +74,39 @@ window.addEventListener('unhandledrejection', (event) => {
 })
 
 viewerContainer.addEventListener('scroll', () => {
+    updateCurrentPageFromScroll()
     queueStatePost()
     queueVisiblePageRender()
 }, { passive: true })
+
+prevPageButton?.addEventListener('click', () => {
+    scrollToPage(state.page - 1)
+})
+
+nextPageButton?.addEventListener('click', () => {
+    scrollToPage(state.page + 1)
+})
+
+pageInput?.addEventListener('change', () => {
+    scrollToPage(Number(pageInput.value))
+})
+
+zoomSelect?.addEventListener('change', () => {
+    state.scale = zoomSelect.value
+    void renderDocument({ preserveScroll: true })
+})
+
+searchInput?.addEventListener('input', () => {
+    void updateSearch(searchInput.value)
+})
+
+prevMatchButton?.addEventListener('click', () => {
+    selectSearchMatch(selectedSearchMatch - 1)
+})
+
+nextMatchButton?.addEventListener('click', () => {
+    selectSearchMatch(selectedSearchMatch + 1)
+})
 
 window.addEventListener('resize', () => {
     clearTimeout(resizeTimer)
@@ -78,6 +120,7 @@ void initialize()
 async function initialize() {
     try {
         applyAppearance()
+        initializeToolbar()
         await renderDocument({ preserveScroll: false })
         vscode.postMessage({ type: 'initialized' })
     } catch (error) {
@@ -133,6 +176,9 @@ async function renderDocument({ preserveScroll }) {
     clearTimeout(documentCleanupTimer)
     clearPageEntries()
     pagesRoot.replaceChildren()
+    searchIndexPromise = undefined
+    searchMatches = []
+    selectedSearchMatch = -1
     statusText.textContent = 'Loading PDF…'
 
     try {
@@ -153,7 +199,9 @@ async function renderDocument({ preserveScroll }) {
     }
 
     currentPdf = pdf
+    state.page = 1
     statusText.textContent = `${pdf.numPages} page${pdf.numPages === 1 ? '' : 's'}`
+    updateToolbar(pdf.numPages)
     await buildPageShells(pdf, epoch)
     if (epoch !== renderEpoch) {
         return
@@ -168,6 +216,33 @@ async function renderDocument({ preserveScroll }) {
     applyPendingSyncTeX()
     queueStatePost()
     vscode.postMessage({ type: 'document-loaded' })
+}
+
+function initializeToolbar() {
+    if (zoomSelect) {
+        const scale = String(state.scale || 'page-width')
+        if ([...zoomSelect.options].some(option => option.value === scale)) {
+            zoomSelect.value = scale
+        }
+    }
+    updateToolbar()
+}
+
+function updateToolbar(pageTotal = currentPdf?.numPages) {
+    const total = pageTotal ?? 0
+    if (pageInput) {
+        pageInput.max = String(Math.max(1, total))
+        pageInput.value = String(Math.max(1, Math.min(state.page || 1, Math.max(1, total))))
+    }
+    if (pageCount) {
+        pageCount.textContent = `/ ${total || '–'}`
+    }
+    if (prevPageButton) {
+        prevPageButton.disabled = !total || state.page <= 1
+    }
+    if (nextPageButton) {
+        nextPageButton.disabled = !total || state.page >= total
+    }
 }
 
 async function buildPageShells(pdf, epoch) {
@@ -233,6 +308,41 @@ function createPageEntry(pageNumber, viewport) {
     }
 }
 
+function scrollToPage(pageNumber) {
+    const total = currentPdf?.numPages ?? pageEntries.size
+    const clamped = Math.max(1, Math.min(Number.isFinite(pageNumber) ? Math.round(pageNumber) : 1, Math.max(1, total)))
+    const entry = pageEntries.get(clamped)
+    if (!entry) {
+        return
+    }
+    state.page = clamped
+    viewerContainer.scrollTop = Math.max(0, entry.shell.offsetTop - 12)
+    updateToolbar(total)
+    queueStatePost()
+    queueVisiblePageRender()
+}
+
+function updateCurrentPageFromScroll() {
+    if (pageEntries.size === 0) {
+        return
+    }
+    const viewportMiddle = viewerContainer.scrollTop + viewerContainer.clientHeight * 0.35
+    let currentPage = state.page || 1
+    let closestDistance = Number.POSITIVE_INFINITY
+    for (const [pageNumber, entry] of pageEntries) {
+        const pageMiddle = entry.shell.offsetTop + entry.shell.offsetHeight / 2
+        const distance = Math.abs(pageMiddle - viewportMiddle)
+        if (distance < closestDistance) {
+            closestDistance = distance
+            currentPage = pageNumber
+        }
+    }
+    if (currentPage !== state.page) {
+        state.page = currentPage
+        updateToolbar()
+    }
+}
+
 async function renderPage(entry, epoch) {
     if (!currentPdf || entry.isRendered || entry.isRendering || epoch !== renderEpoch) {
         return
@@ -277,6 +387,61 @@ async function renderPage(entry, epoch) {
         entry.isRendering = false
         page.cleanup?.()
     }
+}
+
+async function updateSearch(query) {
+    const normalizedQuery = query.trim().toLowerCase()
+    searchMatches = []
+    selectedSearchMatch = -1
+    if (!normalizedQuery || !currentPdf) {
+        statusText.textContent = `${currentPdf?.numPages ?? 0} page${currentPdf?.numPages === 1 ? '' : 's'}`
+        return
+    }
+    statusText.textContent = 'Searching…'
+    const index = await getSearchIndex()
+    searchMatches = index.filter(entry => entry.text.includes(normalizedQuery))
+    if (searchMatches.length === 0) {
+        statusText.textContent = 'No matches'
+        return
+    }
+    statusText.textContent = `${searchMatches.length} match${searchMatches.length === 1 ? '' : 'es'}`
+    selectSearchMatch(0)
+}
+
+function selectSearchMatch(nextIndex) {
+    if (searchMatches.length === 0) {
+        return
+    }
+    selectedSearchMatch = ((nextIndex % searchMatches.length) + searchMatches.length) % searchMatches.length
+    const match = searchMatches[selectedSearchMatch]
+    statusText.textContent = `${selectedSearchMatch + 1}/${searchMatches.length} page ${match.pageNumber}`
+    scrollToPage(match.pageNumber)
+}
+
+async function getSearchIndex() {
+    if (!currentPdf) {
+        return []
+    }
+    searchIndexPromise ??= buildSearchIndex(currentPdf)
+    return searchIndexPromise
+}
+
+async function buildSearchIndex(pdf) {
+    const result = []
+    for (let pageNumber = 1; pageNumber <= pdf.numPages; pageNumber++) {
+        const page = await pdf.getPage(pageNumber)
+        try {
+            const content = await page.getTextContent()
+            const text = content.items
+                .map(item => typeof item.str === 'string' ? item.str : '')
+                .join(' ')
+                .toLowerCase()
+            result.push({ pageNumber, text })
+        } finally {
+            page.cleanup?.()
+        }
+    }
+    return result
 }
 
 function installReverseSyncTeXHandlers(canvasWrap, viewport, pageNumber) {

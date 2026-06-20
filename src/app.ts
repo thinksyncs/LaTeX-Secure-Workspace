@@ -145,11 +145,15 @@ export function activate(extensionContext: vscode.ExtensionContext) {
     }))
 
     registerProviders(extensionContext)
+    lw.lint.graphics.initialize(extensionContext)
 
     void lw.root.find().then(() => {
         if (lw.file.hasLaTeXLangId(vscode.window.activeTextEditor?.document.languageId ?? '')) {
             lw.previousActive = vscode.window.activeTextEditor
         }
+        vscode.workspace.textDocuments.forEach(document => {
+            void lw.lint.graphics.update(document)
+        })
     })
     conflictCheck()
 
@@ -164,6 +168,8 @@ function registerLatexWorkshopCommands(extensionContext: vscode.ExtensionContext
         vscode.commands.registerCommand('latex-workshop.build-recipe', () => lw.commands.buildRecipe()),
         vscode.commands.registerCommand('latex-workshop.view', (mode?: 'tab' | 'browser' | 'external' | vscode.Uri) => lw.commands.view(mode)),
         vscode.commands.registerCommand('latex-workshop.refresh-viewer', () => lw.commands.refresh()),
+        vscode.commands.registerCommand('latex-workshop.secure-build-status', () => lw.commands.secureBuildStatus()),
+        vscode.commands.registerCommand('latex-workshop.secure-mode-report', () => lw.commands.secureModeReport()),
         vscode.commands.registerCommand('latex-workshop.recipes', (recipe: string | undefined) => lw.commands.recipes(recipe)),
         vscode.commands.registerCommand('latex-workshop.kill', () => lw.commands.kill()),
         vscode.commands.registerCommand('latex-workshop.clean', () => lw.commands.clean()),

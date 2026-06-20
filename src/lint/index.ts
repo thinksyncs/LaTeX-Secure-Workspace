@@ -3,6 +3,7 @@ import { formatter as latexFormatter } from './latex-formatter'
 import { provider as latexActionProvider, action as latexAction } from './latex-code-actions'
 import { format as bibtexFormat, formatter as bibtexFormatter } from './bibtex-formatter'
 import { dupLabelDetector } from './duplicate-label'
+import { graphicsDiagnostics } from './graphics-diagnostics'
 
 export const lint = {
     latex: {
@@ -15,5 +16,6 @@ export const lint = {
         format: bibtexFormat,
         formatter: bibtexFormatter
     },
-    label: dupLabelDetector
+    label: dupLabelDetector,
+    graphics: graphicsDiagnostics
 }
