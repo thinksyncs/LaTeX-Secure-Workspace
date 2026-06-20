@@ -73,7 +73,7 @@ function shouldScan(document: vscode.TextDocument): boolean {
 }
 
 async function collectDiagnostics(document: vscode.TextDocument): Promise<vscode.Diagnostic[]> {
-    const rootFile = lw.root.file.path || await lw.root.resolveSecurityRoot()
+    const rootFile = lw.root.file.path
     const rootDir = rootFile ? path.dirname(rootFile) : undefined
     const documentDir = path.dirname(document.uri.fsPath)
     const result: vscode.Diagnostic[] = []
