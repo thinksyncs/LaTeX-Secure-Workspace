@@ -1,21 +1,21 @@
 # LaTeX Workspace Security
 
-Secure LaTeX tools for [Visual Studio Code](https://code.visualstudio.com/) with IntelliSense, manual build, diagnostics, and a local PDF tab viewer.
+Secure LaTeX tools for [Visual Studio Code](https://code.visualstudio.com/) with IntelliSense, manual build, diagnostics, and a local PDF tab viewer with SyncTeX.
 
 ## TL;DR
 
 - IntelliSense for citations, labels, commands, environments, classes, and packages
 - Manual build and clean with the fixed secure recipe
-- Local PDF tab viewer with one-way refresh
+- Local PDF tab viewer with refresh and forward/reverse SyncTeX
 - Diagnostics and log parsing inside VS Code
-- No telemetry, auto build, external build commands, or browser viewer workflow
+- No telemetry, auto build, custom build recipes, external build commands, or browser viewer workflow
 
 > [!IMPORTANT]
 > This extension is an independent secure fork and is not the official `James-Yu.latex-workshop` marketplace release. For compatibility, settings and command IDs still use the existing `latex-workshop.*` prefix.
 
 ## Release Channels
 
-- Stable releases publish GitHub release tags to the VS Code Marketplace stable channel and Open VSX.
+- Stable releases publish GitHub release tags to the VS Code Marketplace stable channel.
 - Daily releases build, test, and package a VSIX every day, refresh the rolling GitHub daily prerelease, and attach open PR, CodeQL, and Dependabot summaries. They do not publish to extension registries.
 - The canonical repository fails release publication if the required registry credentials are missing, so security fixes do not silently miss distribution.
 - Stable versioning: `1.2.3 -> 1.2.4`, `1.2 -> 1.3.0`
@@ -37,12 +37,13 @@ This secure build keeps a focused subset of the upstream editing and compilation
 - Build LaTeX documents manually with the fixed internal build recipe.
 - Resolve the build root with a fixed internal policy and always run manual build and clean against the resolved main root file. Secure build and viewer flows do not honor file-level `%!TEX root` comments.
 - Write build outputs and auxiliary files into the resolved root file directory, rather than honoring workspace-controlled output-path overrides.
-- Open the built PDF in a local VS Code tab using a minimal `pdf.js` runtime, with one-way refresh from the extension to the viewer.
+- Open the built PDF in a local VS Code tab using a minimal `pdf.js` runtime, with refresh, forward SyncTeX, and reverse SyncTeX inside the bundled webview path.
 - IntelliSense for citations, labels, commands, environments, document classes, packages, and input paths.
 - Snippets and text-wrapping commands for common LaTeX authoring tasks.
 - Automatic `\item` continuation and other core editing conveniences that stay within the editor process.
 - LaTeX log parsing and diagnostics shown directly in VS Code.
 - Hover-based assistance for supported LaTeX constructs.
+- Texdoc from trusted workspaces, with workspace-scoped executable overrides blocked and command execution confirmed before launch.
 
 ## Not Included In This Secure Build
 
@@ -52,8 +53,8 @@ The following upstream features are intentionally disabled or not exposed in thi
 - Auto build and other file-watcher-triggered build execution.
 - Custom recipes, custom tools, and external build commands.
 - Workspace-controlled overrides for build root selection and output or auxiliary directory selection in the secure execution path.
-- The internal PDF preview server, browser viewer workflow, reverse or bidirectional viewer messaging, and SyncTeX viewer paths.
-- Texdoc, word count, and math preview panel workflows.
+- The internal PDF preview server, browser viewer workflow, external PDF viewer execution, and external SyncTeX command paths.
+- Word count and math preview panel workflows.
 - External formatter or linter command overrides from workspace settings without an explicit confirmation prompt.
 - Other convenience integrations that expand the executable or network-facing surface without being required for core authoring and compilation.
 

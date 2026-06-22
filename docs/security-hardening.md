@@ -22,7 +22,7 @@ Risk:
 
 Mitigation:
 
-The secure build disables Live Share integration, the internal PDF preview server, browser-based preview flows, reverse or bidirectional viewer control paths, and SyncTeX paths that depended on the internal viewer runtime. In place of the old preview stack, it keeps only a local tab-based PDF viewer with one-way refresh from the extension host to the webview.
+The secure build disables Live Share integration, the internal PDF preview server, browser-based preview flows, external PDF viewer execution, and external SyncTeX command paths. In place of the old preview stack, it keeps only a local tab-based PDF viewer with file refresh and forward/reverse SyncTeX inside the bundled webview path.
 
 Restricted Mode remains available on a limited basis. In restricted mode, the local tab viewer and viewer refresh remain available because they stay inside the bundled webview path, while build, clean, kill, and reveal-output commands remain disabled until trust is granted.
 
@@ -70,7 +70,7 @@ Risk:
 
 Mitigation:
 
-The secure build removes or disables texdoc, word count, math preview panel, auto-lint execution, and other convenience features that invoke additional tooling or UI subsystems. Remaining formatter and linter executable overrides are no longer silently taken from workspace settings; they require an explicit confirmation prompt before execution.
+The secure build removes or disables word count, math preview panel, auto-lint execution, and other convenience features that are not required for core authoring. Texdoc and the remaining formatter or linter helper commands require a trusted workspace, block workspace-scoped executable overrides, and require an explicit confirmation prompt before execution.
 
 ### 5. Removed `vsls`-specific handling and legacy compatibility paths
 
@@ -83,7 +83,7 @@ Risk:
 
 Mitigation:
 
-The secure build removes Live Share URI handling and trims compatibility code that only existed to support disabled collaboration or viewer workflows.
+The secure build removes Live Share URI handling and trims compatibility code that only existed to support disabled collaboration, browser viewer, or external viewer workflows.
 
 ### 6. Tightened development dependency hygiene
 
