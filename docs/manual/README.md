@@ -10,7 +10,7 @@ LaTeX-Secure-Workspace keeps a deliberately small workflow surface:
 - Manual LaTeX build with the fixed internal recipe
 - Root-file detection with the secure root-resolution policy
 - Local tab-based PDF viewing with refresh and forward/reverse SyncTeX
-- IntelliSense, snippets, hover help, outline, and diagnostics
+- Project-local completions, snippets, hover help, outline, and diagnostics
 - Texdoc from trusted workspaces with command confirmation
 
 The fork intentionally does not expose Live Share integration, browser viewer

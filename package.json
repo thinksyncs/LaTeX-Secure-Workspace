@@ -1,7 +1,7 @@
 {
   "name": "tex-workspace-secure",
   "displayName": "LaTeX Workspace Security",
-  "description": "Secure LaTeX tools for VS Code with IntelliSense, manual build, diagnostics, and a local PDF tab viewer with SyncTeX.",
+  "description": "Secure LaTeX tools for VS Code with project-local completions, manual build, diagnostics, and a local PDF tab viewer with SyncTeX.",
   "icon": "icons/icon.png",
   "version": "11.2.6",
   "publisher": "ToppyMicroServices",

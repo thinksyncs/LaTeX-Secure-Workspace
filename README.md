@@ -1,10 +1,10 @@
 # LaTeX Workspace Security
 
-Secure LaTeX tools for [Visual Studio Code](https://code.visualstudio.com/) with IntelliSense, manual build, diagnostics, and a local PDF tab viewer with SyncTeX.
+Secure LaTeX tools for [Visual Studio Code](https://code.visualstudio.com/) with project-local completions, manual build, diagnostics, and a local PDF tab viewer with SyncTeX.
 
 ## TL;DR
 
-- IntelliSense for citations, labels, commands, environments, classes, and packages
+- Project-local completions for citations, labels, commands, packages, and input paths
 - Manual build and clean with the fixed secure recipe
 - Local PDF tab viewer with refresh and forward/reverse SyncTeX
 - Diagnostics and log parsing inside VS Code
@@ -38,7 +38,7 @@ This secure build keeps a focused subset of the upstream editing and compilation
 - Resolve the build root with a fixed internal policy and always run manual build and clean against the resolved main root file. Secure build and viewer flows do not honor file-level `%!TEX root` comments.
 - Write build outputs and auxiliary files into the resolved root file directory, rather than honoring workspace-controlled output-path overrides.
 - Open the built PDF in a local VS Code tab using a minimal `pdf.js` runtime, with refresh, forward SyncTeX, and reverse SyncTeX inside the bundled webview path.
-- IntelliSense for citations, labels, commands, environments, document classes, packages, and input paths.
+- Project-local completions for citations, labels, commands, environments, document classes, packages, and input paths.
 - Snippets and text-wrapping commands for common LaTeX authoring tasks.
 - Automatic `\item` continuation and other core editing conveniences that stay within the editor process.
 - LaTeX log parsing and diagnostics shown directly in VS Code.
