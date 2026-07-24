@@ -12,34 +12,38 @@ const DOCKER_SECURE_SOURCE_DIR = '/latex-workshop/src'
 const DOCKER_SECURE_OUTPUT_DIR = '/latex-workshop/out'
 
 const FIXED_SECURE_RECIPE_NAME = 'secure-latexmk'
-const FIXED_SECURE_TOOL: Tool = {
-    name: 'latexmk',
-    command: 'latexmk',
-    args: [
-        '-norc',
-        '-interaction=nonstopmode',
-        '-file-line-error',
-        '-pdf',
-        '-outdir=%DOCFILE%',
-        '-auxdir=%DOCFILE%',
-        '%DOC%'
-    ],
-    env: {}
+const FIXED_SECURE_TOOL_ARGS = [
+    '-norc',
+    '-no-shell-escape',
+    '-interaction=nonstopmode',
+    '-file-line-error',
+    '-pdf',
+    '-outdir=%DOCFILE%',
+    '-auxdir=%DOCFILE%',
+    '%DOC%'
+]
+
+function createFixedSecureTool(): Tool {
+    return {
+        name: 'latexmk',
+        command: 'latexmk',
+        args: [...FIXED_SECURE_TOOL_ARGS],
+        env: {}
+    }
 }
 
-let state: {
-    prevRecipe: Recipe | undefined,
-    prevLangId: string,
-    isMikTeX: boolean | undefined
+function createFixedSecureRecipe(): Recipe {
+    return {
+        name: FIXED_SECURE_RECIPE_NAME,
+        tools: [createFixedSecureTool()]
+    }
 }
+
+let isMikTeXCache: boolean | undefined
 
 initialize()
 export function initialize() {
-    state = {
-        prevRecipe: undefined,
-        prevLangId: '',
-        isMikTeX: undefined
-    }
+    isMikTeXCache = undefined
 }
 
 void setDockerImage()
@@ -66,10 +70,7 @@ async function getSecureDockerSetting<T>(section: string, fallback: T): Promise<
 // eslint-disable-next-line @typescript-eslint/require-await
 export async function getAvailableRecipes(scope?: vscode.ConfigurationScope): Promise<Recipe[]> {
     void scope
-    return [{
-        name: FIXED_SECURE_RECIPE_NAME,
-        tools: [JSON.parse(JSON.stringify(FIXED_SECURE_TOOL)) as Tool]
-    }]
+    return [createFixedSecureRecipe()]
 }
 
 /**
@@ -193,7 +194,7 @@ async function createAuxSubFolders(rootFile: string) {
  * build tools.
  */
 async function createBuildTools(rootFile: string, langId: string, recipeName?: string): Promise<Tool[] | undefined> {
-    let buildTools: Tool[] = []
+    const buildTools: Tool[] = []
 
     const configuration = vscode.workspace.getConfiguration('latex-workshop', lw.file.toUri(rootFile))
     const magic = await findMagicComments(rootFile)
@@ -207,20 +208,19 @@ async function createBuildTools(rootFile: string, langId: string, recipeName?: s
         return
     }
     logger.log(`Preparing to run recipe: ${recipe.name}.`)
-    state.prevRecipe = recipe
-    state.prevLangId = langId
     recipe.tools.forEach(tool => {
         if (typeof tool !== 'string') {
-            buildTools.push(tool)
+            buildTools.push({
+                ...tool,
+                args: tool.args ? [...tool.args] : undefined,
+                env: tool.env ? {...tool.env} : undefined
+            })
         }
     })
     logger.log(`Prepared ${buildTools.length} tools.`)
     if (buildTools.length < 1) {
         return
     }
-
-    // Use JSON.parse and JSON.stringify for a deep copy.
-    buildTools = JSON.parse(JSON.stringify(buildTools)) as Tool[]
 
     populateTools(rootFile, buildTools)
 
@@ -303,10 +303,7 @@ function findRecipe(rootFile: string, langId: string, recipeName?: string): Reci
     if (recipeName && recipeName !== FIXED_SECURE_RECIPE_NAME) {
         logger.log(`Ignoring requested recipe ${recipeName} in this secure build.`)
     }
-    return {
-        name: FIXED_SECURE_RECIPE_NAME,
-        tools: [JSON.parse(JSON.stringify(FIXED_SECURE_TOOL)) as Tool]
-    }
+    return createFixedSecureRecipe()
 }
 
 /**
@@ -396,7 +393,7 @@ function populateTools(rootFile: string, buildTools: Tool[]): Tool[] {
  * otherwise, false.
  */
 function isMikTeX(): boolean {
-    if (state.isMikTeX === undefined) {
+    if (isMikTeXCache === undefined) {
         try {
             const result = lw.external.sync('pdflatex', ['--version'])
             if (result.error) {
@@ -404,15 +401,15 @@ function isMikTeX(): boolean {
             }
             const log = result.stdout?.toString() ?? ''
             if (log.includes('MiKTeX')) {
-                state.isMikTeX = true
+                isMikTeXCache = true
                 logger.log('`pdflatex` is provided by MiKTeX.')
             } else {
-                state.isMikTeX = false
+                isMikTeXCache = false
             }
         } catch (err) {
             logger.logError('Cannot run `pdflatex` to determine if we are using MiKTeX.', err)
-            state.isMikTeX = false
+            isMikTeXCache = false
         }
     }
-    return state.isMikTeX
+    return isMikTeXCache
 }

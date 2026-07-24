@@ -1,5 +1,20 @@
 # Change Log
 
+## [11.2.9] - 2026-07-24
+
+### Changed
+- Refactor secure configuration inspection so normal and language-specific workspace overrides follow the same policy.
+- Build each fixed recipe invocation from a fresh tool definition instead of mutable shared state.
+
+### Fixed
+- Clear the formatter-in-progress state when `latexindent` exits before execution.
+
+### Security
+- Disable TeX shell escape in the fixed `secure-latexmk` recipe.
+- Keep external formatters, `kpsewhich`, and the native forward SyncTeX helper from running in Restricted Mode.
+- Detect N-API prebuild families in the dependency audit and verify reviewed optional native packages remain excluded from the VSIX.
+- Require Security Guardrails to pass on the default-branch commit before an automatic stable release.
+
 ## [11.2.8] - 2026-07-24
 
 ### Added

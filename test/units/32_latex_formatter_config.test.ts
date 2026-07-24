@@ -2,6 +2,7 @@ import * as sinon from 'sinon'
 import * as vscode from 'vscode'
 import { assert, mock, set, TextDocument, hooks } from './utils'
 import { formatter as latexFormatter } from '../../src/lint/latex-formatter'
+import { latexindent } from '../../src/lint/latex-formatter/latexindent'
 import * as quoteFixer from '../../src/extras/quote-fixer'
 import * as mathFixer from '../../src/extras/math-fixer'
 import { testFileSuiteName } from '../file-name'
@@ -47,5 +48,22 @@ describe(testFileSuiteName(__filename), () => {
 
         assert.deepStrictEqual(edits, [])
         assert.strictEqual(showErrorStub.firstCall?.args[0], 'Unknown LaTeX formatter by `formatting.latex`: broken-formatter .')
+    })
+
+    it('should not run an external formatter in restricted mode', async () => {
+        sinon.stub(vscode.workspace, 'isTrusted').value(false)
+        sinon.stub(vscode.window, 'showWarningMessage')
+        const formatStub = sinon.stub(latexindent, 'formatDocument').resolves(undefined)
+        sinon.stub(quoteFixer, 'fixQuotes').returns([])
+        sinon.stub(mathFixer, 'fixMath').returns([])
+        set.config('formatting.latex', 'latexindent')
+        const document = new TextDocument('/tmp/main.tex', 'Plain text', {})
+        const formattingOptions: vscode.FormattingOptions = { insertSpaces: true, tabSize: 4 }
+        const token = new vscode.CancellationTokenSource().token
+
+        const edits = await latexFormatter.provideDocumentFormattingEdits(document, formattingOptions, token)
+
+        assert.deepStrictEqual(edits, [])
+        assert.ok(formatStub.notCalled)
     })
 })

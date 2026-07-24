@@ -711,6 +711,24 @@ describe(testFileSuiteName(__filename), () => {
     })
 
     describe('kpsewhich', () => {
+        it('should not run kpsewhich in restricted mode', async () => {
+            const trustStub = sinon.stub(vscode.workspace, 'isTrusted').value(false)
+            const originalSpawn = lw.external.spawn
+            let called = false
+            lw.external.spawn = ((..._args) => {
+                called = true
+                return mockKpsewhichProcess({})
+            }) as typeof lw.external.spawn
+            try {
+                const result = await lw.file.kpsewhich('restricted-mode-test.cls')
+                assert.strictEqual(result, undefined)
+                assert.strictEqual(called, false)
+            } finally {
+                lw.external.spawn = originalSpawn
+                trustStub.restore()
+            }
+        })
+
         it('should call kpsewhich with correct arguments', async () => {
             set.config('kpsewhich.path', 'kpse')
             const originalSpawn = lw.external.spawn

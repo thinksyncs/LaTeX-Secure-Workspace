@@ -38,9 +38,11 @@ Risk:
 
 Mitigation:
 
-The secure build disables auto build, ignores custom recipes and custom tools, and ignores external build commands. Manual compilation is limited to a fixed internal recipe so workspace content and settings cannot switch the build command path.
+The secure build disables auto build, ignores custom recipes and custom tools, and ignores external build commands. Manual compilation is limited to a fixed internal recipe so workspace content and settings cannot switch the build command path. The recipe also passes `-no-shell-escape` to `latexmk`, which disables TeX `\write18` command execution.
 
-It also ignores workspace-scoped argument overrides for formatter and linter helper commands so trusted workspaces cannot silently reshape those command lines.
+It also ignores workspace-scoped argument overrides for formatter and linter helper commands so trusted workspaces cannot silently reshape those command lines. Normal and language-specific workspace settings follow the same override policy.
+
+Restricted Mode does not launch external formatters, `kpsewhich`, or the native forward SyncTeX helper. Forward SyncTeX uses the bundled parser instead.
 
 It also uses a fixed internal root-resolution policy for secure build and clean commands, always executes against the resolved main root file, and writes both PDF output and auxiliary files to the resolved root file directory instead of honoring workspace-controlled output-path overrides.
 
@@ -70,7 +72,7 @@ Risk:
 
 Mitigation:
 
-The secure build removes or disables word count, math preview panel, auto-lint execution, and other convenience features that are not required for core authoring. Texdoc and the remaining formatter or linter helper commands require a trusted workspace, block workspace-scoped executable overrides, and require an explicit confirmation prompt before execution.
+The secure build removes or disables word count, math preview panel, auto-lint execution, and other convenience features that are not required for core authoring. Texdoc and external formatter helpers require a trusted workspace and block workspace-scoped executable overrides. Texdoc remains an explicit command.
 
 ### 5. Removed `vsls`-specific handling and legacy compatibility paths
 
@@ -96,7 +98,7 @@ Risk:
 
 Mitigation:
 
-Development dependencies were updated and targeted overrides were added where needed so local audit checks pass cleanly and release tooling remains functional.
+Development dependencies were updated and targeted overrides were added where needed so local audit checks pass cleanly and release tooling remains functional. The native-addon guardrail detects N-API prebuild families as well as install scripts. The optional Node.js canvas backend in `pdfjs-dist` is reviewed separately and accepted only while `.vscodeignore` keeps it out of the browser-only VSIX payload.
 
 ## Security Posture Goals
 

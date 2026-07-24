@@ -533,6 +533,10 @@ async function kpsewhich(target: string, isBib: boolean = false): Promise<string
         logger.log(`kpsewhich promise cache hit on ${query} .`)
         return kpsewhichPromises[query]
     }
+    if (!vscode.workspace.isTrusted) {
+        logger.log(`Skipping kpsewhich lookup for ${query} in restricted mode.`)
+        return undefined
+    }
     const scope = lw.root.file.path ? toUri(lw.root.file.path) : vscode.workspace.workspaceFolders?.[0]?.uri
     const command = getSecureConfigurationValueSync(scope, 'kpsewhich.path', 'kpsewhich')
     logger.log(`Calling ${command} to resolve ${query} .`)

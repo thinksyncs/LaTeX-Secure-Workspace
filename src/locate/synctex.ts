@@ -21,6 +21,7 @@ export const synctex = {
         computeToTeX,
         openTeX,
         getCurrentEditorCoordinates,
+        shouldUseNativeSyncTeX,
         shouldUseExternalViewerForForwardSyncTeX,
         setSynctexToPDFCombinedForTest
     }
@@ -226,16 +227,23 @@ function getCurrentEditorCoordinates(): {line: number, column: number, inputFile
  * @returns an object indicating the PDF file location and whether to show the indicator.
  */
 async function synctexToPDFCombined(line: number, col: number, filePath: string, targetPdfFile: vscode.Uri, indicator: 'none' | 'circle' | 'rectangle'): Promise<SyncTeXRecordToPDF> {
-    try {
-        return await callSyncTeXToPDF(line, col, filePath, targetPdfFile, indicator)
-    } catch {
-        logger.log(`Compute with synctex.js from ${filePath} to ${targetPdfFile} on line ${line}.`)
-        const record = await syncTeXToPDF(line, filePath, targetPdfFile)
-        if (!record) {
-            throw new Error('Failed to compute the SyncTeX record.')
+    if (shouldUseNativeSyncTeX()) {
+        try {
+            return await callSyncTeXToPDF(line, col, filePath, targetPdfFile, indicator)
+        } catch {
+            logger.log('Native forward SyncTeX failed; using the bundled parser.')
         }
-        return record
     }
+    logger.log(`Compute with synctex.js from ${filePath} to ${targetPdfFile} on line ${line}.`)
+    const record = await syncTeXToPDF(line, filePath, targetPdfFile)
+    if (!record) {
+        throw new Error('Failed to compute the SyncTeX record.')
+    }
+    return record
+}
+
+function shouldUseNativeSyncTeX(): boolean {
+    return vscode.workspace.isTrusted
 }
 
 type SynctexToPDFCombined = typeof synctexToPDFCombined

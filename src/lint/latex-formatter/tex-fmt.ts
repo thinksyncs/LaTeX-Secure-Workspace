@@ -2,7 +2,7 @@ import * as vscode from 'vscode'
 import * as path from 'path'
 import { lw } from '../../lw'
 import { LaTeXFormatter } from '../../types'
-import { confirmWorkspaceCommandExecution, getSecureConfigurationValue } from '../../utils/security'
+import { confirmWorkspaceCommandExecution, getSecureConfigurationValue, requireTrustedWorkspace } from '../../utils/security'
 import { replaceArgumentPlaceholders } from '../../utils/utils'
 
 
@@ -13,6 +13,9 @@ export const texfmt: LaTeXFormatter = {
 }
 
 async function formatDocument(document: vscode.TextDocument, range?: vscode.Range): Promise<vscode.TextEdit | undefined> {
+    if (!requireTrustedWorkspace('LaTeX formatting')) {
+        return
+    }
     const program = await getSecureConfigurationValue(document.uri, 'formatting.tex-fmt.path', 'tex-fmt')
     if (!await confirmWorkspaceCommandExecution(document.uri, 'formatting.tex-fmt.path', program)) {
         return

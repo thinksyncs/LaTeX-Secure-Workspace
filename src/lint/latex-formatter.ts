@@ -5,6 +5,7 @@ import { latexindent } from './latex-formatter/latexindent'
 import { texfmt } from './latex-formatter/tex-fmt'
 import { fixQuotes } from '../extras/quote-fixer'
 import { fixMath } from '../extras/math-fixer'
+import { requireTrustedWorkspace } from '../utils/security'
 
 const logger = lw.log('Format', 'LaTeX')
 
@@ -17,8 +18,14 @@ class FormattingProvider implements vscode.DocumentFormattingEditProvider, vscod
         const config = vscode.workspace.getConfiguration('latex-workshop')
         const program = config.get('formatting.latex') as string
         if (program === 'latexindent') {
+            if (!requireTrustedWorkspace('LaTeX formatting')) {
+                return undefined
+            }
             return latexindent
         } else if (program === 'tex-fmt') {
+            if (!requireTrustedWorkspace('LaTeX formatting')) {
+                return undefined
+            }
             return texfmt
         } else if (program === 'none') {
             return undefined

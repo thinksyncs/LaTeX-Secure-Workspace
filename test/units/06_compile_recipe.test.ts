@@ -162,6 +162,7 @@ describe(testFileSuiteName(__filename), () => {
             const step = queue.getStep()
             assert.ok(step)
             assert.ok(step.args?.includes('-norc'))
+            assert.ok(step.args?.includes('-no-shell-escape'))
             assert.ok(step.args?.includes(normalizedRootFile.replace('.tex', '')))
             assert.ok(step.args?.includes(`-outdir=${normalizedRootDir}`))
             assert.ok(step.args?.includes(`-auxdir=${normalizedRootDir}`))

@@ -21,7 +21,7 @@ LaTeX Workspace Security is best for controlled workspaces that need manual LaTe
 ## Requirements
 
 - A local TeX distribution that provides `latexmk` and `pdflatex` is required for local builds.
-- `kpsewhich` supports TeX file lookup, and `synctex` supports source/PDF synchronization.
+- In trusted workspaces, `kpsewhich` supports TeX file lookup and the native `synctex` helper can accelerate forward synchronization. Restricted Mode uses the bundled SyncTeX parser without launching these helpers.
 - On macOS, the extension automatically adds the standard MacTeX path `/Library/TeX/texbin` when it exists.
 - Build, clean, kill, and reveal-output commands require a trusted, non-virtual workspace.
 
@@ -46,7 +46,7 @@ For repository organization and cleanup rules, see [Repository Layout](./docs/ma
 | Workflow | Included behavior |
 | --- | --- |
 | Editing | Project-local completion for citations, labels, commands, environments, classes, packages, and input paths; snippets, wrapping, outline, and hover help. |
-| Build | Explicit manual build with the fixed `secure-latexmk` PDF profile; fixed root and output policy; no workspace-selected command path. |
+| Build | Explicit manual build with the fixed `secure-latexmk` PDF profile and shell escape disabled; fixed root and output policy; no workspace-selected command path. |
 | Environment | Preflight checks for `latexmk` and `pdflatex`, tool versions in Secure Build Status, standard MacTeX PATH recovery, and targeted missing-resource guidance. |
 | PDF | Local VS Code tab viewer with refresh and forward/reverse SyncTeX inside the bundled viewer path. |
 | Diagnostics | LaTeX log parsing, Problems-panel diagnostics, graphics checks, compiler log access, and actionable environment failures. |
@@ -54,7 +54,7 @@ For repository organization and cleanup rules, see [Repository Layout](./docs/ma
 
 ## Build Behavior
 
-- Build LaTeX documents manually with the fixed internal `secure-latexmk` recipe. The recipe invokes `latexmk` with a fixed PDF-oriented profile and ignores workspace-selected recipes, tools, external build commands, and build-control magic comments.
+- Build LaTeX documents manually with the fixed internal `secure-latexmk` recipe. The recipe invokes `latexmk` with `-norc` and `-no-shell-escape` in a fixed PDF-oriented profile, and ignores workspace-selected recipes, tools, external build commands, and build-control magic comments.
 - Check the required local tools before spawning the build. A missing or broken `latexmk`/`pdflatex` installation stops before compilation and reports macOS, Windows, or Linux recovery guidance.
 - Report a missing `.sty`, `.cls`, or related TeX resource directly, with guidance to check project files or the providing TeX package.
 - Resolve the build root with a fixed internal policy and always run manual build and clean against the resolved main root file. Secure build and viewer flows do not honor file-level `%!TEX root` comments.
@@ -70,7 +70,8 @@ The following surfaces remain present only in a narrowed form.
 - Auto-build settings are retained for compatibility but cannot start TeX; compilation requires an explicit build command.
 - Secure build and viewer flows use the resolved main root file and ignore root-changing magic comments.
 - Build outputs and auxiliary files are resolved in the root file directory instead of workspace-controlled output or auxiliary directories.
-- Texdoc, formatter, and linter helper commands block workspace-scoped executable overrides and require confirmation before command execution.
+- Texdoc and external formatter helpers require a trusted workspace. Workspace-scoped executable and argument overrides are blocked or ignored; Texdoc runs only from an explicit command.
+- Restricted Mode skips `kpsewhich`, external formatters, and the native forward SyncTeX helper. Forward SyncTeX falls back to the bundled parser.
 - The `external` PDF viewer setting is retained for compatibility, but this secure build still opens PDFs in the internal tab viewer.
 
 ## Not Included In This Secure Build

@@ -13,6 +13,8 @@ const nativeDependencyNames = new Set([
     'prebuildify'
 ])
 const nativeScriptPattern = /\b(?:node-gyp|node-pre-gyp|prebuild|prebuild-install)\b|\.node\b/
+const nativePackageNamePattern = /^@(?:napi-rs|node-rs)\//
+const reviewedPdfjsCanvasReason = 'optional pdfjs-dist Node.js canvas backend; excluded from the browser-only VSIX payload'
 
 function packageNameFromLockPath(lockPath) {
     const normalizedPath = lockPath.replace(/^node_modules\//, '')
@@ -20,7 +22,7 @@ function packageNameFromLockPath(lockPath) {
     return parts[parts.length - 1]
 }
 
-function findNativeIndicators(pkg) {
+function findNativeIndicators(packageName, pkg) {
     const indicators = []
     const dependencyGroups = [
         pkg.dependencies ?? {},
@@ -30,6 +32,9 @@ function findNativeIndicators(pkg) {
 
     if (pkg.gypfile) {
         indicators.push('gypfile')
+    }
+    if (nativePackageNamePattern.test(packageName)) {
+        indicators.push('package:native-prebuild-family')
     }
 
     for (const dependencies of dependencyGroups) {
@@ -49,29 +54,78 @@ function findNativeIndicators(pkg) {
     return indicators
 }
 
+function getReviewedRuntimeNativePackages(packages) {
+    const pdfjsOptionalDependencies = packages['node_modules/pdfjs-dist']?.optionalDependencies ?? {}
+    if (!Object.hasOwn(pdfjsOptionalDependencies, '@napi-rs/canvas')) {
+        return new Map()
+    }
+    const canvasOptionalDependencies = packages['node_modules/@napi-rs/canvas']?.optionalDependencies ?? {}
+    return new Map([
+        ['@napi-rs/canvas', reviewedPdfjsCanvasReason],
+        ...Object.keys(canvasOptionalDependencies).map(packageName => [packageName, reviewedPdfjsCanvasReason])
+    ])
+}
+
+function unignoreRuleCouldIncludePackage(rule, packageName) {
+    if (!rule.startsWith('!node_modules/')) {
+        return false
+    }
+    const packagePath = `node_modules/${packageName}`
+    const staticPrefix = rule.slice(1).split('*', 1)[0]
+    return packagePath.startsWith(staticPrefix) || staticPrefix.startsWith(`${packagePath}/`)
+}
+
+async function verifyReviewedRuntimeExclusions(reviewedPackages) {
+    if (reviewedPackages.length === 0) {
+        return
+    }
+    const ignorePath = path.join(workspaceRoot, '.vscodeignore')
+    const ignoreRules = (await fs.readFile(ignorePath, 'utf8'))
+        .split(/\r?\n/)
+        .map(line => line.trim())
+        .filter(line => line !== '' && !line.startsWith('#'))
+
+    if (!ignoreRules.includes('node_modules/**')) {
+        throw new Error('.vscodeignore must exclude node_modules/** before reviewed browser assets are selectively included.')
+    }
+    for (const pkg of reviewedPackages) {
+        const includingRules = ignoreRules.filter(rule => unignoreRuleCouldIncludePackage(rule, pkg.name))
+        if (includingRules.length > 0) {
+            throw new Error(`Reviewed native package ${pkg.name} may be included by .vscodeignore rule(s): ${includingRules.join(', ')}`)
+        }
+    }
+}
+
 async function main() {
     const lockPath = path.join(workspaceRoot, 'package-lock.json')
     const lock = JSON.parse(await fs.readFile(lockPath, 'utf8'))
     const packages = lock.packages ?? {}
+    const reviewedRuntimePackagesByName = getReviewedRuntimeNativePackages(packages)
     const nativePackages = []
 
     for (const [lockPackagePath, pkg] of Object.entries(packages)) {
         if (!lockPackagePath.startsWith('node_modules/')) {
             continue
         }
-        const indicators = findNativeIndicators(pkg)
+        const packageName = packageNameFromLockPath(lockPackagePath)
+        const indicators = findNativeIndicators(packageName, pkg)
         if (indicators.length === 0) {
             continue
         }
         nativePackages.push({
-            name: packageNameFromLockPath(lockPackagePath),
+            name: packageName,
             lockPath: lockPackagePath,
             devOnly: pkg.dev === true,
-            indicators
+            indicators,
+            reviewedRuntimeReason: pkg.dev === true ? undefined : reviewedRuntimePackagesByName.get(packageName)
         })
     }
 
     const runtimeNativePackages = nativePackages.filter(pkg => !pkg.devOnly)
+    const reviewedRuntimePackages = runtimeNativePackages.filter(pkg => pkg.reviewedRuntimeReason !== undefined)
+    const unreviewedRuntimePackages = runtimeNativePackages.filter(pkg => pkg.reviewedRuntimeReason === undefined)
+    await verifyReviewedRuntimeExclusions(reviewedRuntimePackages)
+
     console.log('Native/prebuild dependency audit')
     if (nativePackages.length === 0) {
         console.log('No native addon indicators found in package-lock.json.')
@@ -79,16 +133,21 @@ async function main() {
     }
 
     for (const pkg of nativePackages) {
-        const scope = pkg.devOnly ? 'dev-only' : 'runtime'
-        console.log(`- ${pkg.name} (${scope}): ${pkg.indicators.join(', ')}`)
+        const scope = pkg.devOnly ? 'dev-only' : pkg.reviewedRuntimeReason ? 'runtime, reviewed and VSIX-excluded' : 'runtime'
+        const reason = pkg.reviewedRuntimeReason ? `; ${pkg.reviewedRuntimeReason}` : ''
+        console.log(`- ${pkg.name} (${scope}): ${pkg.indicators.join(', ')}${reason}`)
     }
 
-    if (runtimeNativePackages.length > 0) {
-        console.error('Runtime native addon indicators found. Keep extension runtime dependencies JavaScript-only unless explicitly reviewed.')
+    if (unreviewedRuntimePackages.length > 0) {
+        console.error('Unreviewed runtime native addon indicators found. Keep the shipped extension runtime JavaScript-only unless explicitly reviewed and excluded.')
         process.exit(1)
     }
 
-    console.log('No runtime native addon indicators found.')
+    if (reviewedRuntimePackages.length > 0) {
+        console.log('No unreviewed native addon indicators are eligible for the VSIX payload.')
+    } else {
+        console.log('No runtime native addon indicators found.')
+    }
 }
 
 main().catch(error => {

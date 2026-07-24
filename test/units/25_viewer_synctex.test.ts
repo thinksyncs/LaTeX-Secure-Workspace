@@ -147,6 +147,12 @@ describe(testFileSuiteName(__filename), () => {
         assert.strictEqual(synctex.components.shouldUseExternalViewerForForwardSyncTeX('tabOrBrowser', 'tab'), false)
     })
 
+    it('should use the bundled SyncTeX parser in restricted mode', () => {
+        sinon.stub(vscode.workspace, 'isTrusted').value(false)
+
+        assert.strictEqual(synctex.components.shouldUseNativeSyncTeX(), false)
+    })
+
     it('should deliver forward SyncTeX records to the internal viewer', async () => {
         const rootFile = '/tmp/main.tex'
         const pdfUri = vscode.Uri.file('/tmp/.lw-security/main.pdf')

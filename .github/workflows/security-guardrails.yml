@@ -1,6 +1,8 @@
 name: Security Guardrails
 
 on:
+  push:
+    branches: [master, main]
   pull_request:
 
 permissions:
@@ -85,7 +87,10 @@ jobs:
       - name: Ensure green CI can publish a stable release
         run: |
           file=.github/workflows/auto-stable-release.yml
+          grep -q '^  push:' .github/workflows/security-guardrails.yml || { echo "Security Guardrails must run on default-branch pushes."; exit 1; }
           grep -q 'workflow_run:' "$file" || { echo "Auto stable release must be gated by workflow_run."; exit 1; }
+          grep -A12 '^  workflow_run:' "$file" | grep -q -- '- Security Guardrails' || { echo "Security Guardrails must trigger auto stable release after completion."; exit 1; }
+          grep -q 'AUTORELEASE_REQUIRED_WORKFLOWS:.*Security Guardrails' "$file" || { echo "Auto stable release must require Security Guardrails."; exit 1; }
           checkout_block="$(grep -A4 'name: Checkout trusted release automation' "$file")"
           echo "$checkout_block" | grep -q 'github.event.repository.default_branch' || { echo "Auto stable release must checkout trusted default-branch automation."; exit 1; }
           ! echo "$checkout_block" | grep -q 'workflow_run.head_sha' || { echo "Auto stable release must not checkout event-supplied code."; exit 1; }

@@ -5,7 +5,7 @@ import { lw } from '../lw'
 const logger = lw.log('Security')
 
 const warnedWorkspaceCommands = new Set<string>()
-const approvedWorkspaceCommands = new Set<string>()
+const warnedRestrictedFeatures = new Set<string>()
 const blockedWorkspaceOverrides = new Set<string>()
 const blockedWorkspaceCommands = new Set<string>()
 const ignoredWorkspaceOverrides = new Set<string>()
@@ -14,7 +14,17 @@ type InspectValue<T> = {
     defaultValue?: T,
     globalValue?: T,
     workspaceValue?: T,
-    workspaceFolderValue?: T
+    workspaceFolderValue?: T,
+    defaultLanguageValue?: T,
+    globalLanguageValue?: T,
+    workspaceLanguageValue?: T,
+    workspaceFolderLanguageValue?: T
+}
+
+type WorkspaceOverride<T> = {
+    scope: 'workspace' | 'workspace folder',
+    value: T,
+    languageSpecific: boolean
 }
 
 function getScopeKey(scope?: vscode.ConfigurationScope): string {
@@ -30,36 +40,60 @@ function getScopeKey(scope?: vscode.ConfigurationScope): string {
     return JSON.stringify(scope)
 }
 
-export async function confirmWorkspaceCommandExecution(scope: vscode.ConfigurationScope | undefined, section: string, command: string): Promise<boolean> {
+function getWorkspaceOverride<T>(inspect: InspectValue<T>): WorkspaceOverride<T> | undefined {
+    if (inspect.workspaceFolderLanguageValue !== undefined) {
+        return { scope: 'workspace folder', value: inspect.workspaceFolderLanguageValue, languageSpecific: true }
+    }
+    if (inspect.workspaceLanguageValue !== undefined) {
+        return { scope: 'workspace', value: inspect.workspaceLanguageValue, languageSpecific: true }
+    }
+    if (inspect.workspaceFolderValue !== undefined) {
+        return { scope: 'workspace folder', value: inspect.workspaceFolderValue, languageSpecific: false }
+    }
+    if (inspect.workspaceValue !== undefined) {
+        return { scope: 'workspace', value: inspect.workspaceValue, languageSpecific: false }
+    }
+    return undefined
+}
+
+function getOverrideLabel(override: WorkspaceOverride<unknown>): string {
+    return `${override.languageSpecific ? 'language-specific ' : ''}${override.scope}`
+}
+
+export function requireTrustedWorkspace(feature: string, notify: boolean = true): boolean {
+    if (vscode.workspace.isTrusted) {
+        return true
+    }
+    logger.log(`${feature} is disabled in restricted mode.`)
+    if (notify && !warnedRestrictedFeatures.has(feature)) {
+        warnedRestrictedFeatures.add(feature)
+        void vscode.window.showWarningMessage(`${feature} is disabled in restricted mode. Trust the workspace to enable it.`)
+    }
+    return false
+}
+
+export async function confirmWorkspaceCommandExecution(scope: vscode.ConfigurationScope | undefined, section: string, _command: string): Promise<boolean> {
     const configuration = vscode.workspace.getConfiguration('latex-workshop', scope)
     const inspect = configuration.inspect<string>(section)
     if (!inspect) {
         return true
     }
 
-    let configScope: 'workspace' | 'workspace folder' | undefined
-    if (inspect.workspaceFolderValue !== undefined) {
-        configScope = 'workspace folder'
-    } else if (inspect.workspaceValue !== undefined) {
-        configScope = 'workspace'
-    }
-    if (!configScope) {
+    const override = getWorkspaceOverride(inspect)
+    if (!override) {
         return true
     }
 
-    const key = `${section}:${command}:${configScope}:${getScopeKey(scope)}`
-    if (approvedWorkspaceCommands.has(key)) {
-        return true
-    }
-
+    const configScope = getOverrideLabel(override)
+    const key = `${section}:${String(override.value)}:${configScope}:${getScopeKey(scope)}`
     if (blockedWorkspaceCommands.has(key)) {
         return false
     }
     blockedWorkspaceCommands.add(key)
 
-    logger.log(`Workspace-scoped command blocked for latex-workshop.${section}: ${command}`)
+    logger.log(`Workspace-scoped command blocked for latex-workshop.${section}: ${String(override.value)}`)
     const selection = await vscode.window.showWarningMessage(
-        `The ${configScope} setting "latex-workshop.${section}" is disabled in this secure build. Move "${command}" to your user settings if you still need it.`,
+        `The ${configScope} setting "latex-workshop.${section}" is disabled in this secure build. Move "${String(override.value)}" to your user settings if you still need it.`,
         { modal: true },
         'Open Settings'
     )
@@ -76,19 +110,13 @@ export function warnWorkspaceCommandSetting(scope: vscode.ConfigurationScope | u
         return
     }
 
-    let configScope: 'workspace' | 'workspace folder' | undefined
-    let command: string | undefined
-    if (inspect.workspaceFolderValue !== undefined) {
-        configScope = 'workspace folder'
-        command = inspect.workspaceFolderValue
-    } else if (inspect.workspaceValue !== undefined) {
-        configScope = 'workspace'
-        command = inspect.workspaceValue
-    }
-    if (!configScope || !command) {
+    const override = getWorkspaceOverride(inspect)
+    if (!override || !override.value) {
         return
     }
 
+    const configScope = getOverrideLabel(override)
+    const command = override.value
     const key = `${section}:${command}:${configScope}:${getScopeKey(scope)}`
     if (warnedWorkspaceCommands.has(key)) {
         return
@@ -114,16 +142,12 @@ export async function confirmNoWorkspaceConfigurationOverride(scope: vscode.Conf
         return true
     }
 
-    let configScope: 'workspace' | 'workspace folder' | undefined
-    if (inspect.workspaceFolderValue !== undefined) {
-        configScope = 'workspace folder'
-    } else if (inspect.workspaceValue !== undefined) {
-        configScope = 'workspace'
-    }
-    if (!configScope) {
+    const override = getWorkspaceOverride(inspect)
+    if (!override) {
         return true
     }
 
+    const configScope = getOverrideLabel(override)
     const key = `${section}:${configScope}:${getScopeKey(scope)}`
     if (blockedWorkspaceOverrides.has(key)) {
         return false
@@ -143,7 +167,7 @@ export async function confirmNoWorkspaceConfigurationOverride(scope: vscode.Conf
 }
 
 function getNonWorkspaceValue<T>(inspect: InspectValue<T>, fallback: T): T {
-    return inspect.globalValue ?? inspect.defaultValue ?? fallback
+    return inspect.globalLanguageValue ?? inspect.defaultLanguageValue ?? inspect.globalValue ?? inspect.defaultValue ?? fallback
 }
 
 export function getSecureConfigurationValueSync<T>(scope: vscode.ConfigurationScope | undefined, section: string, fallback: T): T {
@@ -153,8 +177,9 @@ export function getSecureConfigurationValueSync<T>(scope: vscode.ConfigurationSc
         return fallback
     }
 
-    if (inspect.workspaceFolderValue !== undefined || inspect.workspaceValue !== undefined) {
-        const configScope = inspect.workspaceFolderValue !== undefined ? 'workspace folder' : 'workspace'
+    const override = getWorkspaceOverride(inspect)
+    if (override) {
+        const configScope = getOverrideLabel(override)
         const key = `${section}:${configScope}:${getScopeKey(scope)}`
         if (!ignoredWorkspaceOverrides.has(key)) {
             ignoredWorkspaceOverrides.add(key)

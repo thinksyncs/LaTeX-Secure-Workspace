@@ -3,6 +3,7 @@ import * as vscode from 'vscode'
 import { getAvailableRecipes } from '../compile/recipe'
 import { showSecureBuildStatus, showSecureModeReport } from './secure-status'
 import { lw } from '../lw'
+import { requireTrustedWorkspace } from '../utils/security'
 import { getSurroundingMacroRange, stripText } from '../utils/utils'
 
 const logger = lw.log('Commander')
@@ -10,15 +11,6 @@ const logger = lw.log('Commander')
 function showDisabledFeature(feature: string) {
     logger.log(`${feature} is disabled in this secure build.`)
     void vscode.window.showWarningMessage(`${feature} is disabled in this secure build.`)
-}
-
-function requireTrustedWorkspace(feature: string): boolean {
-    if (vscode.workspace.isTrusted) {
-        return true
-    }
-    logger.log(`${feature} is disabled in restricted mode.`)
-    void vscode.window.showWarningMessage(`${feature} is disabled in restricted mode. Trust the workspace to enable it.`)
-    return false
 }
 
 export function hostPort() {
