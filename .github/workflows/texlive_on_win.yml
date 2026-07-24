@@ -33,10 +33,10 @@ jobs:
           ${{ env.cache-version }}-${{ runner.os }}-texlive-essential
     - name: Download install-tl.zip
       run: |
-        if ! command -v gpg >/dev/null 2>&1; then
-          choco.exe install gnupg --no-progress -y
-          export PATH="/c/ProgramData/chocolatey/bin:/c/Program Files (x86)/GnuPG/bin:/c/Program Files/GnuPG/bin:$PATH"
-        fi
+        command -v gpg >/dev/null 2>&1 || {
+          echo 'GnuPG is required on the Windows runner.' >&2
+          exit 1
+        }
         gpg --version
         download_and_verify() {
           curl.exe --fail --show-error --silent --location --proto "=https" --tlsv1.2 -o install-tl.zip "$TEXLIVE_BOOTSTRAP_REPOSITORY/install-tl.zip"
@@ -74,11 +74,7 @@ jobs:
     - name: Trust TeX Live signing key
       shell: pwsh
       run: |
-        if (-not (Get-Command gpg -ErrorAction SilentlyContinue)) {
-          choco.exe install gnupg --no-progress -y
-          $env:PATH = "C:\ProgramData\chocolatey\bin;C:\Program Files (x86)\GnuPG\bin;C:\Program Files\GnuPG\bin;$env:PATH"
-        }
-        $gpg = (Get-Command gpg).Source
+        $gpg = (Get-Command gpg -ErrorAction Stop).Source
         curl.exe --fail --show-error --silent --location --proto "=https" --tlsv1.2 -o texlive.asc https://tug.org/texlive/files/texlive.asc
         $fingerprint = (& $gpg --show-keys --with-colons texlive.asc | Select-String '^fpr:' | Select-Object -First 1).ToString().Split(':')[9]
         if ($fingerprint -ne $env:TEXLIVE_KEY_FINGERPRINT) {
