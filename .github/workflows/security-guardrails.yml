@@ -113,9 +113,11 @@ jobs:
       - name: Ensure shared publish action covers both registry credentials
         run: |
           file=.github/actions/publish-extension/action.yml
-          grep -q 'VSCE_PAT' "$file" || { echo "Missing VSCE_PAT handling in $file"; exit 1; }
-          grep -q 'OVSX_PAT' "$file" || { echo "Missing OVSX_PAT handling in $file"; exit 1; }
           grep -q 'resolvePublishPlan.mjs' "$file" || { echo "Missing shared publish-plan resolver in $file"; exit 1; }
+          grep -q 'VSCE_STORE: file' "$file" || { echo "Marketplace publication must use the inherited VSCE_PAT environment."; exit 1; }
+          grep -q 'OVSX_PAT' "$file" || { echo "Missing Open VSX credential use in $file"; exit 1; }
+          grep -q 'VSCE_PAT' dev/resolvePublishPlan.mjs || { echo "Missing VSCE_PAT validation in the publish-plan resolver."; exit 1; }
+          grep -q 'OVSX_PAT' dev/resolvePublishPlan.mjs || { echo "Missing OVSX_PAT validation in the publish-plan resolver."; exit 1; }
 
       - name: Ensure release docs match fail-closed publish behavior
         run: |
