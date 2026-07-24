@@ -1,5 +1,4 @@
 import fs from 'fs'
-import path from 'path'
 
 export const MAC_TEX_BIN = '/Library/TeX/texbin'
 
@@ -12,11 +11,11 @@ export function ensureMacTeXBinOnPath(
         return false
     }
 
-    const entries = (env.PATH ?? '').split(path.delimiter).filter(Boolean)
+    const entries = (env.PATH ?? '').split(':').filter(Boolean)
     if (entries.includes(MAC_TEX_BIN)) {
         return false
     }
 
-    env.PATH = [MAC_TEX_BIN, ...entries].join(path.delimiter)
+    env.PATH = [MAC_TEX_BIN, ...entries].join(':')
     return true
 }
