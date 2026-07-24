@@ -2,6 +2,14 @@ import * as path from 'path'
 import * as vscode from 'vscode'
 import { getAvailableRecipes } from '../compile/recipe'
 import { lw } from '../lw'
+import { getSecureConfigurationValueSync } from '../utils/security'
+import {
+    getTexEnvironmentInstallAdvice,
+    inspectTexEnvironment,
+    TEX_TOOL_DEFINITIONS,
+    type TexToolRunner,
+    type TexToolStatus
+} from '../utils/tex-environment'
 
 type ReportKind = 'status' | 'mode'
 
@@ -59,6 +67,18 @@ async function renderReport(kind: ReportKind): Promise<string> {
     const auxDir = rootFile ? resolveAgainstRoot(rootFile, lw.file.getSecurityAuxDir(rootFile)) : undefined
     const outDir = rootFile ? resolveAgainstRoot(rootFile, lw.file.getSecurityOutDir(rootFile)) : undefined
     const ignoredSettings = collectOverriddenRestrictedSettings(rootFile ? lw.file.toUri(rootFile) : undefined)
+    const configurationScope = rootFile ? lw.file.toUri(rootFile) : workspaceScope
+    const dockerEnabled = getSecureConfigurationValueSync(configurationScope, 'docker.enabled', false)
+    const texTools = inspectTexEnvironment(lw.external.sync as TexToolRunner, TEX_TOOL_DEFINITIONS)
+    const dockerTool = dockerEnabled
+        ? inspectTexEnvironment(lw.external.sync as TexToolRunner, [{
+            command: getSecureConfigurationValueSync(configurationScope, 'docker.path', 'docker') || 'docker',
+            args: ['--version'],
+            purpose: 'container build runtime',
+            requiredForBuild: true
+        }])[0]
+        : undefined
+    const buildReady = dockerTool?.available ?? texTools.filter(tool => tool.requiredForBuild).every(tool => tool.available)
     const title = kind === 'status' ? 'Secure Build Status' : 'Secure Mode Report'
     const lines = [
         `# ${title}`,
@@ -72,6 +92,17 @@ async function renderReport(kind: ReportKind): Promise<string> {
         `- Auxiliary directory: ${auxDir ?? '(not resolved)'}`,
         `- Build profile: ${recipe?.name ?? '(none)'}`,
         `- Build command: ${formatRecipe(recipe)}`,
+        '',
+        '## LaTeX Environment',
+        '',
+        `- Execution mode: ${dockerEnabled ? 'Docker' : 'local TeX installation'}`,
+        `- Build toolchain ready: ${buildReady ? 'yes' : 'no'}`,
+        ...(dockerTool ? [formatTexToolStatus(dockerTool)] : []),
+        ...texTools.map(formatTexToolStatus),
+        `- Process PATH: \`${escapeInlineCode(process.env.PATH ?? '(unset)')}\``,
+        ...(!buildReady ? [
+            `- Guidance: ${dockerEnabled ? 'Verify that Docker is installed and running and that the configured Docker command is available, then reload VS Code.' : getTexEnvironmentInstallAdvice()}`
+        ] : []),
         ''
     ]
 
@@ -132,6 +163,18 @@ function formatRecipe(recipe: Awaited<ReturnType<typeof getAvailableRecipes>>[nu
         }
         return [tool.command, ...(tool.args ?? [])].join(' ')
     }).join(' -> ')
+}
+
+function formatTexToolStatus(tool: TexToolStatus): string {
+    const requirement = tool.requiredForBuild ? 'required' : 'optional'
+    const detail = tool.available
+        ? `available${tool.summary ? ` - ${escapeInlineCode(tool.summary)}` : ''}`
+        : `unavailable${tool.error ? ` - ${escapeInlineCode(tool.error)}` : ''}`
+    return `- \`${escapeInlineCode(tool.command)}\` (${requirement}; ${tool.purpose}): ${detail}`
+}
+
+function escapeInlineCode(value: string): string {
+    return value.replaceAll('`', '\'')
 }
 
 function isVirtualWorkspace(): boolean {

@@ -4,6 +4,14 @@ import micromatch from 'micromatch'
 import * as path from 'path'
 import { lw } from '../lw'
 import type { ProcessEnv, RecipeStep, Step } from '../types'
+import { getSecureConfigurationValueSync } from '../utils/security'
+import {
+    getLatexBuildFailureMessage,
+    getMissingBuildToolsMessage,
+    inspectTexEnvironment,
+    REQUIRED_BUILD_TOOL_DEFINITIONS,
+    type TexToolRunner
+} from '../utils/tex-environment'
 import { build as buildRecipe } from './recipe'
 import { queue } from './queue'
 
@@ -19,9 +27,8 @@ lw.watcher.src.onChange(filePath => autoBuild(filePath.fsPath, 'onFileChange'))
 lw.watcher.bib.onChange(filePath => autoBuild(filePath.fsPath, 'onFileChange', true))
 
 /**
- * Triggers auto build based on file change or file save events. If the
- * configuration allows auto-build for the given event type, it initiates the
- * build process for the affected file.
+ * Ignores configured auto-build requests. Secure builds require an explicit
+ * user command so opening or saving workspace content cannot start TeX.
  *
  * @param {string} file - The path of the file that triggered the auto build.
  * @param {'onFileChange' | 'onSave'} type - The type of event that triggered
@@ -34,22 +41,8 @@ function autoBuild(file: string, type: 'onFileChange' | 'onSave', bibChanged: bo
     if (configuration.get('latex.autoBuild.run') as string !== type) {
         return
     }
-    logger.log('Auto build started ' + (type === 'onFileChange' ? 'detecting the change of a file' : 'on saving file') + `: ${file} .`)
-    lw.event.fire(lw.event.AutoBuildInitiated, {type, file})
-    if (!canAutoBuild(file)) {
-        logger.log('Autobuild temporarily disabled.')
-        return
-    }
-    lw.compile.lastAutoBuildTime = Date.now()
-    if (!bibChanged && lw.root.subfiles.path && configuration.get('latex.rootFile.useSubFile')) {
-        return build(true, lw.root.subfiles.path, lw.root.subfiles.langId)
-    }
-    return build(true, lw.root.file.path, lw.root.file.langId)
-}
-
-function canAutoBuild(file: string): boolean {
-    const configuration = vscode.workspace.getConfiguration('latex-workshop', lw.file.toUri(file))
-    return Date.now() - lw.compile.lastAutoBuildTime >= (configuration.get('latex.autoBuild.interval', 1000) as number)
+    void bibChanged
+    logger.log(`Auto build request ignored in this secure build (${type}): ${file}`)
 }
 
 /**
@@ -92,6 +85,7 @@ async function build(skipSelection: boolean = false, rootFile: string | undefine
     const activeEditor = vscode.window.activeTextEditor ?? lw.previousActive
     if (!activeEditor) {
         logger.log('Cannot start to build because the active editor is undefined.')
+        void logger.showErrorMessageWithExtensionLogButton('Cannot start secure build because no LaTeX editor is active. Open a LaTeX document and try again.')
         return
     }
 
@@ -111,12 +105,38 @@ async function build(skipSelection: boolean = false, rootFile: string | undefine
     }
     if (rootFile === undefined || languageId === undefined) {
         logger.log('Cannot find LaTeX root file. See https://github.com/James-Yu/LaTeX-Workshop/wiki/Compile#the-root-file')
+        void logger.showErrorMessageWithExtensionLogButton('Cannot find a LaTeX root file. Open the main TeX document and try again.')
         return
     }
     void skipSelection
 
+    if (!isBuildEnvironmentReady(lw.file.toUri(rootFile))) {
+        return
+    }
+
     logger.log(`Building root file: ${rootFile}`)
     await buildRecipe(rootFile, languageId, buildLoop, recipe)
+}
+
+function isBuildEnvironmentReady(scope: vscode.ConfigurationScope): boolean {
+    const dockerEnabled = getSecureConfigurationValueSync(scope, 'docker.enabled', false)
+    const definitions = dockerEnabled
+        ? [{
+            command: getSecureConfigurationValueSync(scope, 'docker.path', 'docker') || 'docker',
+            args: ['--version'],
+            purpose: 'container build runtime',
+            requiredForBuild: true
+        }]
+        : REQUIRED_BUILD_TOOL_DEFINITIONS
+    const statuses = inspectTexEnvironment(lw.external.sync as TexToolRunner, definitions)
+    const missing = statuses.filter(status => !status.available)
+    if (missing.length === 0) {
+        return true
+    }
+    logger.log(`Required LaTeX tools unavailable: ${missing.map(status => `${status.command}: ${status.error}`).join('; ')}`)
+    logger.refreshStatus('x', 'errorForeground', undefined, 'error')
+    void logger.showErrorMessageWithExtensionLogButton(getMissingBuildToolsMessage(statuses))
+    return false
 }
 
 /**
@@ -276,7 +296,7 @@ async function monitorProcess(step: Step, env: ProcessEnv): Promise<boolean> {
             return
         }
         lw.compile.process.on('error', err => {
-            handleProcessError(env, stderr, err)
+            handleProcessError(step, env, stderr, err)
             resolve(false)
         })
 
@@ -299,7 +319,7 @@ async function monitorProcess(step: Step, env: ProcessEnv): Promise<boolean> {
                 return
             }
 
-            handleExitCodeError(step, env, stderr, code, signal)
+            handleExitCodeError(step, env, stdout, stderr, code, signal)
             resolve(false)
         })
     })
@@ -312,25 +332,33 @@ async function monitorProcess(step: Step, env: ProcessEnv): Promise<boolean> {
  * function logs the error, refreshes the status, and shows an error message
  * to the user.
  *
+ * @param {Step} step - The recipe step that failed to spawn.
  * @param {ProcessEnv} env - The process environment passed to the spawned
  * process.
  * @param {string} stderr - The stderr output of the process.
  * @param {Error} err - The error object representing the error.
  */
-function handleProcessError(env: ProcessEnv, stderr: string, err: Error) {
+function handleProcessError(step: Step, env: ProcessEnv, stderr: string, err: Error) {
     logger.logError(`LaTeX fatal error on PID ${lw.compile.process?.pid}.`, err)
     logger.log(`Does the executable exist? $PATH: ${env['PATH']}, $Path: ${env['Path']}, $SHELL: ${process.env.SHELL}`)
     logger.log(`${stderr}`)
     logger.refreshStatus('x', 'errorForeground', undefined, 'error')
-    void logger.showErrorMessageWithExtensionLogButton(getProcessErrorMessage(err))
+    void logger.showErrorMessageWithExtensionLogButton(getProcessErrorMessage(step.command, err))
     lw.compile.process = undefined
     queue.clear()
 }
 
-function getProcessErrorMessage(err: Error): string {
+function getProcessErrorMessage(command: string, err: Error): string {
     const code = (err as NodeJS.ErrnoException).code
     if (code === 'ENOENT') {
-        return `Recipe terminated with fatal error: ${err.message}. The secure build uses latexmk to compile LaTeX to PDF; on Linux, install the latexmk package or ensure latexmk is on PATH.`
+        return getMissingBuildToolsMessage([{
+            command,
+            args: [],
+            purpose: 'build command',
+            requiredForBuild: true,
+            available: false,
+            error: err.message
+        }])
     }
     return `Recipe terminated with fatal error: ${err.message}.`
 }
@@ -343,11 +371,12 @@ function getProcessErrorMessage(err: Error): string {
  * @param {Step} step - The Step of the process that exited with an error.
  * @param {ProcessEnv} env - The process environment passed to the spawned
  * process.
+ * @param {string} stdout - The stdout output of the process.
  * @param {string} stderr - The stderr output of the process.
  * @param {number | null} code - The exit code of the process.
  * @param {NodeJS.Signals | null} signal - The exit signal of the process.
  */
-function handleExitCodeError(step: Step, env: ProcessEnv, stderr: string, code: number | null, signal: NodeJS.Signals | null) {
+function handleExitCodeError(step: Step, env: ProcessEnv, stdout: string, stderr: string, code: number | null, signal: NodeJS.Signals | null) {
     if (!step.isExternal) {
         logger.log(`Recipe returns with error code ${code}/${signal} on PID ${lw.compile.process?.pid}.`)
         logger.log(`Does the executable exist? $PATH: ${env['PATH']}, $Path: ${env['Path']}, $SHELL: ${process.env.SHELL}`)
@@ -356,7 +385,7 @@ function handleExitCodeError(step: Step, env: ProcessEnv, stderr: string, code: 
     }
 
     if (!step.isExternal && signal !== 'SIGTERM') {
-        handleNoRetryError(step)
+        handleNoRetryError(step, `${stdout}\n${stderr}`)
     } else if (step.isExternal) {
         handleExternalCommandError()
     } else {
@@ -372,10 +401,11 @@ function handleExitCodeError(step: Step, env: ProcessEnv, stderr: string, code: 
  * and clears the BuildToolQueue.
  *
  * @param {RecipeStep} step - The Step representing the tool process.
+ * @param {string} output - Combined process output used for targeted guidance.
  */
-function handleNoRetryError(_step: RecipeStep) {
+function handleNoRetryError(_step: RecipeStep, output: string) {
     logger.refreshStatus('x', 'errorForeground')
-    void logger.showErrorMessageWithCompilerLogButton('Recipe terminated with error.')
+    void logger.showErrorMessageWithCompilerLogButton(getLatexBuildFailureMessage(output) ?? 'Secure build terminated with error.')
     queue.clear()
 }
 

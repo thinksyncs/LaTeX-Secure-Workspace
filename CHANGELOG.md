@@ -1,5 +1,19 @@
 # Change Log
 
+## [11.2.8] - 2026-07-24
+
+### Added
+- Show local `latexmk`, `pdflatex`, `kpsewhich`, and `synctex` availability and version details in Secure Build Status.
+- Check the required local LaTeX tools before manual compilation and provide macOS, Windows, or Linux recovery guidance.
+- Report missing TeX resources such as `.sty` and `.cls` with project-file and package guidance.
+
+### Fixed
+- Keep automatic builds disabled even when compatibility settings request build-on-save or build-on-change.
+- Preserve the standard MacTeX path for GUI-launched VS Code and handle incomplete tool installations without secondary exceptions.
+
+### Security
+- Keep TeX execution user-initiated by preventing file changes and saves from starting a build.
+
 ## [10.13.2] - 2026-03-07
 
 Subtractive feature selection of LaTeX-Secure-Workspace for enterprise use cases.

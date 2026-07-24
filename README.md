@@ -6,6 +6,7 @@ Secure LaTeX tools for [Visual Studio Code](https://code.visualstudio.com/) with
 
 - Project-local completions for citations, labels, commands, packages, and input paths
 - Manual build and clean with the fixed secure recipe
+- Preflight checks for required LaTeX tools with OS-specific recovery guidance
 - Local PDF tab viewer with refresh and forward/reverse SyncTeX
 - Diagnostics and log parsing inside VS Code
 - No telemetry, auto build, custom build recipes, external build commands, or browser viewer workflow
@@ -16,6 +17,15 @@ LaTeX Workspace Security is best for controlled workspaces that need manual LaTe
 
 > [!IMPORTANT]
 > This extension is an independent secure fork and is not the official `James-Yu.latex-workshop` marketplace release. For compatibility, settings and command IDs still use the existing `latex-workshop.*` prefix.
+
+## Requirements
+
+- A local TeX distribution that provides `latexmk` and `pdflatex` is required for local builds.
+- `kpsewhich` supports TeX file lookup, and `synctex` supports source/PDF synchronization.
+- On macOS, the extension automatically adds the standard MacTeX path `/Library/TeX/texbin` when it exists.
+- Build, clean, kill, and reveal-output commands require a trusted, non-virtual workspace.
+
+Run **LaTeX-Secure-Workspace: Show secure build status** from the Command Palette to see the detected tools, versions, execution mode, root file, fixed recipe, and output paths.
 
 ## Compared With LaTeX Workshop
 
@@ -31,20 +41,25 @@ Start with the local secure-fork manual in [docs/manual/README.md](./docs/manual
 
 For repository organization and cleanup rules, see [Repository Layout](./docs/manual/repository-layout.md). For the security controls in this fork, see [Security Hardening Summary](./docs/security-hardening.md) or [in Japanese](./docs/security-hardening.ja.md).
 
-## Supported Editing and Build Features
+## Feature Map
 
-This secure build keeps a focused subset of the upstream editing and compilation workflow.
+| Workflow | Included behavior |
+| --- | --- |
+| Editing | Project-local completion for citations, labels, commands, environments, classes, packages, and input paths; snippets, wrapping, outline, and hover help. |
+| Build | Explicit manual build with the fixed `secure-latexmk` PDF profile; fixed root and output policy; no workspace-selected command path. |
+| Environment | Preflight checks for `latexmk` and `pdflatex`, tool versions in Secure Build Status, standard MacTeX PATH recovery, and targeted missing-resource guidance. |
+| PDF | Local VS Code tab viewer with refresh and forward/reverse SyncTeX inside the bundled viewer path. |
+| Diagnostics | LaTeX log parsing, Problems-panel diagnostics, graphics checks, compiler log access, and actionable environment failures. |
+| Documentation | Texdoc from trusted workspaces with workspace executable overrides blocked and confirmation before launch. |
+
+## Build Behavior
 
 - Build LaTeX documents manually with the fixed internal `secure-latexmk` recipe. The recipe invokes `latexmk` with a fixed PDF-oriented profile and ignores workspace-selected recipes, tools, external build commands, and build-control magic comments.
+- Check the required local tools before spawning the build. A missing or broken `latexmk`/`pdflatex` installation stops before compilation and reports macOS, Windows, or Linux recovery guidance.
+- Report a missing `.sty`, `.cls`, or related TeX resource directly, with guidance to check project files or the providing TeX package.
 - Resolve the build root with a fixed internal policy and always run manual build and clean against the resolved main root file. Secure build and viewer flows do not honor file-level `%!TEX root` comments.
 - Write build outputs and auxiliary files into the resolved root file directory, rather than honoring workspace-controlled output-path overrides.
 - Open the built PDF in a local VS Code tab using a minimal `pdf.js` runtime, with refresh, forward SyncTeX, and reverse SyncTeX inside the bundled webview path.
-- Project-local completions for citations, labels, commands, environments, document classes, packages, and input paths.
-- Snippets and text-wrapping commands for common LaTeX authoring tasks.
-- Automatic `\item` continuation and other core editing conveniences that stay within the editor process.
-- LaTeX log parsing and diagnostics shown directly in VS Code.
-- Hover-based assistance for supported LaTeX constructs.
-- Texdoc from trusted workspaces, with workspace-scoped executable overrides blocked and command execution confirmed before launch.
 
 ## Constrained In This Secure Build
 
@@ -52,6 +67,7 @@ The following surfaces remain present only in a narrowed form.
 
 - Build, clean, kill, and reveal-output commands require a trusted workspace.
 - Manual builds use the fixed `secure-latexmk` recipe rather than workspace-selected recipes or tools.
+- Auto-build settings are retained for compatibility but cannot start TeX; compilation requires an explicit build command.
 - Secure build and viewer flows use the resolved main root file and ignore root-changing magic comments.
 - Build outputs and auxiliary files are resolved in the root file directory instead of workspace-controlled output or auxiliary directories.
 - Texdoc, formatter, and linter helper commands block workspace-scoped executable overrides and require confirmation before command execution.

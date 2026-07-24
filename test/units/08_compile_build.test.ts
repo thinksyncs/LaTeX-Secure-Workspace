@@ -29,6 +29,16 @@ describe(testFileSuiteName(__filename), () => {
             void options
             return cs.spawn(process.execPath, ['-e', 'process.exit(0)'])
         })
+        const successfulProbe: ReturnType<typeof lw.external.sync> = {
+            error: undefined,
+            pid: 1,
+            output: [null, Buffer.from('tool version'), Buffer.from('')],
+            signal: null,
+            status: 0,
+            stdout: Buffer.from('tool version'),
+            stderr: Buffer.from('')
+        }
+        sinon.stub(lw.external, 'sync').returns(successfulProbe)
     })
 
     afterEach(() => {
@@ -101,6 +111,22 @@ describe(testFileSuiteName(__filename), () => {
             assert.hasLog(`Building root file: ${get.path('main.tex')}`)
         })
 
+        it('should stop before spawning when required LaTeX tools are unavailable', async () => {
+            const syncStub = lw.external.sync as sinon.SinonStub
+            syncStub.withArgs('latexmk').returns({
+                error: Object.assign(new Error('spawn latexmk ENOENT'), { code: 'ENOENT' }),
+                status: null,
+                stdout: Buffer.from(''),
+                stderr: Buffer.from('')
+            })
+            const spawnStub = lw.external.spawn as sinon.SinonStub
+
+            await build()
+
+            assert.ok(spawnStub.notCalled)
+            assert.hasLog('Required LaTeX tools unavailable: latexmk:')
+        })
+
         it('should open the built pdf when the viewer is not already open', async () => {
             const viewStub = lw.viewer.view as sinon.SinonStub
             const fileStat = { type: vscode.FileType.File }
@@ -147,39 +173,25 @@ describe(testFileSuiteName(__filename), () => {
     })
 
     describe('lw.compile->build.autoBuild', () => {
-        it('should trigger auto build on save when configured', async () => {
+        it('should ignore on-save auto build when configured', async () => {
             set.config('latex.autoBuild.run', 'onSave')
-            lw.compile.lastAutoBuildTime = 0
 
             log.start()
             await autoBuild(get.path('main.tex'), 'onSave')
             log.stop()
 
-            assert.hasLog(`Building root file: ${get.path('main.tex')}`)
+            assert.hasLog(`Auto build request ignored in this secure build (onSave): ${get.path('main.tex')}`)
+            assert.notHasLog('Building root file:')
         })
 
-        it('should start file-change auto build instead of treating it as a disabled secure-build feature', async () => {
+        it('should ignore file-change auto build when configured', async () => {
             set.config('latex.autoBuild.run', 'onFileChange')
-            lw.compile.lastAutoBuildTime = 0
 
             log.start()
             await autoBuild(get.path('main.tex'), 'onFileChange')
             log.stop()
 
-            assert.hasLog(`Auto build started detecting the change of a file: ${get.path('main.tex')} .`)
-            assert.notHasLog('Auto build is disabled in this secure build.')
-        })
-
-        it('should debounce auto build according to latex.autoBuild.interval', async () => {
-            set.config('latex.autoBuild.run', 'onSave')
-            set.config('latex.autoBuild.interval', 1000)
-            lw.compile.lastAutoBuildTime = Date.now()
-
-            log.start()
-            await autoBuild(get.path('main.tex'), 'onSave')
-            log.stop()
-
-            assert.hasLog('Autobuild temporarily disabled.')
+            assert.hasLog(`Auto build request ignored in this secure build (onFileChange): ${get.path('main.tex')}`)
             assert.notHasLog('Building root file:')
         })
     })
