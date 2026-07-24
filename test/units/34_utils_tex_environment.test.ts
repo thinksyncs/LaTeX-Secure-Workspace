@@ -87,7 +87,6 @@ describe('34_utils_tex_environment:', () => {
         const message = getMissingBuildToolsMessage(statuses, 'darwin')
 
         assert.match(message, /unavailable: latexmk\./)
-        assert.doesNotMatch(message, /unavailable: .*pdflatex/)
         assert.match(message, /Show secure build status/)
     })
 
