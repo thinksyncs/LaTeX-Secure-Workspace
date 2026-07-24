@@ -215,6 +215,19 @@ describe(testFileSuiteName(__filename), () => {
             assert.ok(step.args?.includes('--max-print-line=' + lw.constant.MAX_PRINT_LINE), step.args?.join(' '))
         })
 
+        it('should handle missing pdflatex during MiKTeX detection', async () => {
+            set.config('latex.option.maxPrintLine.enabled', true)
+            syncStub.returns({ error: new Error('spawn pdflatex ENOENT') })
+            const rootFile = set.root('main.tex')
+
+            await build(rootFile, 'latex', async () => {})
+
+            const step = queue.getStep()
+            assert.ok(step)
+            assert.ok(!step.args?.includes('--max-print-line=' + lw.constant.MAX_PRINT_LINE), step.args?.join(' '))
+            assert.hasLog('Cannot run `pdflatex` to determine if we are using MiKTeX.')
+        })
+
         it('should cache MiKTeX detection across builds', async () => {
             syncStub.returns({ stdout: 'pdfTeX (MiKTeX)' })
             const rootFile = set.root('main.tex')

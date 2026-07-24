@@ -2,7 +2,9 @@
 import * as vscode from 'vscode'
 import { lw } from './lw'
 import { log } from './utils/logger'
+import { ensureMacTeXBinOnPath } from './utils/tex-path'
 
+ensureMacTeXBinOnPath()
 const logger = lw.log('Extension')
 logger.log('Initializing LaTeX-Secure-Workspace.')
 
