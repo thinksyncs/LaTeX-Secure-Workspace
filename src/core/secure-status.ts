@@ -111,7 +111,7 @@ async function renderReport(kind: ReportKind): Promise<string> {
             '## Secure Execution Policy',
             '',
             '- Manual build and clean require a trusted, non-virtual workspace.',
-            '- Secure builds use the fixed internal latexmk profile.',
+            '- Secure builds use fixed internal pdfLaTeX or LuaLaTeX latexmk profiles.',
             '- Workspace-controlled recipes, tools, magic comments, output paths, and external viewer commands are ignored in secure execution paths.',
             '- PDF preview uses the local VS Code tab viewer.',
             '- External command paths can require explicit confirmation when they come from workspace-scoped settings.',

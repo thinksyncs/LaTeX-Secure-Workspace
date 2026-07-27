@@ -38,7 +38,7 @@ Risk:
 
 Mitigation:
 
-The secure build disables auto build, ignores custom recipes and custom tools, and ignores external build commands. Manual compilation is limited to a fixed internal recipe so workspace content and settings cannot switch the build command path. The recipe also passes `-no-shell-escape` to `latexmk`, which disables TeX `\write18` command execution.
+The secure build disables auto build, ignores custom recipes and custom tools, and ignores external build commands. Manual compilation is limited to fixed internal pdfLaTeX and LuaLaTeX recipes so workspace content and settings cannot switch the build command path. Both recipes pass `-no-shell-escape` to `latexmk`, which disables TeX `\write18` command execution.
 
 It also ignores workspace-scoped argument overrides for formatter and linter helper commands so trusted workspaces cannot silently reshape those command lines. Normal and language-specific workspace settings follow the same override policy.
 

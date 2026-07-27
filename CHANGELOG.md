@@ -1,5 +1,15 @@
 # Change Log
 
+## [11.2.10] - 2026-07-27
+
+### Added
+- Add a fixed `secure-lualatexmk` profile selectable from **Build with recipe**.
+- Check the selected pdfLaTeX or LuaLaTeX engine before starting a secure build.
+
+### Fixed
+- Serialize PDF page rendering and keep adjacent pages ready so scrolling does not leave pages black.
+- Use the patched `brace-expansion` release across development and packaging tools.
+
 ## [11.2.9] - 2026-07-24
 
 ### Changed

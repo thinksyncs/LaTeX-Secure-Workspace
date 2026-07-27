@@ -7,7 +7,7 @@ LaTeX-Secure-Workspace fork.
 
 LaTeX-Secure-Workspace keeps a deliberately small workflow surface:
 
-- Manual LaTeX build with the fixed internal recipe
+- Manual pdfLaTeX or LuaLaTeX build with fixed internal recipes
 - Root-file detection with the secure root-resolution policy
 - Local tab-based PDF viewing with refresh and forward/reverse SyncTeX
 - Project-local completions, snippets, hover help, outline, and diagnostics
@@ -19,22 +19,23 @@ count, or the math preview panel.
 
 ## User Quick Start
 
-1. Install a TeX distribution that provides `latexmk` and `pdflatex`.
+1. Install a TeX distribution that provides `latexmk` and the LaTeX engine you use (`pdflatex` or `lualatex`).
 2. Open the LaTeX project in a trusted local workspace.
 3. Open the main document and run **LaTeX-Secure-Workspace: Build LaTeX project** from the Command Palette or the editor build button.
-4. Use **LaTeX-Secure-Workspace: Show secure build status** when a tool, root file, output path, or PDF cannot be found.
+4. For LuaLaTeX, run **LaTeX-Secure-Workspace: Build with recipe** and select `secure-lualatexmk`.
+5. Use **LaTeX-Secure-Workspace: Show secure build status** when a tool, root file, output path, or PDF cannot be found.
 
 On macOS, the extension restores the standard MacTeX path
 `/Library/TeX/texbin` for GUI-launched VS Code. On Windows, the TeX Live or
 MiKTeX binary directory must be present in the user or system `Path`. On Linux,
 the TeX Live binary directory must be present in `PATH`.
 
-Before each local build, the extension checks `latexmk` and `pdflatex`. The
-status report also checks `kpsewhich` and `synctex`, shows the detected version
-line, and provides OS-specific recovery guidance. Missing `.sty`, `.cls`, and
-related TeX resources are reported directly with guidance to check project
-files or possible distribution packages. The compiler log remains available
-for details.
+Before each local build, the extension checks `latexmk` and the selected engine.
+The status report also checks `pdflatex`, `lualatex`, `kpsewhich`, and `synctex`,
+shows the detected version line, and provides OS-specific recovery guidance.
+Missing `.sty`, `.cls`, and related TeX resources are reported directly with
+guidance to check project files or possible distribution packages. The compiler
+log remains available for details.
 
 ## Reading Order
 

@@ -11,32 +11,44 @@ const logger = lw.log('Build', 'Recipe')
 const DOCKER_SECURE_SOURCE_DIR = '/latex-workshop/src'
 const DOCKER_SECURE_OUTPUT_DIR = '/latex-workshop/out'
 
-const FIXED_SECURE_RECIPE_NAME = 'secure-latexmk'
-const FIXED_SECURE_TOOL_ARGS = [
+export type SecureLatexEngine = 'pdflatex' | 'lualatex'
+
+const FIXED_SECURE_PDFLATEX_RECIPE_NAME = 'secure-latexmk'
+const FIXED_SECURE_LUALATEX_RECIPE_NAME = 'secure-lualatexmk'
+const FIXED_SECURE_TOOL_ARGS_BEFORE_ENGINE = [
     '-norc',
     '-no-shell-escape',
     '-interaction=nonstopmode',
     '-file-line-error',
-    '-pdf',
+]
+const FIXED_SECURE_TOOL_ARGS_AFTER_ENGINE = [
     '-outdir=%DOCFILE%',
     '-auxdir=%DOCFILE%',
     '%DOC%'
 ]
 
-function createFixedSecureTool(): Tool {
+function createFixedSecureTool(engine: SecureLatexEngine): Tool {
     return {
         name: 'latexmk',
         command: 'latexmk',
-        args: [...FIXED_SECURE_TOOL_ARGS],
+        args: [
+            ...FIXED_SECURE_TOOL_ARGS_BEFORE_ENGINE,
+            engine === 'lualatex' ? '-lualatex' : '-pdf',
+            ...FIXED_SECURE_TOOL_ARGS_AFTER_ENGINE
+        ],
         env: {}
     }
 }
 
-function createFixedSecureRecipe(): Recipe {
+function createFixedSecureRecipe(engine: SecureLatexEngine): Recipe {
     return {
-        name: FIXED_SECURE_RECIPE_NAME,
-        tools: [createFixedSecureTool()]
+        name: engine === 'lualatex' ? FIXED_SECURE_LUALATEX_RECIPE_NAME : FIXED_SECURE_PDFLATEX_RECIPE_NAME,
+        tools: [createFixedSecureTool(engine)]
     }
+}
+
+export function getSecureRecipeEngine(recipeName?: string): SecureLatexEngine {
+    return recipeName === FIXED_SECURE_LUALATEX_RECIPE_NAME ? 'lualatex' : 'pdflatex'
 }
 
 let isMikTeXCache: boolean | undefined
@@ -70,7 +82,10 @@ async function getSecureDockerSetting<T>(section: string, fallback: T): Promise<
 // eslint-disable-next-line @typescript-eslint/require-await
 export async function getAvailableRecipes(scope?: vscode.ConfigurationScope): Promise<Recipe[]> {
     void scope
-    return [createFixedSecureRecipe()]
+    return [
+        createFixedSecureRecipe('pdflatex'),
+        createFixedSecureRecipe('lualatex')
+    ]
 }
 
 /**
@@ -300,10 +315,14 @@ async function findMagicComments(rootFile: string): Promise<{tex?: Tool, bib?: T
 function findRecipe(rootFile: string, langId: string, recipeName?: string): Recipe | undefined {
     void rootFile
     void langId
-    if (recipeName && recipeName !== FIXED_SECURE_RECIPE_NAME) {
+    if (
+        recipeName
+        && recipeName !== FIXED_SECURE_PDFLATEX_RECIPE_NAME
+        && recipeName !== FIXED_SECURE_LUALATEX_RECIPE_NAME
+    ) {
         logger.log(`Ignoring requested recipe ${recipeName} in this secure build.`)
     }
-    return createFixedSecureRecipe()
+    return createFixedSecureRecipe(getSecureRecipeEngine(recipeName))
 }
 
 /**

@@ -23,6 +23,7 @@ type RenderLimitsModule = {
         pageCleanupBatchSize: number,
         renderMarginMultiplier: number
     },
+    enqueueSerialRender: <T>(previousRender: Promise<unknown>, render: () => Promise<T>) => Promise<T>,
     createPdfDocumentInit: (config: {
         cMapUrl: string,
         path: string,
@@ -61,11 +62,13 @@ describe(testFileSuiteName(__filename), () => {
             .replace(/export const PDF_VIEWER_LIMITS =/, 'const PDF_VIEWER_LIMITS =')
             .replace(/export function createPdfDocumentInit/g, 'function createPdfDocumentInit')
             .replace(/export function computeOutputScale/g, 'function computeOutputScale')
+            .replace(/export function enqueueSerialRender/g, 'function enqueueSerialRender')
             .replace(/export function pickPageNumbersToRender/g, 'function pickPageNumbersToRender')
-        const script = new vm.Script(`${source}\nmodule.exports = { PDF_VIEWER_LIMITS, createPdfDocumentInit, computeOutputScale, pickPageNumbersToRender }`)
+        const script = new vm.Script(`${source}\nmodule.exports = { PDF_VIEWER_LIMITS, createPdfDocumentInit, computeOutputScale, enqueueSerialRender, pickPageNumbersToRender }`)
         const module: { exports: RenderLimitsModule | undefined } = { exports: undefined }
         const context = {
             Math,
+            Promise,
             module,
         }
 
@@ -85,12 +88,12 @@ describe(testFileSuiteName(__filename), () => {
         assert.strictEqual(renderLimits.PDF_VIEWER_LIMITS.maxCanvasDimension, 3072)
         assert.strictEqual(renderLimits.PDF_VIEWER_LIMITS.maxCanvasPixels, 1_500_000)
         assert.strictEqual(renderLimits.PDF_VIEWER_LIMITS.maxImageSize, 1_500_000)
-        assert.strictEqual(renderLimits.PDF_VIEWER_LIMITS.maxRenderedPages, 2)
+        assert.strictEqual(renderLimits.PDF_VIEWER_LIMITS.maxRenderedPages, 3)
         assert.strictEqual(renderLimits.PDF_VIEWER_LIMITS.maxOutputScale, 1.25)
         assert.strictEqual(renderLimits.PDF_VIEWER_LIMITS.minOutputScale, 0.1)
         assert.strictEqual(renderLimits.PDF_VIEWER_LIMITS.minPlaceholderCanvasSize, 1)
         assert.strictEqual(renderLimits.PDF_VIEWER_LIMITS.pageCleanupBatchSize, 4)
-        assert.strictEqual(renderLimits.PDF_VIEWER_LIMITS.renderMarginMultiplier, 0)
+        assert.strictEqual(renderLimits.PDF_VIEWER_LIMITS.renderMarginMultiplier, 0.5)
     })
 
     it('should disable risky pdf.js features for large documents', () => {
@@ -129,9 +132,10 @@ describe(testFileSuiteName(__filename), () => {
             { pageNumber: 1, pageTop: 0, pageBottom: 900 },
             { pageNumber: 2, pageTop: 920, pageBottom: 1820 },
             { pageNumber: 3, pageTop: 1840, pageBottom: 2740 },
-        ], 950, 800, 3).sort((left, right) => left - right)
+            { pageNumber: 4, pageTop: 2760, pageBottom: 3660 },
+        ], 950, 800, 4).sort((left, right) => left - right)
 
-        assert.deepStrictEqual([...pages], [2, 3])
+        assert.deepStrictEqual([...pages], [1, 2, 4])
     })
 
     it('should keep adjacent visible pages rendered while scrolling', () => {
@@ -141,6 +145,55 @@ describe(testFileSuiteName(__filename), () => {
             { pageNumber: 3, pageTop: 1840, pageBottom: 2740 },
         ], 550, 800).sort((left, right) => left - right)
 
+        assert.deepStrictEqual([...pages], [1, 2, 3])
+    })
+
+    it('should preload the next page at the start of a document', () => {
+        const pages = renderLimits.pickPageNumbersToRender([
+            { pageNumber: 1, pageTop: 0, pageBottom: 1400 },
+            { pageNumber: 2, pageTop: 1420, pageBottom: 2820 },
+            { pageNumber: 3, pageTop: 2840, pageBottom: 4240 },
+        ], 0, 700).sort((left, right) => left - right)
+
         assert.deepStrictEqual([...pages], [1, 2])
+    })
+
+    it('should keep the previous, current, and next pages ready at a page boundary', () => {
+        const pages = renderLimits.pickPageNumbersToRender([
+            { pageNumber: 1, pageTop: 0, pageBottom: 600 },
+            { pageNumber: 2, pageTop: 620, pageBottom: 1220 },
+            { pageNumber: 3, pageTop: 1240, pageBottom: 1840 },
+            { pageNumber: 4, pageTop: 1860, pageBottom: 2460 },
+        ], 700, 700).sort((left, right) => left - right)
+
+        assert.deepStrictEqual([...pages], [1, 2, 3])
+    })
+
+    it('should serialize overlapping page-render updates', async () => {
+        let activeRenders = 0
+        let maxActiveRenders = 0
+        let releaseFirstRender: (() => void) | undefined
+        const firstRenderGate = new Promise<void>(resolve => {
+            releaseFirstRender = resolve
+        })
+
+        const first = renderLimits.enqueueSerialRender(Promise.resolve(), async () => {
+            activeRenders += 1
+            maxActiveRenders = Math.max(maxActiveRenders, activeRenders)
+            await firstRenderGate
+            activeRenders -= 1
+        })
+        const second = renderLimits.enqueueSerialRender(first, () => {
+            activeRenders += 1
+            maxActiveRenders = Math.max(maxActiveRenders, activeRenders)
+            activeRenders -= 1
+            return Promise.resolve()
+        })
+
+        await Promise.resolve()
+        assert.strictEqual(activeRenders, 1)
+        releaseFirstRender?.()
+        await second
+        assert.strictEqual(maxActiveRenders, 1)
     })
 })

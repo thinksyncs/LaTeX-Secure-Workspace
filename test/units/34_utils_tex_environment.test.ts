@@ -1,6 +1,7 @@
 import {
     getLatexBuildFailureMessage,
     getMissingBuildToolsMessage,
+    getRequiredBuildToolDefinitions,
     getTexEnvironmentInstallAdvice,
     inspectTexEnvironment,
     REQUIRED_BUILD_TOOL_DEFINITIONS,
@@ -68,6 +69,17 @@ describe('34_utils_tex_environment:', () => {
         assert.match(getTexEnvironmentInstallAdvice('darwin'), /MacTeX\/BasicTeX/)
         assert.match(getTexEnvironmentInstallAdvice('win32'), /TeX Live\/MiKTeX/)
         assert.match(getTexEnvironmentInstallAdvice('linux'), /system packages/)
+    })
+
+    it('should require the selected engine for secure builds', () => {
+        assert.deepStrictEqual(
+            getRequiredBuildToolDefinitions('pdflatex').map(tool => tool.command),
+            ['latexmk', 'pdflatex']
+        )
+        assert.deepStrictEqual(
+            getRequiredBuildToolDefinitions('lualatex').map(tool => tool.command),
+            ['latexmk', 'lualatex']
+        )
     })
 
     it('should name only unavailable required tools in the build message', () => {

@@ -3,7 +3,7 @@
   "displayName": "LaTeX Workspace Security",
   "description": "Secure LaTeX tools for VS Code with project-local completions, manual build, diagnostics, and a local PDF tab viewer with SyncTeX.",
   "icon": "icons/icon.png",
-  "version": "11.2.9",
+  "version": "11.2.10",
   "publisher": "ToppyMicroServices",
   "license": "MIT",
   "homepage": "https://github.com/thinksyncs/LaTeX-Secure-Workspace",
@@ -1075,13 +1075,13 @@
               ]
             }
           ],
-          "markdownDescription": "Compatibility setting retained from upstream. Custom recipes are ignored in this secure build because manual builds always use the fixed internal recipe."
+          "markdownDescription": "Compatibility setting retained from upstream. Custom recipes are ignored in this secure build. **Build with recipe** exposes only the fixed `secure-latexmk` and `secure-lualatexmk` profiles."
         },
         "latex-workshop.latex.recipe.default": {
           "scope": "resource",
           "type": "string",
           "default": "first",
-          "markdownDescription": "Compatibility setting retained from upstream. Manual builds in this secure build ignore recipe selection and always use the fixed internal recipe."
+          "markdownDescription": "Compatibility setting retained from upstream. The normal build command uses fixed `secure-latexmk`; use **Build with recipe** to explicitly select fixed `secure-lualatexmk`."
         },
         "latex-workshop.latex.tools": {
           "scope": "resource",
@@ -2977,12 +2977,12 @@
   "overrides": {
     "@vscode/vsce": {
       "markdown-it": "^14.2.0",
-      "yauzl": "^3.2.1",
-      "brace-expansion": "^1.1.16"
+      "yauzl": "^3.2.1"
     },
     "@secretlint/config-loader": {
       "ajv": "^8.18.0"
     },
+    "brace-expansion": "5.0.8",
     "undici": "^7.28.0",
     "flatted": "^3.4.2",
     "fast-uri": "^3.1.4",
@@ -3006,22 +3006,12 @@
     "tinyglobby": {
       "picomatch": "^4.0.4"
     },
-    "minimatch@10.2.4": {
-      "brace-expansion": "^5.0.7"
-    },
-    "minimatch@3.1.5": {
-      "brace-expansion": "1.1.16"
-    },
     "typed-rest-client": {
       "underscore": "^1.13.8"
     },
     "mocha": {
       "diff": "^8.0.3",
-      "serialize-javascript": "^7.0.5",
-      "brace-expansion": "^2.1.2"
-    },
-    "test-exclude": {
-      "brace-expansion": "^2.1.2"
+      "serialize-javascript": "^7.0.5"
     },
     "table": {
       "ajv": "^8.18.0"

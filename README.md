@@ -5,7 +5,7 @@ Secure LaTeX tools for [Visual Studio Code](https://code.visualstudio.com/) with
 ## TL;DR
 
 - Project-local completions for citations, labels, commands, packages, and input paths
-- Manual build and clean with the fixed secure recipe
+- Manual pdfLaTeX and LuaLaTeX build with fixed secure recipes
 - Preflight checks for required LaTeX tools with OS-specific recovery guidance
 - Local PDF tab viewer with refresh and forward/reverse SyncTeX
 - Diagnostics and log parsing inside VS Code
@@ -20,12 +20,13 @@ LaTeX Workspace Security is best for controlled workspaces that need manual LaTe
 
 ## Requirements
 
-- A local TeX distribution that provides `latexmk` and `pdflatex` is required for local builds.
+- A local TeX distribution that provides `latexmk` and the selected engine (`pdflatex` or `lualatex`) is required for local builds.
 - In trusted workspaces, `kpsewhich` supports TeX file lookup and the native `synctex` helper can accelerate forward synchronization. Restricted Mode uses the bundled SyncTeX parser without launching these helpers.
 - On macOS, the extension automatically adds the standard MacTeX path `/Library/TeX/texbin` when it exists.
 - Build, clean, kill, and reveal-output commands require a trusted, non-virtual workspace.
 
 Run **LaTeX-Secure-Workspace: Show secure build status** from the Command Palette to see the detected tools, versions, execution mode, root file, fixed recipe, and output paths.
+Use **LaTeX-Secure-Workspace: Build with recipe** and select `secure-lualatexmk` when the document requires LuaLaTeX.
 
 ## Compared With LaTeX Workshop
 
@@ -46,16 +47,16 @@ For repository organization and cleanup rules, see [Repository Layout](./docs/ma
 | Workflow | Included behavior |
 | --- | --- |
 | Editing | Project-local completion for citations, labels, commands, environments, classes, packages, and input paths; snippets, wrapping, outline, and hover help. |
-| Build | Explicit manual build with the fixed `secure-latexmk` PDF profile and shell escape disabled; fixed root and output policy; no workspace-selected command path. |
-| Environment | Preflight checks for `latexmk` and `pdflatex`, tool versions in Secure Build Status, standard MacTeX PATH recovery, and targeted missing-resource guidance. |
+| Build | Explicit manual build with fixed `secure-latexmk` (pdfLaTeX) and `secure-lualatexmk` (LuaLaTeX) profiles and shell escape disabled; fixed root and output policy; no workspace-selected command path. |
+| Environment | Engine-aware preflight checks for `latexmk` and pdfLaTeX or LuaLaTeX, tool versions in Secure Build Status, standard MacTeX PATH recovery, and targeted missing-resource guidance. |
 | PDF | Local VS Code tab viewer with refresh and forward/reverse SyncTeX inside the bundled viewer path. |
 | Diagnostics | LaTeX log parsing, Problems-panel diagnostics, graphics checks, compiler log access, and actionable environment failures. |
 | Documentation | Texdoc from trusted workspaces with workspace executable overrides blocked and confirmation before launch. |
 
 ## Build Behavior
 
-- Build LaTeX documents manually with the fixed internal `secure-latexmk` recipe. The recipe invokes `latexmk` with `-norc` and `-no-shell-escape` in a fixed PDF-oriented profile, and ignores workspace-selected recipes, tools, external build commands, and build-control magic comments.
-- Check the required local tools before spawning the build. A missing or broken `latexmk`/`pdflatex` installation stops before compilation and reports macOS, Windows, or Linux recovery guidance.
+- Build LaTeX documents manually with the fixed internal `secure-latexmk` recipe, or choose `secure-lualatexmk` from **Build with recipe** for LuaLaTeX. Both profiles invoke `latexmk` with `-norc` and `-no-shell-escape`, and ignore workspace-selected recipes, tools, external build commands, and build-control magic comments.
+- Check the required local tools before spawning the build. A missing or broken `latexmk` or selected LaTeX engine stops before compilation and reports macOS, Windows, or Linux recovery guidance.
 - Report a missing `.sty`, `.cls`, or related TeX resource directly, with guidance to check project files or the providing TeX package.
 - Resolve the build root with a fixed internal policy and always run manual build and clean against the resolved main root file. Secure build and viewer flows do not honor file-level `%!TEX root` comments.
 - Write build outputs and auxiliary files into the resolved root file directory, rather than honoring workspace-controlled output-path overrides.
@@ -66,7 +67,7 @@ For repository organization and cleanup rules, see [Repository Layout](./docs/ma
 The following surfaces remain present only in a narrowed form.
 
 - Build, clean, kill, and reveal-output commands require a trusted workspace.
-- Manual builds use the fixed `secure-latexmk` recipe rather than workspace-selected recipes or tools.
+- Manual builds use the fixed `secure-latexmk` or `secure-lualatexmk` recipe rather than workspace-selected recipes or tools.
 - Auto-build settings are retained for compatibility but cannot start TeX; compilation requires an explicit build command.
 - Secure build and viewer flows use the resolved main root file and ignore root-changing magic comments.
 - Build outputs and auxiliary files are resolved in the root file directory instead of workspace-controlled output or auxiliary directories.

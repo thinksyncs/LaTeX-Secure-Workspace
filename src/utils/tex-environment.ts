@@ -40,6 +40,12 @@ export const TEX_TOOL_DEFINITIONS: readonly TexToolDefinition[] = [
         requiredForBuild: true
     },
     {
+        command: 'lualatex',
+        args: ['--version'],
+        purpose: 'LuaLaTeX engine',
+        requiredForBuild: false
+    },
+    {
         command: 'kpsewhich',
         args: ['--version'],
         purpose: 'TeX file lookup',
@@ -54,6 +60,11 @@ export const TEX_TOOL_DEFINITIONS: readonly TexToolDefinition[] = [
 ]
 
 export const REQUIRED_BUILD_TOOL_DEFINITIONS = TEX_TOOL_DEFINITIONS.filter(tool => tool.requiredForBuild)
+
+export function getRequiredBuildToolDefinitions(engine: 'pdflatex' | 'lualatex'): TexToolDefinition[] {
+    return TEX_TOOL_DEFINITIONS.filter(tool => tool.command === 'latexmk' || tool.command === engine)
+        .map(tool => ({ ...tool, requiredForBuild: true }))
+}
 
 const defaultRunner: TexToolRunner = (command, args, options) => cs.sync(command, args, options)
 
@@ -89,7 +100,7 @@ export function inspectTexEnvironment(
 
 export function getTexEnvironmentInstallAdvice(platform: NodeJS.Platform = process.platform): string {
     if (platform === 'darwin') {
-        return 'Verify that MacTeX/BasicTeX provides latexmk and pdflatex and that /Library/TeX/texbin exists. Install or repair the distribution only if the tools are absent, then reload VS Code.'
+        return 'Verify that MacTeX/BasicTeX provides latexmk and the selected LaTeX engine and that /Library/TeX/texbin exists. Install or repair the distribution only if the tools are absent, then reload VS Code.'
     }
     if (platform === 'win32') {
         return 'Verify that TeX Live/MiKTeX provides the required tools and that its binary directory is in the user or system Path. Install or repair the distribution only if the tools are absent, then restart VS Code.'

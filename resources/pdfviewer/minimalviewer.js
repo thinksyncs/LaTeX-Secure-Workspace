@@ -2,6 +2,7 @@ import {
     createPdfDocumentInit,
     PDF_VIEWER_LIMITS,
     computeOutputScale,
+    enqueueSerialRender,
     pickPageNumbersToRender,
 } from './renderlimits.mjs'
 
@@ -33,6 +34,7 @@ const state = {
 let pdfjsLibPromise
 let renderEpoch = 0
 let currentPdf = undefined
+let visibleRender = Promise.resolve()
 let renderQueueTimer = undefined
 let resizeTimer = undefined
 let stateTimer = undefined
@@ -562,8 +564,10 @@ function getOutputScale(viewport) {
 
 function queueVisiblePageRender() {
     clearTimeout(renderQueueTimer)
+    const epoch = renderEpoch
     renderQueueTimer = setTimeout(() => {
-        void updateVisiblePages(renderEpoch)
+        visibleRender = enqueueSerialRender(visibleRender, () => updateVisiblePages(epoch))
+        void visibleRender.catch(reportError)
     }, 50)
 }
 

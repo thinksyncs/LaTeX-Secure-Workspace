@@ -3,7 +3,7 @@ import * as path from 'path'
 import Sinon, * as sinon from 'sinon'
 import { assert, get, mock, set, sleep } from './utils'
 import { lw } from '../../src/lw'
-import { build, initialize } from '../../src/compile/recipe'
+import { build, getAvailableRecipes, initialize } from '../../src/compile/recipe'
 import { queue } from '../../src/compile/queue'
 import { testFileSuiteName } from '../file-name'
 
@@ -121,6 +121,28 @@ describe(testFileSuiteName(__filename), () => {
             assert.ok(step)
             assert.strictEqual(step.command, 'latexmk')
             assert.hasLog('Ignoring requested recipe customRecipe in this secure build.')
+        })
+
+        it('should expose only fixed secure pdfLaTeX and LuaLaTeX recipes', async () => {
+            const recipes = await getAvailableRecipes()
+
+            assert.deepStrictEqual(recipes.map(recipe => recipe.name), [
+                'secure-latexmk',
+                'secure-lualatexmk'
+            ])
+        })
+
+        it('should use the fixed LuaLaTeX recipe when explicitly selected', async () => {
+            const rootFile = set.root('main.tex')
+
+            await build(rootFile, 'latex', async () => {}, 'secure-lualatexmk')
+
+            const step = queue.getStep()
+            assert.ok(step)
+            assert.ok(step.args?.includes('-lualatex'))
+            assert.ok(!step.args?.includes('-pdf'))
+            assert.ok(step.args?.includes('-norc'))
+            assert.ok(step.args?.includes('-no-shell-escape'))
         })
     })
 

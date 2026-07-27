@@ -10,11 +10,11 @@ export const PDF_VIEWER_LIMITS = Object.freeze({
     maxCanvasPixels: 1_500_000,
     maxImageSize: 1_500_000,
     maxOutputScale: 1.25,
-    maxRenderedPages: 2,
+    maxRenderedPages: 3,
     minOutputScale: 0.1,
     minPlaceholderCanvasSize: 1,
     pageCleanupBatchSize: 4,
-    renderMarginMultiplier: 0,
+    renderMarginMultiplier: 0.5,
     useWasm: false,
 })
 
@@ -54,6 +54,10 @@ export function computeOutputScale(viewport, devicePixelRatio, limits = PDF_VIEW
     )
 }
 
+export function enqueueSerialRender(previousRender, render) {
+    return Promise.resolve(previousRender).then(render, render)
+}
+
 export function pickPageNumbersToRender(pageMetrics, viewportTop, viewportHeight, pendingPageNumber, limits = PDF_VIEWER_LIMITS) {
     const safeTop = Number(viewportTop) || 0
     const safeHeight = Math.max(1, Number(viewportHeight) || 1)
@@ -91,8 +95,15 @@ export function pickPageNumbersToRender(pageMetrics, viewportTop, viewportHeight
     if (pendingPageNumber !== undefined) {
         pageNumbers.add(pendingPageNumber)
     }
-    if (pageNumbers.size === 0 && nearestPageNumber !== undefined) {
+    if (nearestPageNumber !== undefined) {
         pageNumbers.add(nearestPageNumber)
+        const nearestPageIndex = pageMetrics.findIndex(metric => metric.pageNumber === nearestPageNumber)
+        for (const adjacentIndex of [nearestPageIndex - 1, nearestPageIndex + 1]) {
+            const adjacentPageNumber = pageMetrics[adjacentIndex]?.pageNumber
+            if (adjacentPageNumber !== undefined) {
+                pageNumbers.add(adjacentPageNumber)
+            }
+        }
     }
 
     while (pageNumbers.size > limits.maxRenderedPages) {

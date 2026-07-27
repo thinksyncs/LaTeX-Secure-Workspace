@@ -127,6 +127,17 @@ describe(testFileSuiteName(__filename), () => {
             assert.hasLog('Required LaTeX tools unavailable: latexmk:')
         })
 
+        it('should validate LuaLaTeX instead of pdfLaTeX for the secure LuaLaTeX recipe', async () => {
+            const syncStub = lw.external.sync as sinon.SinonStub
+
+            await build(false, undefined, undefined, 'secure-lualatexmk')
+
+            assert.ok(syncStub.calledWith('latexmk', ['-version']))
+            assert.ok(syncStub.calledWith('lualatex', ['--version']))
+            assert.ok(syncStub.neverCalledWith('pdflatex', ['--version']))
+            assert.hasLog('Recipe step 1 The command is latexmk:')
+        })
+
         it('should open the built pdf when the viewer is not already open', async () => {
             const viewStub = lw.viewer.view as sinon.SinonStub
             const fileStat = { type: vscode.FileType.File }

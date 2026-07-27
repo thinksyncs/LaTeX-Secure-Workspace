@@ -9,10 +9,10 @@ import {
     getLatexBuildFailureMessage,
     getMissingBuildToolsMessage,
     inspectTexEnvironment,
-    REQUIRED_BUILD_TOOL_DEFINITIONS,
+    getRequiredBuildToolDefinitions,
     type TexToolRunner
 } from '../utils/tex-environment'
-import { build as buildRecipe } from './recipe'
+import { build as buildRecipe, getSecureRecipeEngine } from './recipe'
 import { queue } from './queue'
 
 const logger = lw.log('Build')
@@ -110,7 +110,7 @@ async function build(skipSelection: boolean = false, rootFile: string | undefine
     }
     void skipSelection
 
-    if (!isBuildEnvironmentReady(lw.file.toUri(rootFile))) {
+    if (!isBuildEnvironmentReady(lw.file.toUri(rootFile), recipe)) {
         return
     }
 
@@ -118,7 +118,7 @@ async function build(skipSelection: boolean = false, rootFile: string | undefine
     await buildRecipe(rootFile, languageId, buildLoop, recipe)
 }
 
-function isBuildEnvironmentReady(scope: vscode.ConfigurationScope): boolean {
+function isBuildEnvironmentReady(scope: vscode.ConfigurationScope, recipeName?: string): boolean {
     const dockerEnabled = getSecureConfigurationValueSync(scope, 'docker.enabled', false)
     const definitions = dockerEnabled
         ? [{
@@ -127,7 +127,7 @@ function isBuildEnvironmentReady(scope: vscode.ConfigurationScope): boolean {
             purpose: 'container build runtime',
             requiredForBuild: true
         }]
-        : REQUIRED_BUILD_TOOL_DEFINITIONS
+        : getRequiredBuildToolDefinitions(getSecureRecipeEngine(recipeName))
     const statuses = inspectTexEnvironment(lw.external.sync as TexToolRunner, definitions)
     const missing = statuses.filter(status => !status.available)
     if (missing.length === 0) {
