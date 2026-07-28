@@ -3,6 +3,8 @@ import { ProjectSymbolProvider } from './symbol-project'
 import { DefinitionProvider } from './definition'
 import { FoldingProvider, DoctexFoldingProvider, WeaveFoldingProvider } from './folding'
 import { SelectionRangeProvider } from './selection'
+import { LabelRenameProvider } from './label-rename'
+import { PathQuickFixProvider } from './path-quick-fix'
 import { getLocaleString } from './l10n'
 
 export const language = {
@@ -13,5 +15,7 @@ export const language = {
     doctexFolding: new DoctexFoldingProvider(),
     weaveFolding: new WeaveFoldingProvider(),
     selectionRage: new SelectionRangeProvider(),
+    labelRename: new LabelRenameProvider(),
+    pathQuickFix: new PathQuickFixProvider(),
     getLocaleString
 }

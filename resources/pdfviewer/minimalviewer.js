@@ -1,8 +1,10 @@
 import {
     createPdfDocumentInit,
     PDF_VIEWER_LIMITS,
+    canAttemptPageRender,
     computeOutputScale,
     enqueueSerialRender,
+    getRenderRetryDelay,
     pickPageNumbersToRender,
 } from './renderlimits.mjs'
 
@@ -312,7 +314,16 @@ function createPageEntry(pageNumber, viewport) {
 
     const label = document.createElement('div')
     label.className = 'pageLabel'
-    label.textContent = `Page ${pageNumber}`
+    label.append(document.createTextNode(`Page ${pageNumber}`))
+
+    const retryButton = document.createElement('button')
+    retryButton.className = 'pageRetry'
+    retryButton.type = 'button'
+    retryButton.title = 'Retry page rendering'
+    retryButton.setAttribute('aria-label', `Retry rendering page ${pageNumber}`)
+    retryButton.textContent = '↻'
+    retryButton.hidden = true
+    label.append(retryButton)
 
     const canvasWrap = document.createElement('div')
     canvasWrap.className = 'pageCanvasWrap'
@@ -327,17 +338,24 @@ function createPageEntry(pageNumber, viewport) {
     shell.append(label, canvasWrap)
     installReverseSyncTeXHandlers(canvasWrap, viewport, pageNumber)
 
-    return {
+    const entry = {
         canvas,
         canvasWrap,
         isRendered: false,
         isRendering: false,
         pageNumber,
+        renderFailures: 0,
         renderTask: undefined,
+        retryButton,
         shell,
         synctexIndicator,
         viewport,
     }
+    retryButton.addEventListener('click', () => {
+        resetRenderFailure(entry)
+        queueVisiblePageRender()
+    })
+    return entry
 }
 
 function scrollToPage(pageNumber) {
@@ -376,14 +394,16 @@ function updateCurrentPageFromScroll() {
 }
 
 async function renderPage(entry, epoch) {
-    if (!currentPdf || entry.isRendered || entry.isRendering || epoch !== renderEpoch) {
+    if (!currentPdf || entry.isRendered || entry.isRendering || epoch !== renderEpoch
+        || !canAttemptPageRender(entry.renderFailures)) {
         return
     }
 
     entry.isRendering = true
-    const page = await currentPdf.getPage(entry.pageNumber)
+    let page
 
     try {
+        page = await currentPdf.getPage(entry.pageNumber)
         const outputScale = getOutputScale(entry.viewport)
         entry.canvas.classList.remove('pageCanvasPlaceholder')
         entry.canvas.width = Math.max(1, Math.ceil(entry.viewport.width * outputScale))
@@ -409,15 +429,27 @@ async function renderPage(entry, epoch) {
         }
 
         entry.isRendered = true
+        resetRenderFailure(entry)
         applyPendingSyncTeX()
     } catch (error) {
-        if (!isRenderCancellation(error)) {
-            throw error
+        if (isRenderCancellation(error)) {
+            return
+        }
+        entry.renderFailures += 1
+        entry.isRendered = false
+        resetCanvasToPlaceholder(entry.canvas, entry.viewport)
+        if (entry.renderFailures <= PDF_VIEWER_LIMITS.maxRenderRetries) {
+            statusText.textContent = `Retrying page ${entry.pageNumber}…`
+            setTimeout(queueVisiblePageRender, getRenderRetryDelay(entry.renderFailures))
+        } else {
+            entry.shell.classList.add('pageRenderFailed')
+            entry.retryButton.hidden = false
+            reportPageRenderError(error, entry.pageNumber)
         }
     } finally {
         entry.renderTask = undefined
         entry.isRendering = false
-        page.cleanup?.()
+        page?.cleanup?.()
     }
 }
 
@@ -611,6 +643,7 @@ function getPagesNearViewport() {
 
 function releaseRenderedPage(entry) {
     if (!entry.isRendered && !entry.isRendering) {
+        resetRenderFailure(entry)
         return
     }
 
@@ -619,6 +652,13 @@ function releaseRenderedPage(entry) {
     entry.isRendered = false
     entry.isRendering = false
     resetCanvasToPlaceholder(entry.canvas, entry.viewport)
+    resetRenderFailure(entry)
+}
+
+function resetRenderFailure(entry) {
+    entry.renderFailures = 0
+    entry.shell.classList.remove('pageRenderFailed')
+    entry.retryButton.hidden = true
 }
 
 function clearPageEntries() {
@@ -762,6 +802,12 @@ function snapshotViewerState() {
 function reportError(error) {
     const message = error instanceof Error ? error.message : String(error)
     statusText.textContent = 'Failed to load PDF'
+    vscode.postMessage({ type: 'document-error', message })
+}
+
+function reportPageRenderError(error, pageNumber) {
+    const message = error instanceof Error ? error.message : String(error)
+    statusText.textContent = `Failed to render page ${pageNumber}`
     vscode.postMessage({ type: 'document-error', message })
 }
 

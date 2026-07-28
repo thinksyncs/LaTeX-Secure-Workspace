@@ -3,7 +3,7 @@
   "displayName": "LaTeX Workspace Security",
   "description": "Secure LaTeX tools for VS Code with project-local completions, manual build, diagnostics, and a local PDF tab viewer with SyncTeX.",
   "icon": "icons/icon.png",
-  "version": "11.2.11",
+  "version": "11.2.12",
   "publisher": "ToppyMicroServices",
   "license": "MIT",
   "homepage": "https://github.com/thinksyncs/LaTeX-Secure-Workspace",
@@ -650,6 +650,31 @@
         "title": "%command.secure-mode-report%",
         "category": "LaTeX-Secure-Workspace",
         "icon": "$(checklist)"
+      },
+      {
+        "command": "latex-workshop.build-root-inspector",
+        "title": "%command.build-root-inspector%",
+        "category": "LaTeX-Secure-Workspace",
+        "icon": "$(type-hierarchy)"
+      },
+      {
+        "command": "latex-workshop.project-health",
+        "title": "%command.project-health%",
+        "category": "LaTeX-Secure-Workspace",
+        "icon": "$(pulse)"
+      },
+      {
+        "command": "latex-workshop.build-provenance",
+        "title": "%command.build-provenance%",
+        "category": "LaTeX-Secure-Workspace",
+        "icon": "$(verified)"
+      },
+      {
+        "command": "latex-workshop.build-with-root-candidate",
+        "title": "%command.build-with-root-candidate%",
+        "category": "LaTeX-Secure-Workspace",
+        "icon": "$(run)",
+        "enablement": "!virtualWorkspace && isWorkspaceTrusted"
       },
       {
         "command": "latex-workshop.kill",

@@ -1,5 +1,16 @@
 # Change Log
 
+## [11.2.12] - 2026-07-28
+
+### Added
+- Add on-demand build-root inspection with parent candidates, source chains, and a project-local dependency tree.
+- Add project health checks for missing paths, citations, references, duplicate labels, and unused labels.
+- Add safe project-local label rename, explicit missing-path quick fixes, one-shot parent-root selection, evidence-based LuaLaTeX guidance, and successful-build provenance reports.
+
+### Fixed
+- Restrict reverse SyncTeX source navigation to real paths inside the workspace that owns the PDF.
+- Recover bounded PDF page-render failures automatically and expose a manual retry action instead of leaving a black page.
+
 ## [11.2.11] - 2026-07-28
 
 ### Fixed

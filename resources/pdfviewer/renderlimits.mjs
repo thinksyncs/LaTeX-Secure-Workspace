@@ -10,11 +10,13 @@ export const PDF_VIEWER_LIMITS = Object.freeze({
     maxCanvasPixels: 1_500_000,
     maxImageSize: 1_500_000,
     maxOutputScale: 1.25,
+    maxRenderRetries: 2,
     maxRenderedPages: 3,
     minOutputScale: 0.1,
     minPlaceholderCanvasSize: 1,
     pageCleanupBatchSize: 4,
     renderMarginMultiplier: 0.5,
+    renderRetryDelayMs: 150,
     useWasm: false,
 })
 
@@ -56,6 +58,16 @@ export function computeOutputScale(viewport, devicePixelRatio, limits = PDF_VIEW
 
 export function enqueueSerialRender(previousRender, render) {
     return Promise.resolve(previousRender).then(render, render)
+}
+
+export function getRenderRetryDelay(attempt, limits = PDF_VIEWER_LIMITS) {
+    const safeAttempt = Math.max(1, Math.floor(Number(attempt) || 1))
+    return limits.renderRetryDelayMs * safeAttempt
+}
+
+export function canAttemptPageRender(failures, limits = PDF_VIEWER_LIMITS) {
+    const safeFailures = Math.max(0, Math.floor(Number(failures) || 0))
+    return safeFailures <= limits.maxRenderRetries
 }
 
 export function pickPageNumbersToRender(pageMetrics, viewportTop, viewportHeight, pendingPageNumber, limits = PDF_VIEWER_LIMITS) {

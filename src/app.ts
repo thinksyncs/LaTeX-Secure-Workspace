@@ -172,6 +172,10 @@ function registerLatexWorkshopCommands(extensionContext: vscode.ExtensionContext
         vscode.commands.registerCommand('latex-workshop.refresh-viewer', () => lw.commands.refresh()),
         vscode.commands.registerCommand('latex-workshop.secure-build-status', () => lw.commands.secureBuildStatus()),
         vscode.commands.registerCommand('latex-workshop.secure-mode-report', () => lw.commands.secureModeReport()),
+        vscode.commands.registerCommand('latex-workshop.build-root-inspector', () => lw.commands.buildRootInspector()),
+        vscode.commands.registerCommand('latex-workshop.project-health', () => lw.commands.projectHealth()),
+        vscode.commands.registerCommand('latex-workshop.build-provenance', () => lw.commands.buildProvenance()),
+        vscode.commands.registerCommand('latex-workshop.build-with-root-candidate', () => lw.commands.buildWithRootCandidate()),
         vscode.commands.registerCommand('latex-workshop.recipes', (recipe: string | undefined) => lw.commands.recipes(recipe)),
         vscode.commands.registerCommand('latex-workshop.kill', () => lw.commands.kill()),
         vscode.commands.registerCommand('latex-workshop.clean', () => lw.commands.clean()),
@@ -248,6 +252,10 @@ function registerProviders(extensionContext: vscode.ExtensionContext) {
         ),
         vscode.languages.registerHoverProvider(latexSymbolSelector, lw.preview.provider),
         vscode.languages.registerDefinitionProvider(latexSymbolSelector, lw.language.definition),
+        vscode.languages.registerRenameProvider(latexSymbolSelector, lw.language.labelRename),
+        vscode.languages.registerCodeActionsProvider(latexSymbolSelector, lw.language.pathQuickFix, {
+            providedCodeActionKinds: [vscode.CodeActionKind.QuickFix]
+        }),
         vscode.languages.registerDocumentSymbolProvider(latexSymbolSelector, lw.language.docSymbol),
         vscode.languages.registerDocumentSymbolProvider(bibtexSelector, lw.language.docSymbol),
         vscode.languages.registerDocumentSymbolProvider(selectDocumentsWithId(['doctex']), lw.language.docSymbol),

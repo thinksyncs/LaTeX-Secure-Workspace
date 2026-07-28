@@ -22,9 +22,11 @@ Risk:
 
 Mitigation:
 
-The secure build disables Live Share integration, the internal PDF preview server, browser-based preview flows, external PDF viewer execution, and external SyncTeX command paths. In place of the old preview stack, it keeps only a local tab-based PDF viewer with file refresh and forward/reverse SyncTeX inside the bundled webview path.
+The secure build disables Live Share integration, the internal PDF preview server, browser-based preview flows, external PDF viewer execution, and external SyncTeX command paths. In place of the old preview stack, it keeps only a local tab-based PDF viewer with file refresh and forward/reverse SyncTeX inside the bundled webview path. The viewer grants local-resource access only to its bundled assets and the directory containing the selected PDF. Reverse SyncTeX resolves the reported source through the filesystem and opens it only when its real path remains inside the workspace that owns that PDF.
 
 Restricted Mode remains available on a limited basis. In restricted mode, the local tab viewer and viewer refresh remain available because they stay inside the bundled webview path, while build, clean, kill, and reveal-output commands remain disabled until trust is granted.
+
+Page-render recovery is bounded to two automatic retries. It reuses the existing page and memory limits and does not add a preview server, network request, or external viewer fallback.
 
 ### 2. Reduced execution of workspace-controlled external tools
 
@@ -73,6 +75,8 @@ Risk:
 Mitigation:
 
 The secure build removes or disables word count, math preview panel, auto-lint execution, and other convenience features that are not required for core authoring. Texdoc and external formatter helpers require a trusted workspace and block workspace-scoped executable overrides. Texdoc remains an explicit command.
+
+Root inspection, project health, dependency reporting, label rename, and missing-path quick fixes operate only on project-local files and do not spawn TeX or external helper processes. A rename or path replacement is applied only after an explicit editor action. Suggested path candidates are existing same-name files whose real paths remain inside the current workspace.
 
 ### 5. Removed `vsls`-specific handling and legacy compatibility paths
 

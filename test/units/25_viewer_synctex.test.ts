@@ -1,8 +1,10 @@
+import * as path from 'path'
 import * as vscode from 'vscode'
 import * as sinon from 'sinon'
 import { assert, mock } from './utils'
 import { lw } from '../../src/lw'
 import * as customEditor from '../../src/preview/pdfcustomeditor'
+import { configureSecurePdfViewerWebview } from '../../src/preview/viewer/securepdfviewer'
 import { synctex } from '../../src/locate/synctex'
 import { testFileSuiteName } from '../file-name'
 
@@ -183,5 +185,29 @@ describe(testFileSuiteName(__filename), () => {
         const [actualPdfUri, actualRecord] = locateStub.firstCall.args as [vscode.Uri, typeof record]
         assert.pathStrictEqual(actualPdfUri.fsPath, lw.file.getSecurityPdfPath(rootFile))
         assert.deepStrictEqual(actualRecord, record)
+    })
+
+    it('should restrict reverse SyncTeX targets to the PDF workspace', async () => {
+        const workspaceFolder = vscode.workspace.workspaceFolders?.[0]
+        assert.ok(workspaceFolder)
+        const pdfUri = vscode.Uri.file(path.join(workspaceFolder.uri.fsPath, '.lw-security', 'main.pdf'))
+        const insideFile = path.join(workspaceFolder.uri.fsPath, '04_core_root', 'secure_parent', 'main.tex')
+        const outsideFile = path.join(lw.extensionRoot, 'package.json')
+
+        assert.strictEqual(await synctex.components.isReverseSyncTeXTargetAllowed(insideFile, pdfUri), true)
+        assert.strictEqual(await synctex.components.isReverseSyncTeXTargetAllowed(outsideFile, pdfUri), false)
+    })
+
+    it('should expose only extension assets and the PDF directory to the webview', () => {
+        const pdfUri = vscode.Uri.file('/tmp/.lw-security/main.pdf')
+        const webview = { options: {} } as unknown as vscode.Webview
+
+        configureSecurePdfViewerWebview(webview, pdfUri)
+
+        assert.strictEqual(webview.options.enableScripts, true)
+        const roots = webview.options.localResourceRoots ?? []
+        assert.strictEqual(roots.length, 2)
+        assert.pathStrictEqual(roots[0].fsPath, lw.extensionRoot)
+        assert.pathStrictEqual(roots[1].fsPath, path.dirname(pdfUri.fsPath))
     })
 })

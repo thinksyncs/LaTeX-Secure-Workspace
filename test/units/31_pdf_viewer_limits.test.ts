@@ -5,6 +5,7 @@ import { assert } from './utils'
 import { testFileSuiteName } from '../file-name'
 
 type RenderLimitsModule = {
+    canAttemptPageRender: (failures: number) => boolean,
     PDF_VIEWER_LIMITS: {
         canvasMaxAreaInBytes: number,
         documentCleanupDelayMs: number,
@@ -17,11 +18,13 @@ type RenderLimitsModule = {
         maxCanvasPixels: number,
         maxImageSize: number,
         maxOutputScale: number,
+        maxRenderRetries: number,
         maxRenderedPages: number,
         minOutputScale: number,
         minPlaceholderCanvasSize: number,
         pageCleanupBatchSize: number,
-        renderMarginMultiplier: number
+        renderMarginMultiplier: number,
+        renderRetryDelayMs: number
     },
     enqueueSerialRender: <T>(previousRender: Promise<unknown>, render: () => Promise<T>) => Promise<T>,
     createPdfDocumentInit: (config: {
@@ -45,6 +48,7 @@ type RenderLimitsModule = {
         wasmUrl: string
     },
     computeOutputScale: (viewport: { width: number, height: number }, devicePixelRatio: number) => number,
+    getRenderRetryDelay: (attempt: number) => number,
     pickPageNumbersToRender: (
         pageMetrics: Array<{ pageNumber: number, pageTop: number, pageBottom: number }>,
         viewportTop: number,
@@ -63,8 +67,10 @@ describe(testFileSuiteName(__filename), () => {
             .replace(/export function createPdfDocumentInit/g, 'function createPdfDocumentInit')
             .replace(/export function computeOutputScale/g, 'function computeOutputScale')
             .replace(/export function enqueueSerialRender/g, 'function enqueueSerialRender')
+            .replace(/export function getRenderRetryDelay/g, 'function getRenderRetryDelay')
+            .replace(/export function canAttemptPageRender/g, 'function canAttemptPageRender')
             .replace(/export function pickPageNumbersToRender/g, 'function pickPageNumbersToRender')
-        const script = new vm.Script(`${source}\nmodule.exports = { PDF_VIEWER_LIMITS, createPdfDocumentInit, computeOutputScale, enqueueSerialRender, pickPageNumbersToRender }`)
+        const script = new vm.Script(`${source}\nmodule.exports = { PDF_VIEWER_LIMITS, canAttemptPageRender, createPdfDocumentInit, computeOutputScale, enqueueSerialRender, getRenderRetryDelay, pickPageNumbersToRender }`)
         const module: { exports: RenderLimitsModule | undefined } = { exports: undefined }
         const context = {
             Math,
@@ -88,12 +94,14 @@ describe(testFileSuiteName(__filename), () => {
         assert.strictEqual(renderLimits.PDF_VIEWER_LIMITS.maxCanvasDimension, 3072)
         assert.strictEqual(renderLimits.PDF_VIEWER_LIMITS.maxCanvasPixels, 1_500_000)
         assert.strictEqual(renderLimits.PDF_VIEWER_LIMITS.maxImageSize, 1_500_000)
+        assert.strictEqual(renderLimits.PDF_VIEWER_LIMITS.maxRenderRetries, 2)
         assert.strictEqual(renderLimits.PDF_VIEWER_LIMITS.maxRenderedPages, 3)
         assert.strictEqual(renderLimits.PDF_VIEWER_LIMITS.maxOutputScale, 1.25)
         assert.strictEqual(renderLimits.PDF_VIEWER_LIMITS.minOutputScale, 0.1)
         assert.strictEqual(renderLimits.PDF_VIEWER_LIMITS.minPlaceholderCanvasSize, 1)
         assert.strictEqual(renderLimits.PDF_VIEWER_LIMITS.pageCleanupBatchSize, 4)
         assert.strictEqual(renderLimits.PDF_VIEWER_LIMITS.renderMarginMultiplier, 0.5)
+        assert.strictEqual(renderLimits.PDF_VIEWER_LIMITS.renderRetryDelayMs, 150)
     })
 
     it('should disable risky pdf.js features for large documents', () => {
@@ -195,5 +203,14 @@ describe(testFileSuiteName(__filename), () => {
         releaseFirstRender?.()
         await second
         assert.strictEqual(maxActiveRenders, 1)
+    })
+
+    it('should bound render retries with a short linear delay', () => {
+        assert.strictEqual(renderLimits.getRenderRetryDelay(1), 150)
+        assert.strictEqual(renderLimits.getRenderRetryDelay(2), 300)
+        assert.strictEqual(renderLimits.getRenderRetryDelay(Number.NaN), 150)
+        assert.strictEqual(renderLimits.canAttemptPageRender(0), true)
+        assert.strictEqual(renderLimits.canAttemptPageRender(2), true)
+        assert.strictEqual(renderLimits.canAttemptPageRender(3), false)
     })
 })

@@ -9,8 +9,9 @@ LaTeX-Secure-Workspace keeps a deliberately small workflow surface:
 
 - Manual pdfLaTeX or LuaLaTeX build with fixed internal recipes
 - Root-file detection with the secure root-resolution policy
-- Local tab-based PDF viewing with refresh and forward/reverse SyncTeX
-- Project-local completions, snippets, hover help, outline, and diagnostics
+- On-demand root inspection, project health, and build provenance reports
+- Local tab-based PDF viewing with bounded render recovery and forward/reverse SyncTeX
+- Project-local completions, safe label rename, snippets, hover help, outline, and diagnostics
 - Texdoc from trusted workspaces with command confirmation
 
 The fork intentionally does not expose Live Share integration, browser viewer
@@ -24,6 +25,9 @@ count, or the math preview panel.
 3. Open the main document and run **LaTeX-Secure-Workspace: Build LaTeX project** from the Command Palette or the editor build button.
 4. For LuaLaTeX, run **LaTeX-Secure-Workspace: Build with recipe** and select `secure-lualatexmk`.
 5. Use **LaTeX-Secure-Workspace: Show secure build status** when a tool, root file, output path, or PDF cannot be found.
+6. When working in an included fragment, use **Show build root inspector** to review the selected parent and dependency chain, or **Build with project root** to select a detected parent for one build.
+7. Run **Check project health** to find project-local missing inputs, graphics, citations, references, and label issues without launching external tools.
+8. After a successful build, use **Show build provenance** to review the fixed command, root, output digest, and timing.
 
 On macOS, the extension restores the standard MacTeX path
 `/Library/TeX/texbin` for GUI-launched VS Code. On Windows, the TeX Live or
@@ -36,6 +40,21 @@ shows the detected version line, and provides OS-specific recovery guidance.
 Missing `.sty`, `.cls`, and related TeX resources are reported directly with
 guidance to check project files or possible distribution packages. The compiler
 log remains available for details.
+
+Use VS Code's **Rename Symbol** command (`F2`) on a supported label or reference
+to update exact project-local occurrences. Project insight and rename operations
+stay inside the open workspace and do not execute LaTeX commands. If direct
+LuaLaTeX-only evidence is found after a failed pdfLaTeX build, the extension can
+offer a one-time LuaLaTeX build; it does not switch the engine automatically.
+
+When the cursor is on a missing `\input`, `\includegraphics`, or bibliography
+path, **Quick Fix** can list same-name candidates that already exist inside the
+workspace. No file is changed until a candidate is selected, and the inserted
+path is relative to the current document.
+
+The PDF viewer retries a failed page render at most twice and then provides a
+manual retry button. Reverse SyncTeX opens a source target only after its real
+path is confirmed to remain inside the workspace that owns the PDF.
 
 ## Reading Order
 

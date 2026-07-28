@@ -7,8 +7,9 @@ Secure LaTeX tools for [Visual Studio Code](https://code.visualstudio.com/) with
 - Project-local completions for citations, labels, commands, packages, and input paths
 - Manual pdfLaTeX and LuaLaTeX build with fixed secure recipes
 - Preflight checks for required LaTeX tools with OS-specific recovery guidance
-- Local PDF tab viewer with refresh and forward/reverse SyncTeX
-- Diagnostics and log parsing inside VS Code
+- Build-root inspection, project health checks, and build provenance reports
+- Local PDF tab viewer with refresh, bounded render recovery, and forward/reverse SyncTeX
+- Diagnostics, log parsing, and safe project-wide label rename inside VS Code
 - No telemetry, auto build, custom build recipes, external build commands, or browser viewer workflow
 
 ## Best For
@@ -48,10 +49,21 @@ For repository organization and cleanup rules, see [Repository Layout](./docs/ma
 | --- | --- |
 | Editing | Project-local completion for citations, labels, commands, environments, classes, packages, and input paths; snippets, wrapping, outline, and hover help. |
 | Build | Explicit manual build with fixed `secure-latexmk` (pdfLaTeX) and `secure-lualatexmk` (LuaLaTeX) profiles and shell escape disabled; fixed root and output policy; no workspace-selected command path. |
+| Project insight | On-demand root candidates and dependency tree, project health checks, and the latest successful build provenance. |
 | Environment | Engine-aware preflight checks for `latexmk` and pdfLaTeX or LuaLaTeX, tool versions in Secure Build Status, standard MacTeX PATH recovery, and targeted missing-resource guidance. |
-| PDF | Local VS Code tab viewer with refresh and forward/reverse SyncTeX inside the bundled viewer path. |
-| Diagnostics | LaTeX log parsing, Problems-panel diagnostics, graphics checks, compiler log access, and actionable environment failures. |
+| PDF | Local VS Code tab viewer with refresh, bounded retry after page-render failures, and forward/reverse SyncTeX inside the bundled viewer path. |
+| Diagnostics | LaTeX log parsing, Problems-panel diagnostics, project health checks, safe label rename, graphics checks, compiler log access, and actionable environment failures. |
 | Documentation | Texdoc from trusted workspaces with workspace executable overrides blocked and confirmation before launch. |
+
+## Project Insight And Repair
+
+- **Show build root inspector** reports the active source, selected root, selection reason, parent candidates, source chain, and project-local input dependency tree without changing files.
+- **Build with project root** lets you explicitly select one detected parent document for a single trusted manual build. It does not persist the choice or add a magic comment.
+- **Check project health** scans project-local TeX and bibliography files for missing inputs, graphics, citations, references, duplicate labels, and unused labels. It does not run external tools.
+- For a missing `\input`, `\includegraphics`, or bibliography path, VS Code Quick Fix offers same-name files found inside the workspace. A path changes only after you select a candidate, and the replacement remains relative to the current document.
+- Rename a label with VS Code's **Rename Symbol** command (`F2`). The extension updates exact project-local `\label`, `\ref`, `\eqref`, `\autoref`, `\pageref`, `\cref`, `\Cref`, `\vref`, and `\Vref` references only.
+- **Show build provenance** reports the latest successful build's root, fixed recipe command, timestamps, PDF size, and SHA-256 digest. Home-directory prefixes are redacted.
+- When a pdfLaTeX build fails and the project contains direct LuaLaTeX evidence such as `fontspec`, the extension offers a one-time **Build with LuaLaTeX** action. It never changes engines silently.
 
 ## Build Behavior
 
@@ -60,7 +72,7 @@ For repository organization and cleanup rules, see [Repository Layout](./docs/ma
 - Report a missing `.sty`, `.cls`, or related TeX resource directly, with guidance to check project files or the providing TeX package.
 - Resolve the build root with a fixed internal policy and always run manual build and clean against the resolved main root file. When the active TeX file is an included fragment, the resolver follows project-local `\input` and `\include` relationships to its parent document; a standalone document remains its own root. Secure build and viewer flows do not honor file-level `%!TEX root` comments.
 - Write build outputs and auxiliary files into the resolved root file directory, rather than honoring workspace-controlled output-path overrides.
-- Open the built PDF in a local VS Code tab using a minimal `pdf.js` runtime, with refresh, forward SyncTeX, and reverse SyncTeX inside the bundled webview path. A manual build reveals the active source location even when `latexmk` reports that the PDF is already up to date.
+- Open the built PDF in a local VS Code tab using a minimal `pdf.js` runtime, with refresh, forward SyncTeX, and reverse SyncTeX inside the bundled webview path. A manual build reveals the active source location even when `latexmk` reports that the PDF is already up to date. Failed page renders are retried twice with a bounded delay and expose a manual retry button instead of leaving a black page.
 
 ## Constrained In This Secure Build
 
@@ -73,6 +85,7 @@ The following surfaces remain present only in a narrowed form.
 - Build outputs and auxiliary files are resolved in the root file directory instead of workspace-controlled output or auxiliary directories.
 - Texdoc and external formatter helpers require a trusted workspace. Workspace-scoped executable and argument overrides are blocked or ignored; Texdoc runs only from an explicit command.
 - Restricted Mode skips `kpsewhich`, external formatters, and the native forward SyncTeX helper. Forward SyncTeX falls back to the bundled parser.
+- Reverse SyncTeX opens source files only after their real path is confirmed to remain inside the workspace that owns the PDF.
 - The `external` PDF viewer setting is retained for compatibility, but this secure build still opens PDFs in the internal tab viewer.
 
 ## Not Included In This Secure Build

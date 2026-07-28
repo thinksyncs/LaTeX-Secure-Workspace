@@ -20,6 +20,7 @@ export const synctex = {
         synctexToPDFCombined,
         computeToTeX,
         openTeX,
+        isReverseSyncTeXTargetAllowed,
         getCurrentEditorCoordinates,
         shouldUseNativeSyncTeX,
         shouldUseExternalViewerForForwardSyncTeX,
@@ -522,8 +523,27 @@ async function toPDFFromRef(args: {line: number, filePath: string}): Promise<voi
  */
 async function toTeX(data: Extract<ClientRequest, {type: 'reverse_synctex'}>, pdfUri: vscode.Uri) {
     const record = await computeToTeX(data, pdfUri)
-    if (record) {
+    if (record && await isReverseSyncTeXTargetAllowed(record.input, pdfUri)) {
         await openTeX(record.input, record.line, record.column, data.textBeforeSelection, data.textAfterSelection)
+    } else if (record) {
+        logger.log(`Backward SyncTeX blocked outside the PDF workspace: ${record.input}`)
+    }
+}
+
+async function isReverseSyncTeXTargetAllowed(input: string, pdfUri: vscode.Uri): Promise<boolean> {
+    const workspaceFolder = vscode.workspace.getWorkspaceFolder(pdfUri)
+    if (!workspaceFolder || workspaceFolder.uri.scheme !== 'file') {
+        return false
+    }
+    try {
+        const [workspacePath, inputPath] = await Promise.all([
+            fs.promises.realpath(workspaceFolder.uri.fsPath),
+            fs.promises.realpath(path.resolve(input))
+        ])
+        const relative = path.relative(workspacePath, inputPath)
+        return relative === '' || (!path.isAbsolute(relative) && relative !== '..' && !relative.startsWith(`..${path.sep}`))
+    } catch {
+        return false
     }
 }
 

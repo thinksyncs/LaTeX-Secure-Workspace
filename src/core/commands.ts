@@ -1,6 +1,14 @@
 import * as path from 'path'
 import * as vscode from 'vscode'
 import { getAvailableRecipes } from '../compile/recipe'
+import {
+    getBuildRootCandidates,
+    getEngineRecommendation,
+    recordBuildProvenance,
+    showBuildProvenance,
+    showBuildRootInspector,
+    showProjectHealth
+} from './project-insight'
 import { showSecureBuildStatus, showSecureModeReport } from './secure-status'
 import { lw } from '../lw'
 import { requireTrustedWorkspace } from '../utils/security'
@@ -22,15 +30,37 @@ export async function build(skipSelection: boolean = false, rootFile: string | u
     if (!requireTrustedWorkspace('Build')) {
         return
     }
+    const startedAt = Date.now()
     const source = getBuildSource()
     const succeeded = await lw.compile.build(skipSelection, rootFile, languageId, recipe)
     const builtRoot = rootFile ?? lw.root.file.path
-    if (!succeeded || !source || !builtRoot) {
+    if (!succeeded || !builtRoot) {
+        if (builtRoot && recipe !== 'secure-lualatexmk') {
+            const recommendation = await getEngineRecommendation(builtRoot)
+            if (recommendation?.engine === 'lualatex') {
+                const action = await vscode.window.showWarningMessage(
+                    `This project uses ${recommendation.signals.join(', ')}, which may require LuaLaTeX.`,
+                    'Build with LuaLaTeX'
+                )
+                if (action === 'Build with LuaLaTeX') {
+                    await build(skipSelection, builtRoot, languageId, 'secure-lualatexmk')
+                }
+            }
+        }
         return
     }
     const pdfUri = vscode.Uri.file(lw.file.getSecurityPdfPath(builtRoot))
     if (await lw.file.exists(pdfUri.fsPath)) {
-        await lw.locate.synctex.toPDF(pdfUri, source)
+        await recordBuildProvenance({
+            activeSource: source?.filePath,
+            pdfPath: pdfUri.fsPath,
+            recipeName: recipe,
+            rootFile: builtRoot,
+            startedAt
+        })
+        if (source) {
+            await lw.locate.synctex.toPDF(pdfUri, source)
+        }
     }
 }
 
@@ -159,6 +189,48 @@ export async function secureBuildStatus() {
 export async function secureModeReport() {
     logger.log('SECURE MODE REPORT command invoked.')
     await showSecureModeReport()
+}
+
+export async function buildRootInspector() {
+    logger.log('BUILD ROOT INSPECTOR command invoked.')
+    await showBuildRootInspector()
+}
+
+export async function projectHealth() {
+    logger.log('PROJECT HEALTH command invoked.')
+    await showProjectHealth()
+}
+
+export async function buildProvenance() {
+    logger.log('BUILD PROVENANCE command invoked.')
+    await showBuildProvenance()
+}
+
+export async function buildWithRootCandidate() {
+    logger.log('BUILD WITH ROOT CANDIDATE command invoked.')
+    if (!requireTrustedWorkspace('Build')) {
+        return
+    }
+    const candidates = await getBuildRootCandidates()
+    if (candidates.length === 0) {
+        void vscode.window.showWarningMessage('No project-local LaTeX root candidates were found.')
+        return
+    }
+    const items = candidates.map(filePath => {
+        const workspace = vscode.workspace.getWorkspaceFolder(vscode.Uri.file(filePath))
+        return {
+            description: workspace ? path.relative(workspace.uri.fsPath, filePath) : filePath,
+            filePath,
+            label: path.basename(filePath)
+        }
+    })
+    const selected = items.length === 1 ? items[0] : await vscode.window.showQuickPick(items, {
+        placeHolder: 'Select a project-local root for this build'
+    })
+    if (!selected) {
+        return
+    }
+    await build(false, selected.filePath)
 }
 
 export function kill() {
