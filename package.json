@@ -3,7 +3,7 @@
   "displayName": "LaTeX Workspace Security",
   "description": "Secure LaTeX tools for VS Code with project-local completions, manual build, diagnostics, and a local PDF tab viewer with SyncTeX.",
   "icon": "icons/icon.png",
-  "version": "11.2.10",
+  "version": "11.2.11",
   "publisher": "ToppyMicroServices",
   "license": "MIT",
   "homepage": "https://github.com/thinksyncs/LaTeX-Secure-Workspace",
@@ -2017,7 +2017,7 @@
           "scope": "window",
           "type": "boolean",
           "default": false,
-          "markdownDescription": "Compatibility setting retained from upstream. SyncTeX after build is disabled in this secure build, so this setting has no effect."
+          "markdownDescription": "Compatibility setting retained from upstream. Manual builds in this secure build always reveal the active source location in the secure PDF, so this setting has no effect."
         },
         "latex-workshop.linting.chktex.enabled": {
           "scope": "resource",

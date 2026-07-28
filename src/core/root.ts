@@ -3,6 +3,7 @@ import * as path from 'path'
 import * as fs from 'fs'
 
 import { lw } from '../lw'
+import { InputFileRegExp } from '../utils/inputfilepath'
 import * as utils from '../utils/utils'
 
 const logger = lw.log('Root')
@@ -22,7 +23,10 @@ export const root = {
     },
     find,
     resolveSecurityRoot,
-    getWorkspace
+    getWorkspace,
+    components: {
+        includesProjectFile
+    }
 }
 
 const FIXED_ROOT_INDICATOR = /\\documentclass(?:\s*\[.*\])?\s*\{.*\}|\\begin\s*{document}|\\starttext|\\startTEXpage/ms
@@ -443,28 +447,37 @@ async function findSecurityInWorkspace(): Promise<string | undefined> {
 
     try {
         const fileUris = await vscode.workspace.findFiles(FIXED_ROOT_INCLUDE_GLOB)
+        const editor = getEditorForRootDetection()
+        const activeFilePath = editor?.document.fileName
         const candidates: string[] = []
+        const sourceParents: string[] = []
+        const flsParents: string[] = []
         for (const fileUri of fileUris) {
             if (!lw.constant.FILE_URI_SCHEMES.includes(fileUri.scheme)) {
                 logger.log(`Skip the file: ${fileUri.toString(true)}`)
                 continue
             }
             const flsChildren = await lw.cache.getFlsChildren(fileUri.fsPath)
-            if (vscode.window.activeTextEditor && flsChildren.includes(vscode.window.activeTextEditor.document.fileName)) {
+            if (activeFilePath && flsChildren.includes(activeFilePath)) {
                 logger.log(`Found secure root file from '.fls': ${fileUri.fsPath}`)
-                return fileUri.fsPath
+                flsParents.push(fileUri.fsPath)
             }
             const content = utils.stripCommentsAndVerbatim(fs.readFileSync(fileUri.fsPath).toString())
             if (content.match(FIXED_ROOT_INDICATOR)) {
-                const activeFilePath = vscode.window.activeTextEditor?.document.fileName ?? ''
-                if (vscode.window.activeTextEditor
-                    && fileUri.fsPath !== activeFilePath
-                    && lw.cache.getIncludedTeX(fileUri.fsPath).has(activeFilePath)) {
+                if (activeFilePath
+                    && path.normalize(fileUri.fsPath) !== path.normalize(activeFilePath)
+                    && await includesProjectFile(fileUri.fsPath, activeFilePath, workspace.fsPath)) {
                     logger.log(`Found secure root file from active editor by parent: ${fileUri.fsPath}`)
-                    candidates.unshift(fileUri.fsPath)
+                    sourceParents.push(fileUri.fsPath)
                 }
                 candidates.push(fileUri.fsPath)
             }
+        }
+        if (sourceParents.length > 0) {
+            return selectWorkspaceRootCandidate(sourceParents, 'secure parent roots')
+        }
+        if (flsParents.length > 0) {
+            return selectWorkspaceRootCandidate(flsParents, 'secure roots from .fls')
         }
         if (candidates.length > 0) {
             return selectWorkspaceRootCandidate(candidates, 'secure roots')
@@ -473,6 +486,55 @@ async function findSecurityInWorkspace(): Promise<string | undefined> {
         logger.logError('Error finding secure root file in workspace', err)
     }
     return
+}
+
+async function includesProjectFile(rootFilePath: string, targetFilePath: string, workspacePath: string): Promise<boolean> {
+    const normalizedTarget = normalizeComparisonPath(targetFilePath)
+    const visited = new Set<string>()
+
+    const visit = async (filePath: string): Promise<boolean> => {
+        const normalizedFile = normalizeComparisonPath(filePath)
+        if (visited.has(normalizedFile) || !isPathInside(workspacePath, filePath)) {
+            return false
+        }
+        visited.add(normalizedFile)
+
+        const openDocument = vscode.workspace.textDocuments.find(
+            document => normalizeComparisonPath(document.fileName) === normalizedFile
+        )
+        const rawContent = openDocument?.getText() ?? await lw.file.read(filePath)
+        if (rawContent === undefined) {
+            return false
+        }
+
+        const inputFiles = new InputFileRegExp()
+        const content = utils.stripCommentsAndVerbatim(rawContent)
+        while (true) {
+            const result = await inputFiles.exec(content, filePath, rootFilePath)
+            if (!result) {
+                return false
+            }
+            if (normalizeComparisonPath(result.path) === normalizedTarget) {
+                return true
+            }
+            if (await visit(result.path)) {
+                return true
+            }
+        }
+    }
+
+    return visit(rootFilePath)
+}
+
+function normalizeComparisonPath(filePath: string): string {
+    const normalized = path.resolve(filePath)
+    return process.platform === 'win32' ? normalized.toLowerCase() : normalized
+}
+
+function isPathInside(parentPath: string, childPath: string): boolean {
+    const relative = path.relative(path.resolve(parentPath), path.resolve(childPath))
+    return relative === '' ||
+        (!path.isAbsolute(relative) && relative !== '..' && !relative.startsWith(`..${path.sep}`))
 }
 
 function selectWorkspaceRootCandidate(candidates: string[], label: string): string {

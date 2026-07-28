@@ -149,6 +149,20 @@ describe(testFileSuiteName(__filename), () => {
             assert.ok(viewStub.calledOnceWithExactly(vscode.Uri.file(get.path('.lw-security', 'main.pdf')), 'tab'))
         })
 
+        it('should open an up-to-date pdf when latexmk skips compilation', async () => {
+            const viewStub = lw.viewer.view as sinon.SinonStub
+            const fileStat = { type: vscode.FileType.File }
+            const parseLogStub = lw.parser.parse.log as sinon.SinonStub
+            sinon.stub(lw.file, 'exists').resolves(fileStat as vscode.FileStat)
+            ;(lw.viewer.isViewing as sinon.SinonStub).returns(false)
+            parseLogStub.returns(true)
+
+            await build()
+
+            parseLogStub.resetBehavior()
+            assert.ok(viewStub.calledOnceWithExactly(vscode.Uri.file(get.path('.lw-security', 'main.pdf')), 'tab'))
+        })
+
         it('should refresh the built pdf when it is already open', async () => {
             const viewStub = lw.viewer.view as sinon.SinonStub
             const refreshStub = lw.viewer.refresh as sinon.SinonStub

@@ -58,6 +58,7 @@ describe(testFileSuiteName(__filename), () => {
             assert.ok(step)
             assert.strictEqual(step.name, 'latexmk')
             assert.strictEqual(step.command, 'latexmk')
+            assert.ok(step.args?.includes('-synctex=1'))
             assert.ok(buildLoop.calledOnce)
             assert.pathStrictEqual(lw.compile.compiledPDFPath, path.join(path.dirname(rootFile), '.lw-security', 'main.pdf'))
         })

@@ -22,7 +22,31 @@ export async function build(skipSelection: boolean = false, rootFile: string | u
     if (!requireTrustedWorkspace('Build')) {
         return
     }
-    await lw.compile.build(skipSelection, rootFile, languageId, recipe)
+    const source = getBuildSource()
+    const succeeded = await lw.compile.build(skipSelection, rootFile, languageId, recipe)
+    const builtRoot = rootFile ?? lw.root.file.path
+    if (!succeeded || !source || !builtRoot) {
+        return
+    }
+    const pdfUri = vscode.Uri.file(lw.file.getSecurityPdfPath(builtRoot))
+    if (await lw.file.exists(pdfUri.fsPath)) {
+        await lw.locate.synctex.toPDF(pdfUri, source)
+    }
+}
+
+function getBuildSource(): {line: number, filePath: string} | undefined {
+    const editor = vscode.window.activeTextEditor ?? lw.previousActive
+    if (!editor || !lw.file.hasLaTeXLangId(editor.document.languageId)) {
+        return
+    }
+    let line = editor.selection.active.line + 1
+    if (line > 1 && editor.document.lineCount === line && editor.document.lineAt(line - 1).text === '') {
+        line -= 1
+    }
+    return {
+        line,
+        filePath: editor.document.fileName
+    }
 }
 
 export async function buildRecipe() {
@@ -152,7 +176,7 @@ export function synctex() {
         logger.log('Cannot start SyncTeX. The active editor is undefined, or the document is not a LaTeX document.')
         return
     }
-    lw.locate.synctex.toPDF()
+    void lw.locate.synctex.toPDF()
 }
 
 export function synctexonref(line: number, filePath: string) {
@@ -162,7 +186,7 @@ export function synctexonref(line: number, filePath: string) {
         logger.log('Cannot start SyncTeX. The active editor is undefined, or the document is not a LaTeX document.')
         return
     }
-    lw.locate.synctex.toPDFFromRef({line, filePath})
+    void lw.locate.synctex.toPDFFromRef({line, filePath})
 }
 
 export async function clean(): Promise<void> {
@@ -214,7 +238,7 @@ export async function gotoSection(filePath: string, lineNumber: number) {
     if (vscode.window.activeTextEditor) {
         vscode.window.activeTextEditor.selection = new vscode.Selection(new vscode.Position(lineNumber, 0), new vscode.Position(lineNumber, 0))
         if (vscode.workspace.getConfiguration('latex-workshop').get('view.outline.sync.viewer') as boolean) {
-            lw.locate.synctex.toPDF(undefined, { line: lineNumber + 1, filePath: doc.fileName })
+            await lw.locate.synctex.toPDF(undefined, { line: lineNumber + 1, filePath: doc.fileName })
         }
     }
 }

@@ -476,6 +476,18 @@ describe(testFileSuiteName(__filename), () => {
     })
 
     describe('lw.root.resolveSecurityRoot', () => {
+        it('should find a project-local parent without a warm cache or fls file', async () => {
+            const rootPath = get.path(fixture, 'secure_parent', 'main.tex')
+            const fragmentPath = get.path(fixture, 'secure_parent', 'sections', 'leaf.tex')
+            const stub = mock.activeTextEditor(fragmentPath, 'Included fragment.')
+
+            const resolved = await lw.root.resolveSecurityRoot()
+
+            stub.restore()
+            assert.pathStrictEqual(resolved, rootPath)
+            assert.pathStrictEqual(lw.root.file.path, rootPath)
+        })
+
         it('should ignore !TEX root magic comments and keep the active root candidate', async () => {
             set.config('latex.build.enableMagicComments', true)
             const texPath = get.path(fixture, 'main.tex')

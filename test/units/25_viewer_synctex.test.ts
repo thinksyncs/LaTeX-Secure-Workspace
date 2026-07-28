@@ -1,6 +1,6 @@
 import * as vscode from 'vscode'
 import * as sinon from 'sinon'
-import { assert, mock, sleep } from './utils'
+import { assert, mock } from './utils'
 import { lw } from '../../src/lw'
 import * as customEditor from '../../src/preview/pdfcustomeditor'
 import { synctex } from '../../src/locate/synctex'
@@ -163,11 +163,23 @@ describe(testFileSuiteName(__filename), () => {
         const locateStub = sinon.stub(lw.viewer, 'locate').resolves()
         synctex.components.setSynctexToPDFCombinedForTest(() => Promise.resolve(record))
 
-        synctex.toPDF(pdfUri, { line: 1, filePath: rootFile })
+        await synctex.toPDF(pdfUri, { line: 1, filePath: rootFile })
 
-        for (let retry = 0; retry < 100 && locateStub.notCalled; retry++) {
-            await sleep(25)
-        }
+        assert.ok(locateStub.calledOnceWithExactly(pdfUri, record))
+    })
+
+    it('should target the fixed secure output directory by default', async () => {
+        const rootFile = '/tmp/main.tex'
+        const pdfUri = vscode.Uri.file('/tmp/.lw-security/main.pdf')
+        const record = { page: 1, x: 12, y: 34, indicator: true }
+        lw.root.file.path = rootFile
+        lw.root.file.langId = 'latex'
+        mock.activeTextEditor(rootFile, '\\documentclass{article}\n\\begin{document}\nabc\n\\end{document}\n')
+        const locateStub = sinon.stub(lw.viewer, 'locate').resolves()
+        synctex.components.setSynctexToPDFCombinedForTest(() => Promise.resolve(record))
+
+        await synctex.toPDF(undefined, { line: 1, filePath: rootFile })
+
         assert.ok(locateStub.calledOnceWithExactly(pdfUri, record))
     })
 })

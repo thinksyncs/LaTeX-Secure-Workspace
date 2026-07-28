@@ -1,5 +1,11 @@
 # Change Log
 
+## [11.2.11] - 2026-07-28
+
+### Fixed
+- Resolve a project-local parent document from nested `\input` and `\include` relationships when manual build starts from an included TeX fragment.
+- Generate SyncTeX data and reveal the active source location in the secure PDF after successful and up-to-date manual builds.
+
 ## [11.2.10] - 2026-07-27
 
 ### Added

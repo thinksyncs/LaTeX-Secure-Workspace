@@ -81,12 +81,12 @@ let isBuilding = false
  * @param {string | undefined} recipe - The name of the recipe to use for the
  * build.
  */
-async function build(skipSelection: boolean = false, rootFile: string | undefined = undefined, languageId: string | undefined = undefined, recipe: string | undefined = undefined) {
+async function build(skipSelection: boolean = false, rootFile: string | undefined = undefined, languageId: string | undefined = undefined, recipe: string | undefined = undefined): Promise<boolean> {
     const activeEditor = vscode.window.activeTextEditor ?? lw.previousActive
     if (!activeEditor) {
         logger.log('Cannot start to build because the active editor is undefined.')
         void logger.showErrorMessageWithExtensionLogButton('Cannot start secure build because no LaTeX editor is active. Open a LaTeX document and try again.')
-        return
+        return false
     }
 
     logger.log(`The document of the active editor: ${activeEditor.document.uri.toString(true)}`)
@@ -106,16 +106,16 @@ async function build(skipSelection: boolean = false, rootFile: string | undefine
     if (rootFile === undefined || languageId === undefined) {
         logger.log('Cannot find LaTeX root file. See https://github.com/James-Yu/LaTeX-Workshop/wiki/Compile#the-root-file')
         void logger.showErrorMessageWithExtensionLogButton('Cannot find a LaTeX root file. Open the main TeX document and try again.')
-        return
+        return false
     }
     void skipSelection
 
     if (!isBuildEnvironmentReady(lw.file.toUri(rootFile), recipe)) {
-        return
+        return false
     }
 
     logger.log(`Building root file: ${rootFile}`)
-    await buildRecipe(rootFile, languageId, buildLoop, recipe)
+    return buildRecipe(rootFile, languageId, buildLoop, recipe)
 }
 
 function isBuildEnvironmentReady(scope: vscode.ConfigurationScope, recipeName?: string): boolean {
@@ -151,10 +151,10 @@ function isBuildEnvironmentReady(scope: vscode.ConfigurationScope, recipeName?: 
  * last step and performs cleanup if necessary. Finally, it sets the `compiling`
  * flag to false.
  */
-async function buildLoop() {
+async function buildLoop(): Promise<boolean> {
     if (isBuilding) {
         logger.log('Another build loop is already running.')
-        return
+        return false
     }
 
     // Clear all logs before starting
@@ -164,6 +164,8 @@ async function buildLoop() {
     // Stop watching the PDF file to avoid reloading the PDF viewer twice.
     // The builder will be responsible for refreshing the viewer.
     let skipped = true
+    let completedBuild = false
+    let failed = false
     while (true) {
         const step = queue.getStep()
         if (step === undefined) {
@@ -171,13 +173,16 @@ async function buildLoop() {
         }
         const env = spawnProcess(step)
         const success = await monitorProcess(step, env)
+        failed = failed || !success
         skipped = skipped && !step.isExternal && step.isSkipped
         if (success && queue.isLastStep(step)) {
             await afterSuccessfulBuilt(step, skipped)
+            completedBuild = true
         }
     }
     isBuilding = false
     setTimeout(() => lw.compile.compiledPDFWriting--, vscode.workspace.getConfiguration('latex-workshop').get('latex.watch.pdf.delay') as number * 2)
+    return completedBuild && !failed
 }
 /** Normalizes a command-line argument that represents a file path to be
  * relative to the current working directory (`cwd`) if it is under the root
@@ -447,12 +452,11 @@ async function afterSuccessfulBuilt(lastStep: Step, skipped: boolean) {
     logger.log(`Successfully built ${lastStep.rootFile} .`)
     logger.refreshStatus('check', 'statusBar.foreground', 'Recipe succeeded.')
     lw.event.fire(lw.event.BuildDone)
-    if (!lastStep.isExternal && skipped) {
-        return
-    }
     if (await lw.file.exists(pdfPath)) {
         if (lw.viewer.isViewing(pdfUri)) {
-            lw.viewer.refresh(pdfUri)
+            if (!skipped) {
+                lw.viewer.refresh(pdfUri)
+            }
         } else {
             await lw.viewer.view(pdfUri, 'tab')
         }

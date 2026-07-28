@@ -273,7 +273,7 @@ function setSynctexToPDFCombinedForTest(fn?: SynctexToPDFCombined) {
  * @param forcedViewer - Indicates a PDF viewer with which SyncTeX is executed
  * ('auto', 'tabOrBrowser', or 'external').
  */
-function toPDF(pdfUri?: vscode.Uri, args?: {line: number, filePath: string}, forcedViewer: 'auto' | 'tabOrBrowser' | 'external' = 'auto') {
+async function toPDF(pdfUri?: vscode.Uri, args?: {line: number, filePath: string}, forcedViewer: 'auto' | 'tabOrBrowser' | 'external' = 'auto'): Promise<void> {
     let line: number
     let filePath: string
     let column = 0
@@ -305,22 +305,23 @@ function toPDF(pdfUri?: vscode.Uri, args?: {line: number, filePath: string}, for
         logger.log('No root file found.')
         return
     }
-    const targetPdfFile = pdfUri ?? lw.file.toUri(lw.file.getPdfPath(rootFile))
+    const targetPdfFile = pdfUri ?? lw.file.toUri(lw.file.getSecurityPdfPath(rootFile))
     if (active.document.lineCount === line &&
         active.document.lineAt(line - 1).text === '') {
             line -= 1
     }
     const pdfViewerMode = configuration.get('view.pdf.viewer')
     if (shouldUseExternalViewerForForwardSyncTeX(forcedViewer, pdfViewerMode)) {
-        void syncTeXExternal(line, targetPdfFile, rootFile)
+        await syncTeXExternal(line, targetPdfFile, rootFile)
         return
     }
 
-    void getSynctexToPDFCombined()(line, column, filePath, targetPdfFile, configuration.get('synctex.indicator') as 'none' | 'circle' | 'rectangle').then(async (record) => {
+    try {
+        const record = await getSynctexToPDFCombined()(line, column, filePath, targetPdfFile, configuration.get('synctex.indicator') as 'none' | 'circle' | 'rectangle')
         await lw.viewer.locate(targetPdfFile, record)
-    }).catch(e =>
+    } catch (e) {
         logger.logError('Forward SyncTeX failed.', e)
-    )
+    }
 }
 
 function shouldUseExternalViewerForForwardSyncTeX(
@@ -427,14 +428,14 @@ function callSyncTeXToPDF(line: number, col: number, filePath: string, pdfUri: v
  * @param args - The arguments of forward SyncTeX, including line number and
  * file path.
  */
-function toPDFFromRef(args: {line: number, filePath: string}) {
+async function toPDFFromRef(args: {line: number, filePath: string}): Promise<void> {
     const configuration = vscode.workspace.getConfiguration('latex-workshop')
     const viewer = configuration.get('view.pdf.ref.viewer') as 'auto' | 'tabOrBrowser' | 'external'
     args.line += 1
     if (viewer) {
-        toPDF(undefined, args, viewer)
+        await toPDF(undefined, args, viewer)
     } else {
-        toPDF(undefined, args)
+        await toPDF(undefined, args)
     }
 }
 

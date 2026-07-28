@@ -18,6 +18,7 @@ const FIXED_SECURE_LUALATEX_RECIPE_NAME = 'secure-lualatexmk'
 const FIXED_SECURE_TOOL_ARGS_BEFORE_ENGINE = [
     '-norc',
     '-no-shell-escape',
+    '-synctex=1',
     '-interaction=nonstopmode',
     '-file-line-error',
 ]
@@ -100,7 +101,7 @@ export async function getAvailableRecipes(scope?: vscode.ConfigurationScope): Pr
  * @param {string} [recipeName] - Optional. The name of the recipe to be used.
  * If undefined, the builder tries to determine on its own.
  */
-export async function build(rootFile: string, langId: string, buildLoop: () => Promise<void>, recipeName?: string) {
+export async function build(rootFile: string, langId: string, buildLoop: () => Promise<unknown>, recipeName?: string): Promise<boolean> {
     logger.log(`Build root file ${rootFile}`)
     const cwd: string = path.dirname(lw.file.toUri(rootFile).fsPath)
 
@@ -120,7 +121,7 @@ export async function build(rootFile: string, langId: string, buildLoop: () => P
     // Check for invalid toolchain
     if (tools === undefined) {
         logger.log('Invalid toolchain.')
-        return
+        return false
     }
 
     // Add tools to the queue with timestamp
@@ -135,7 +136,7 @@ export async function build(rootFile: string, langId: string, buildLoop: () => P
         lw.compile.compiledPDFPath = lw.file.getSecurityPdfPath(rootFile)
     }
     // Execute the build loop
-    await buildLoop()
+    return (await buildLoop()) !== false
 }
 
 /**
