@@ -10,6 +10,7 @@
 ### Fixed
 - Restrict reverse SyncTeX source navigation to real paths inside the workspace that owns the PDF.
 - Recover bounded PDF page-render failures automatically and expose a manual retry action instead of leaving a black page.
+- Pin and fingerprint-check the official TeX Live signing key so cached CI jobs do not depend on key-server availability.
 
 ## [11.2.11] - 2026-07-28
 

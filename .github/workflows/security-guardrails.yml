@@ -60,7 +60,14 @@ jobs:
 
       - name: Ensure TeX Live package metadata verification is fail-closed
         run: |
+          key=.github/keys/texlive.asc
+          expected=C78B82D8C79512F79CC0D7C80D5E5D9106BAB6BC
+          test -f "$key" || { echo "Missing pinned TeX Live signing key"; exit 1; }
+          actual="$(gpg --show-keys --with-colons "$key" | awk -F: '/^fpr:/ {print $10; exit}')"
+          test "$actual" = "$expected" || { echo "Unexpected pinned TeX Live key fingerprint: $actual"; exit 1; }
           for file in .github/actions/setup-texlive-linux/action.yml .github/workflows/texlive_on_mac.yml .github/workflows/texlive_on_win.yml; do
+            grep -q '.github/keys/texlive.asc' "$file" || { echo "Missing pinned TeX Live key use in $file"; exit 1; }
+            ! grep -q 'tug.org/texlive/files/texlive.asc' "$file" || { echo "TeX Live signing key must not depend on a key-server download in $file"; exit 1; }
             grep -q -- '--verify-repo=all' "$file" || { echo "Missing tlmgr --verify-repo=all in $file"; exit 1; }
             grep -q 'key add texlive.asc' "$file" || { echo "Missing tlmgr trusted key import in $file"; exit 1; }
             grep -q 'TL_GNUPGHOME' "$file" || { echo "Missing pinned GnuPG home for tlmgr verification in $file"; exit 1; }

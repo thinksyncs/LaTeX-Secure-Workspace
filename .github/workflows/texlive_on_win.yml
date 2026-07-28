@@ -46,7 +46,7 @@ jobs:
           gpg --batch --verify install-tl.zip.sha512.asc install-tl.zip.sha512 || return 1
           echo "TEXLIVE_REPOSITORY=$TEXLIVE_BOOTSTRAP_REPOSITORY" >> "$GITHUB_ENV"
         }
-        curl.exe --fail --show-error --silent --location --proto "=https" --tlsv1.2 -O https://tug.org/texlive/files/texlive.asc
+        cp .github/keys/texlive.asc texlive.asc
         test "$(gpg --show-keys --with-colons texlive.asc | awk -F: '/^fpr:/ {print $10; exit}')" = "$TEXLIVE_KEY_FINGERPRINT"
         GNUPGHOME="$(mktemp -d)"
         export GNUPGHOME
@@ -75,7 +75,7 @@ jobs:
       shell: pwsh
       run: |
         $gpg = (Get-Command gpg -ErrorAction Stop).Source
-        curl.exe --fail --show-error --silent --location --proto "=https" --tlsv1.2 -o texlive.asc https://tug.org/texlive/files/texlive.asc
+        Copy-Item .github/keys/texlive.asc texlive.asc
         $fingerprint = (& $gpg --show-keys --with-colons texlive.asc | Select-String '^fpr:' | Select-Object -First 1).ToString().Split(':')[9]
         if ($fingerprint -ne $env:TEXLIVE_KEY_FINGERPRINT) {
           throw "Unexpected TeX Live key fingerprint: $fingerprint"
