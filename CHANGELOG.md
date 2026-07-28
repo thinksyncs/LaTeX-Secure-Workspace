@@ -5,6 +5,7 @@
 ### Fixed
 - Resolve a project-local parent document from nested `\input` and `\include` relationships when manual build starts from an included TeX fragment.
 - Generate SyncTeX data and reveal the active source location in the secure PDF after successful and up-to-date manual builds.
+- Fall back to the bundled SyncTeX parser when the native helper returns an invalid forward-search response.
 
 ## [11.2.10] - 2026-07-27
 

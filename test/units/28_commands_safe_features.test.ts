@@ -40,15 +40,20 @@ describe(testFileSuiteName(__filename), () => {
         const buildStub = sinon.stub(lw.compile, 'build').resolves(true)
         const pdfStat: vscode.FileStat = { type: vscode.FileType.File, ctime: 0, mtime: 0, size: 1 }
         sinon.stub(lw.file, 'exists').resolves(pdfStat)
-        const toPDFStub = sinon.stub(lw.locate.synctex, 'toPDF').resolves()
+        const currentToPDF = lw.locate.synctex.toPDF as sinon.SinonStub
+        const toPDFStub = typeof currentToPDF.resolves === 'function'
+            ? currentToPDF
+            : sinon.stub(lw.locate.synctex, 'toPDF')
+        toPDFStub.resetHistory()
+        toPDFStub.resolves()
 
         await commands.build()
 
         assert.ok(buildStub.calledOnceWithExactly(false, undefined, undefined, undefined))
-        assert.ok(toPDFStub.calledOnceWithExactly(
-            vscode.Uri.file(lw.file.getSecurityPdfPath(rootFile)),
-            { line: 2, filePath: sourceFile }
-        ))
+        assert.strictEqual(toPDFStub.callCount, 1)
+        const [pdfUri, source] = toPDFStub.firstCall.args as [vscode.Uri, {line: number, filePath: string}]
+        assert.pathStrictEqual(pdfUri.fsPath, lw.file.getSecurityPdfPath(rootFile))
+        assert.deepStrictEqual(source, { line: 2, filePath: sourceFile })
     })
 
     it('should delegate texdoc to the extras module', () => {

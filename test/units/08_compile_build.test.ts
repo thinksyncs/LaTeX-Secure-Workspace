@@ -152,7 +152,10 @@ describe(testFileSuiteName(__filename), () => {
         it('should open an up-to-date pdf when latexmk skips compilation', async () => {
             const viewStub = lw.viewer.view as sinon.SinonStub
             const fileStat = { type: vscode.FileType.File }
-            const parseLogStub = lw.parser.parse.log as sinon.SinonStub
+            const currentParseLog = lw.parser.parse.log as sinon.SinonStub
+            const parseLogStub = typeof currentParseLog.returns === 'function'
+                ? currentParseLog
+                : sinon.stub(lw.parser.parse, 'log')
             sinon.stub(lw.file, 'exists').resolves(fileStat as vscode.FileStat)
             ;(lw.viewer.isViewing as sinon.SinonStub).returns(false)
             parseLogStub.returns(true)

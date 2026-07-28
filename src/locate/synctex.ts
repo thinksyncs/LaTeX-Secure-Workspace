@@ -396,11 +396,16 @@ function callSyncTeXToPDF(line: number, col: number, filePath: string, pdfUri: v
                 logger.logError(`(${logTag}) Forward SyncTeX failed, fallback to synctex.js.`, exitCode, stderr)
                 reject()
             } else {
-                const record = indicator === 'rectangle' ? parseToPDFList(stdout) : parseToPDF(stdout)
-                if (!Array.isArray(record)) {
-                    record.indicator = indicator !== 'none'
+                try {
+                    const record = indicator === 'rectangle' ? parseToPDFList(stdout) : parseToPDF(stdout)
+                    if (!Array.isArray(record)) {
+                        record.indicator = indicator !== 'none'
+                    }
+                    resolve(record)
+                } catch (error) {
+                    logger.logError(`(${logTag}) Forward SyncTeX returned an invalid response, fallback to synctex.js.`, error, stdout)
+                    reject(error)
                 }
-                resolve(record)
             }
         })
     }) as Promise<SyncTeXRecordToPDF> | Promise<SyncTeXRecordToPDFAll[]>
