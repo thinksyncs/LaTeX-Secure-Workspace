@@ -170,7 +170,6 @@ describe(testFileSuiteName(__filename), () => {
 
     it('should target the fixed secure output directory by default', async () => {
         const rootFile = '/tmp/main.tex'
-        const pdfUri = vscode.Uri.file('/tmp/.lw-security/main.pdf')
         const record = { page: 1, x: 12, y: 34, indicator: true }
         lw.root.file.path = rootFile
         lw.root.file.langId = 'latex'
@@ -180,6 +179,9 @@ describe(testFileSuiteName(__filename), () => {
 
         await synctex.toPDF(undefined, { line: 1, filePath: rootFile })
 
-        assert.ok(locateStub.calledOnceWithExactly(pdfUri, record))
+        assert.strictEqual(locateStub.callCount, 1)
+        const [actualPdfUri, actualRecord] = locateStub.firstCall.args as [vscode.Uri, typeof record]
+        assert.pathStrictEqual(actualPdfUri.fsPath, lw.file.getSecurityPdfPath(rootFile))
+        assert.deepStrictEqual(actualRecord, record)
     })
 })
