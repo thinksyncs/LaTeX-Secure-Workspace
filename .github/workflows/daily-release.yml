@@ -65,7 +65,7 @@ jobs:
         if gh release view daily >/dev/null 2>&1; then
           gh release delete daily --yes --cleanup-tag
         fi
-        git tag daily "$GITHUB_SHA"
+        git tag --force daily "$GITHUB_SHA"
         git push origin refs/tags/daily --force
         gh release create daily "${{ steps.package.outputs.vsix_path }}" \
           --title "Daily Build ${{ steps.version.outputs.daily_version }}" \
