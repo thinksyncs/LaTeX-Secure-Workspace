@@ -12,7 +12,7 @@ type UnifiedModule = {
 
 type UnifiedParser = { parse: (content: string) => Ast.Root }
 // eslint-disable-next-line @typescript-eslint/no-require-imports
-const { getParser, attachMacroArgs } = require(path.resolve(__dirname, '../../../../resources/unified.js')) as UnifiedModule
+const { getParser, attachMacroArgs } = require(path.resolve(__dirname, '../../../unified.js')) as UnifiedModule
 
 let unifiedParser: UnifiedParser = getParser({ flags: { autodetectExpl3AndAtLetter: true } })
 
