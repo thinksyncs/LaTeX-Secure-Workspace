@@ -86,7 +86,10 @@ jobs:
         entries="$(unzip -Z1 "${{ steps.package.outputs.vsix_path }}")"
         ! grep -q '^extension/node_modules/' <<< "$entries" || { echo "VSIX must not contain node_modules."; exit 1; }
         for required in \
+          extension/out/extension.js \
           extension/out/unified.js \
+          extension/out/src/parse/parser/unified.js \
+          extension/out/src/preview/mathjax/mathjax.js \
           extension/out/pdfjs/build/pdf.mjs \
           extension/out/pdfjs/build/pdf.worker.mjs \
           extension/out/pdfjs/cmaps/ \
