@@ -20,8 +20,11 @@ jobs:
     if: ${{ github.event_name == 'workflow_dispatch' || !github.event.release.prerelease }}
     runs-on: ubuntu-latest
     timeout-minutes: 45
+    environment: marketplace
     permissions:
+      attestations: write
       contents: write
+      id-token: write
     env:
       LATEXWORKSHOP_ALLOW_VSCODE_TEST_DOWNLOAD: '1'
       LATEXWORKSHOP_VSCODE_TEST_VERSION: '1.96.0'
@@ -78,6 +81,42 @@ jobs:
         vsix_path="$RUNNER_TEMP/vsix/${package_name}-${package_version}.vsix"
         npx vsce package --out "$vsix_path"
         echo "vsix_path=$vsix_path" >> "$GITHUB_OUTPUT"
+    - name: Audit VSIX payload
+      run: |
+        entries="$(unzip -Z1 "${{ steps.package.outputs.vsix_path }}")"
+        ! grep -q '^extension/node_modules/' <<< "$entries" || { echo "VSIX must not contain node_modules."; exit 1; }
+        for required in \
+          extension/out/extension.js \
+          extension/out/unified.js \
+          extension/out/src/parse/parser/unified.js \
+          extension/out/src/preview/mathjax/mathjax.js \
+          extension/out/pdfjs/build/pdf.mjs \
+          extension/out/pdfjs/build/pdf.worker.mjs \
+          extension/out/pdfjs/cmaps/ \
+          extension/out/pdfjs/standard_fonts/ \
+          extension/out/pdfjs/wasm/ \
+          extension/out/pdfjs/LICENSE
+        do
+          grep -q "^${required}" <<< "$entries" || { echo "VSIX is missing ${required}."; exit 1; }
+        done
+        echo "VSIX payload contains $(wc -l <<< "$entries") entries."
+    - name: Generate SPDX SBOM
+      id: sbom
+      run: |
+        sbom_path="${{ steps.package.outputs.vsix_path }}"
+        sbom_path="${sbom_path%.vsix}.spdx.json"
+        npm sbom --omit=dev --omit=optional --sbom-format spdx > "$sbom_path"
+        node -e 'const fs = require("fs"); const sbom = JSON.parse(fs.readFileSync(process.argv[1], "utf8")); if (sbom.spdxVersion !== "SPDX-2.3" || !Array.isArray(sbom.packages) || sbom.packages.length === 0) process.exit(1)' "$sbom_path"
+        echo "sbom_path=$sbom_path" >> "$GITHUB_OUTPUT"
+    - name: Attest VSIX build provenance
+      uses: actions/attest@f7c74d28b9d84cb8768d0b8ca14a4bac6ef463e6 # v4.2.0
+      with:
+        subject-path: ${{ steps.package.outputs.vsix_path }}
+    - name: Attest VSIX SBOM
+      uses: actions/attest@f7c74d28b9d84cb8768d0b8ca14a4bac6ef463e6 # v4.2.0
+      with:
+        subject-path: ${{ steps.package.outputs.vsix_path }}
+        sbom-path: ${{ steps.sbom.outputs.sbom_path }}
     - name: Publish stable extension to Marketplace
       uses: ./.github/actions/publish-extension
       env:
@@ -88,9 +127,11 @@ jobs:
     - name: Upload VSIX to GitHub release
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      run: gh release upload "$RELEASE_TAG" "${{ steps.package.outputs.vsix_path }}" --clobber
+      run: gh release upload "$RELEASE_TAG" "${{ steps.package.outputs.vsix_path }}" "${{ steps.sbom.outputs.sbom_path }}" --clobber
     - name: Archive VSIX artifact
       uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7
       with:
         name: stable-vsix
-        path: ${{ steps.package.outputs.vsix_path }}
+        path: |
+          ${{ steps.package.outputs.vsix_path }}
+          ${{ steps.sbom.outputs.sbom_path }}

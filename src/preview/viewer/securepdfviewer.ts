@@ -35,7 +35,7 @@ export function configureSecurePdfViewerWebview(webview: vscode.Webview, pdfUri:
 
 export async function getSecurePdfViewerHtml(pdfUri: vscode.Uri, webview: vscode.Webview, params: PdfViewerParams): Promise<string> {
     const extensionRoot = lw.file.toUri(lw.extensionRoot)
-    const pdfjsRoot = vscode.Uri.joinPath(extensionRoot, 'node_modules', 'pdfjs-dist')
+    const pdfjsRoot = vscode.Uri.joinPath(extensionRoot, 'out', 'pdfjs')
     const viewerHtmlPath = path.join(lw.extensionRoot, 'resources', 'pdfviewer', 'minimalviewer.html')
     const webviewSettings = createWebviewSettings(pdfUri, webview, pdfjsRoot, params)
     const viewerCssUri = webview.asWebviewUri(vscode.Uri.joinPath(extensionRoot, 'resources', 'pdfviewer', 'minimalviewer.css')).toString()

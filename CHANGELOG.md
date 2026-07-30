@@ -1,5 +1,15 @@
 # Change Log
 
+## [Unreleased]
+
+### Changed
+- Bundle the unified LaTeX parser and only the PDF.js assets required at runtime, removing packaged `node_modules` and reducing the VSIX payload.
+
+### Security
+- Gate Marketplace publication through the protected `marketplace` environment.
+- Generate an SPDX SBOM and publish GitHub build-provenance and SBOM attestations for stable VSIX releases.
+- Reject stable VSIX packages that contain runtime `node_modules` or omit required PDF.js assets and license notices.
+
 ## [11.2.12] - 2026-07-28
 
 ### Added

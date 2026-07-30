@@ -1,10 +1,11 @@
 import * as path from 'path'
 import * as vscode from 'vscode'
 import * as sinon from 'sinon'
+import type { PdfViewerParams } from '../../types/latex-workshop-protocol-types/index'
 import { assert, mock } from './utils'
 import { lw } from '../../src/lw'
 import * as customEditor from '../../src/preview/pdfcustomeditor'
-import { configureSecurePdfViewerWebview } from '../../src/preview/viewer/securepdfviewer'
+import { configureSecurePdfViewerWebview, getSecurePdfViewerHtml } from '../../src/preview/viewer/securepdfviewer'
 import { synctex } from '../../src/locate/synctex'
 import { testFileSuiteName } from '../file-name'
 
@@ -209,5 +210,63 @@ describe(testFileSuiteName(__filename), () => {
         assert.strictEqual(roots.length, 2)
         assert.pathStrictEqual(roots[0].fsPath, lw.extensionRoot)
         assert.pathStrictEqual(roots[1].fsPath, path.dirname(pdfUri.fsPath))
+    })
+
+    it('should load PDF.js from the curated extension bundle', async () => {
+        const requestedUris: vscode.Uri[] = []
+        const webview = {
+            asWebviewUri: (uri: vscode.Uri) => {
+                requestedUris.push(uri)
+                return uri
+            },
+            cspSource: 'test-csp'
+        } as unknown as vscode.Webview
+        const params: PdfViewerParams = {
+            toolbar: 0,
+            sidebar: { open: 'off', view: 'thumbnails' },
+            scale: 'page-width',
+            trim: 0,
+            scrollMode: 0,
+            spreadMode: 0,
+            hand: false,
+            invertMode: {
+                enabled: false,
+                brightness: 100,
+                grayscale: 0,
+                hueRotate: 0,
+                invert: 0,
+                sepia: 0
+            },
+            color: {
+                light: {
+                    pageColorsForeground: '#000000',
+                    pageColorsBackground: '#ffffff',
+                    backgroundColor: '#ffffff',
+                    pageBorderColor: '#d0d0d0'
+                },
+                dark: {
+                    pageColorsForeground: '#ffffff',
+                    pageColorsBackground: '#000000',
+                    backgroundColor: '#000000',
+                    pageBorderColor: '#303030'
+                }
+            },
+            codeColorTheme: 'light',
+            keybindings: { synctex: 'ctrl-click' },
+            reloadTransition: 'none'
+        }
+
+        await getSecurePdfViewerHtml(
+            vscode.Uri.file('/tmp/.lw-security/main.pdf'),
+            webview,
+            params
+        )
+
+        const requestedPaths = requestedUris.map(uri => uri.fsPath)
+        assert.ok(requestedPaths.includes(path.join(lw.extensionRoot, 'out', 'pdfjs', 'build', 'pdf.mjs')))
+        assert.ok(requestedPaths.includes(path.join(lw.extensionRoot, 'out', 'pdfjs', 'build', 'pdf.worker.mjs')))
+        assert.ok(requestedPaths.includes(path.join(lw.extensionRoot, 'out', 'pdfjs', 'cmaps')))
+        assert.ok(requestedPaths.includes(path.join(lw.extensionRoot, 'out', 'pdfjs', 'standard_fonts')))
+        assert.ok(requestedPaths.includes(path.join(lw.extensionRoot, 'out', 'pdfjs', 'wasm')))
     })
 })

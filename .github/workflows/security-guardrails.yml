@@ -90,6 +90,15 @@ jobs:
           grep -q 'uses: ./.github/actions/publish-extension' "$file" || { echo "Missing shared publish action in $file"; exit 1; }
           grep -q 'VSCE_PAT' "$file" || { echo "Stable release must pass VSCE_PAT to the shared publish action."; exit 1; }
           grep -q "publish_openvsx: 'false'" "$file" || { echo "Stable release must keep Open VSX disabled unless explicitly re-enabled."; exit 1; }
+          grep -q '^    environment: marketplace$' "$file" || { echo "Stable release must use the protected marketplace environment."; exit 1; }
+          grep -q 'attestations: write' "$file" || { echo "Stable release must be able to publish artifact attestations."; exit 1; }
+          grep -q 'id-token: write' "$file" || { echo "Stable release must use OIDC for artifact attestations."; exit 1; }
+          test "$(grep -c 'actions/attest@f7c74d28b9d84cb8768d0b8ca14a4bac6ef463e6' "$file")" -ge 2 || { echo "Stable release must attest VSIX provenance and its SBOM with the pinned action."; exit 1; }
+          grep -q 'npm sbom --omit=dev --omit=optional --sbom-format spdx' "$file" || { echo "Stable release must generate a runtime-only SPDX SBOM."; exit 1; }
+          grep -q 'VSIX must not contain node_modules' "$file" || { echo "Stable release must reject unbundled node_modules in the VSIX."; exit 1; }
+          grep -q 'extension/out/src/parse/parser/unified.js' "$file" || { echo "Stable release must require the parser worker bundle."; exit 1; }
+          grep -q 'extension/out/src/preview/mathjax/mathjax.js' "$file" || { echo "Stable release must require the MathJax worker bundle."; exit 1; }
+          grep -q 'extension/out/pdfjs/LICENSE' "$file" || { echo "Stable release must require the bundled PDF.js license."; exit 1; }
 
       - name: Ensure green CI can publish a stable release
         run: |

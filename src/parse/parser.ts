@@ -17,7 +17,7 @@ type UnifiedStringifier = {
 const logger = lw.log('Parser')
 const bibDiagnostics = vscode.languages.createDiagnosticCollection('BibTeX')
 // eslint-disable-next-line @typescript-eslint/no-require-imports
-const { toString } = require(path.join(lw.extensionRoot, 'resources', 'unified.js')) as UnifiedStringifier
+const { toString } = require(path.join(lw.extensionRoot, 'out', 'unified.js')) as UnifiedStringifier
 
 export const parser = {
     bib,
