@@ -100,6 +100,16 @@ jobs:
           grep -q 'extension/out/src/preview/mathjax/mathjax.js' "$file" || { echo "Stable release must require the MathJax worker bundle."; exit 1; }
           grep -q 'extension/out/pdfjs/LICENSE' "$file" || { echo "Stable release must require the bundled PDF.js license."; exit 1; }
 
+      - name: Ensure release packaging rechecks production dependencies
+        run: |
+          for file in .github/workflows/daily-release.yml .github/workflows/stable-release.yml; do
+            audit_line="$(grep -n -m1 'run: npm run audit:prod' "$file" | cut -d: -f1)"
+            package_line="$(grep -n -m1 'name: Package .*VSIX' "$file" | cut -d: -f1)"
+            test -n "$audit_line" || { echo "Missing production dependency audit in $file"; exit 1; }
+            test -n "$package_line" || { echo "Missing VSIX packaging step in $file"; exit 1; }
+            test "$package_line" -eq "$((audit_line + 1))" || { echo "Production dependency audit must run immediately before VSIX packaging in $file"; exit 1; }
+          done
+
       - name: Ensure green CI can publish a stable release
         run: |
           file=.github/workflows/auto-stable-release.yml

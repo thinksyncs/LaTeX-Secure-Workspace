@@ -3,7 +3,7 @@
   "displayName": "LaTeX Workspace Security",
   "description": "Secure LaTeX tools for VS Code with project-local completions, manual build, diagnostics, and a local PDF tab viewer with SyncTeX.",
   "icon": "icons/icon.png",
-  "version": "11.2.12",
+  "version": "11.2.13",
   "publisher": "ToppyMicroServices",
   "license": "MIT",
   "homepage": "https://github.com/thinksyncs/LaTeX-Secure-Workspace",
@@ -3007,10 +3007,10 @@
     "@secretlint/config-loader": {
       "ajv": "^8.18.0"
     },
-    "brace-expansion": "5.0.8",
-    "undici": "^7.28.0",
+    "brace-expansion": "5.0.9",
+    "undici": "^7.29.0",
     "flatted": "^3.4.2",
-    "fast-uri": "^3.1.4",
+    "fast-uri": "^3.1.5",
     "js-yaml": "^4.3.0",
     "linkify-it": "^5.0.2",
     "speech-rule-engine": {

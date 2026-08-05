@@ -72,6 +72,8 @@ jobs:
       run: npm ci --ignore-scripts
     - name: Verify release build
       run: xvfb-run -a npm run release:verify
+    - name: Audit production dependencies before packaging
+      run: npm run audit:prod
     - name: Package VSIX
       id: package
       run: |
