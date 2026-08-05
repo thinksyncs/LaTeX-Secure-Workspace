@@ -42,6 +42,8 @@ jobs:
       run: npm version --no-git-tag-version "${{ steps.version.outputs.daily_version }}"
     - name: Verify daily release build
       run: xvfb-run -a npm run release:verify
+    - name: Audit production dependencies before packaging
+      run: npm run audit:prod
     - name: Package daily VSIX
       id: package
       run: |

@@ -24,6 +24,8 @@ Stable Marketplace publication is prepared only after the required push CI, incl
 
 The `npm-audit.yml` workflow intentionally runs both `npm run audit:prod` and `npm run audit:full` on pushes and pull requests. The production gate keeps shipped dependencies clean, while the full gate mirrors Dependabot's dynamic npm audit behavior so dev-only advisories fail fast before they reappear as separate Dependabot update failures.
 
+The daily and stable release jobs rerun `npm run audit:prod` immediately before VSIX packaging. This final gate prevents a release from including a runtime vulnerability disclosed after the commit's earlier CI checks completed.
+
 The security guardrails also run `npm run audit:native`, which scans `package-lock.json` for native addon and prebuild indicators, including N-API prebuild package families. Dev-only packaging dependencies may be reported for review. Runtime indicators fail unless they are explicitly reviewed and the audit confirms that `.vscodeignore` keeps them out of the VSIX payload.
 
 We run tests on GitHub Actions on Windows, macOS, and Linux with the minimal installations of TeX Live.

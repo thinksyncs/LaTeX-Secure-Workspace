@@ -1,11 +1,13 @@
 # Change Log
 
-## [Unreleased]
+## [11.2.13] - 2026-08-05
 
 ### Changed
 - Bundle the unified LaTeX parser and only the PDF.js assets required at runtime, removing packaged `node_modules` and reducing the VSIX payload.
 
 ### Security
+- Update `brace-expansion` to 5.0.9, `fast-uri` to 3.1.5, and `undici` to 7.29.0.
+- Recheck production dependency advisories immediately before daily and stable VSIX packaging.
 - Gate Marketplace publication through the protected `marketplace` environment.
 - Generate an SPDX SBOM and publish GitHub build-provenance and SBOM attestations for stable VSIX releases.
 - Reject stable VSIX packages that contain runtime `node_modules` or omit required PDF.js assets and license notices.
