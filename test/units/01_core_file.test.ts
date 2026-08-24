@@ -101,7 +101,7 @@ describe(testFileSuiteName(__filename), () => {
 
             const buildDir = lw.file.getValidatedSecurityBuildDir(rootFile, true)
 
-            assert.pathStrictEqual(buildDir, path.join(path.dirname(rootFile), '.lw-security'))
+            assert.pathStrictEqual(buildDir, fs.realpathSync(path.join(path.dirname(rootFile), '.lw-security')))
             assert.ok(fs.lstatSync(buildDir!).isDirectory())
             assert.ok(!fs.lstatSync(buildDir!).isSymbolicLink())
         })
