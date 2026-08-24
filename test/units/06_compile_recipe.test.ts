@@ -10,25 +10,27 @@ import { testFileSuiteName } from '../file-name'
 describe(testFileSuiteName(__filename), () => {
     let getAuxDirStub: sinon.SinonStub
     let getIncludedTeXStub: sinon.SinonStub
-    let mkdirStub: sinon.SinonStub
+    let secureBuildDirStub: sinon.SinonStub
 
     before(() => {
         mock.init(lw)
         getAuxDirStub = sinon.stub(lw.file, 'getAuxDir').returns('.')
         getIncludedTeXStub = lw.cache.getIncludedTeX as sinon.SinonStub
-        mkdirStub = sinon.stub(lw.external, 'mkdirSync').returns(undefined)
+        secureBuildDirStub = sinon.stub(lw.file, 'getValidatedSecurityBuildDir')
     })
 
     beforeEach(() => {
         initialize()
         getIncludedTeXStub.returns([])
+        secureBuildDirStub.callsFake((rootFile: string) => path.join(path.dirname(rootFile), '.lw-security'))
     })
 
     afterEach(() => {
         queue.clear()
         getAuxDirStub.resetHistory()
         getIncludedTeXStub.resetHistory()
-        mkdirStub.resetHistory()
+        secureBuildDirStub.resetHistory()
+        secureBuildDirStub.resetBehavior()
         lw.root.subfiles.path = undefined
         lw.compile.compiledPDFPath = ''
     })
@@ -144,6 +146,19 @@ describe(testFileSuiteName(__filename), () => {
             assert.ok(!step.args?.includes('-pdf'))
             assert.ok(step.args?.includes('-norc'))
             assert.ok(step.args?.includes('-no-shell-escape'))
+            assert.ok(!step.args?.some(arg => arg.includes('safer')))
+        })
+
+        it('should stop before building when the secure output directory is rejected', async () => {
+            const rootFile = set.root('main.tex')
+            const buildLoop = sinon.stub().resolves()
+            secureBuildDirStub.throws(new Error('symbolic link'))
+
+            const succeeded = await build(rootFile, 'latex', buildLoop)
+
+            assert.strictEqual(succeeded, false)
+            assert.ok(buildLoop.notCalled)
+            assert.hasLog('Secure build output directory rejected.')
         })
     })
 

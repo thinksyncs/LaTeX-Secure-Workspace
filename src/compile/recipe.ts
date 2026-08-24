@@ -108,15 +108,14 @@ export async function build(rootFile: string, langId: string, buildLoop: () => P
     // Save all open files in the workspace
     await vscode.workspace.saveAll()
 
-    // Create build tools based on the recipe system
-    const tools = await createBuildTools(rootFile, langId, recipeName)
-
     // Create output subdirectories for included files
-    if (tools?.map(tool => tool.command).includes('latexmk') && rootFile === lw.root.subfiles.path && lw.root.file.path) {
-        await createAuxSubFolders(lw.root.file.path)
-    } else {
-        await createAuxSubFolders(rootFile)
+    const secureBuildDir = createAuxSubFolders(rootFile)
+    if (!secureBuildDir) {
+        return false
     }
+
+    // Create build tools based on the recipe system
+    const tools = await createBuildTools(rootFile, langId, secureBuildDir, recipeName)
 
     // Check for invalid toolchain
     if (tools === undefined) {
@@ -145,58 +144,32 @@ export async function build(rootFile: string, langId: string, buildLoop: () => P
  *
  * @param {string} rootFile - Path to the root LaTeX file.
  */
-async function createAuxSubFolders(rootFile: string) {
+function createAuxSubFolders(rootFile: string): string | undefined {
     const rootDir = path.dirname(rootFile)
-    let auxDir = lw.file.getSecurityAuxDir(rootFile)
-    if (!path.isAbsolute(auxDir)) {
-        auxDir = path.resolve(rootDir, auxDir)
-    }
-    logger.log(`auxDir: ${auxDir} .`)
+    let auxDir: string
     try {
-        const auxDirStat = await lw.file.exists(auxDir)
-        if (
-            !auxDirStat ||
-            ![vscode.FileType.Directory, vscode.FileType.Directory | vscode.FileType.SymbolicLink].includes(
-                auxDirStat.type
-            )
-        ) {
-            lw.external.mkdirSync(auxDir, { recursive: true })
+        auxDir = lw.file.getValidatedSecurityBuildDir(rootFile, true)!
+        logger.log(`auxDir: ${auxDir} .`)
+        for (const file of lw.cache.getIncludedTeX(rootFile)) {
+            const relativeFile = path.relative(rootDir, file)
+            if (path.isAbsolute(relativeFile) || relativeFile === '..' || relativeFile.startsWith(`..${path.sep}`)) {
+                logger.log(`Skip auxiliary directory for included file outside the root: ${file}`)
+                continue
+            }
+            lw.file.getValidatedSecurityBuildDir(rootFile, true, path.dirname(relativeFile))
         }
+        return auxDir
     } catch (e) {
         if (e instanceof Error) {
-            logger.log(`Unexpected Error: ${e.name}: ${e.message} .`)
+            logger.logError('Secure build output directory rejected.', e)
+            logger.refreshStatus('x', 'errorForeground', undefined, 'error')
+            void logger.showErrorMessageWithExtensionLogButton('Secure build output directory is unsafe. Remove symbolic links from .lw-security and try again.')
         } else {
             logger.log('Unexpected Error: please see the console log of the Developer Tools of VS Code.')
             logger.refreshStatus('x', 'errorForeground')
-            throw(e)
         }
     }
-    for (const file of lw.cache.getIncludedTeX(rootFile)) {
-        const relativePath = path.dirname(file.replace(rootDir, '.'))
-        const fullAuxDir = path.resolve(auxDir, relativePath)
-        // To avoid issues when fullAuxDir is the root dir
-        // Using fs.mkdir() on the root directory even with recursion will result in an error
-        try {
-            const fileStat = await lw.file.exists(fullAuxDir)
-            if (
-                !fileStat ||
-                ![vscode.FileType.Directory, vscode.FileType.Directory | vscode.FileType.SymbolicLink].includes(
-                    fileStat.type
-                )
-            ) {
-                lw.external.mkdirSync(fullAuxDir, { recursive: true })
-            }
-        } catch (e) {
-            if (e instanceof Error) {
-                // #4048
-                logger.log(`Unexpected Error: ${e.name}: ${e.message} .`)
-            } else {
-                logger.log('Unexpected Error: please see the console log of the Developer Tools of VS Code.')
-                logger.refreshStatus('x', 'errorForeground')
-                throw(e)
-            }
-        }
-    }
+    return
 }
 
 
@@ -209,7 +182,7 @@ async function createAuxSubFolders(rootFile: string) {
  * @returns {Tool[] | undefined} - An array of Tool objects representing the
  * build tools.
  */
-async function createBuildTools(rootFile: string, langId: string, recipeName?: string): Promise<Tool[] | undefined> {
+async function createBuildTools(rootFile: string, langId: string, secureBuildDir: string, recipeName?: string): Promise<Tool[] | undefined> {
     const buildTools: Tool[] = []
 
     const configuration = vscode.workspace.getConfiguration('latex-workshop', lw.file.toUri(rootFile))
@@ -238,7 +211,7 @@ async function createBuildTools(rootFile: string, langId: string, recipeName?: s
         return
     }
 
-    populateTools(rootFile, buildTools)
+    populateTools(rootFile, buildTools, secureBuildDir)
 
     return buildTools
 }
@@ -333,11 +306,11 @@ function findRecipe(rootFile: string, langId: string, recipeName?: string): Reci
  * @param {Tool[]} buildTools - An array of Tool objects to be populated.
  * @returns {Tool[]} - An array of Tool objects with expanded values.
  */
-function populateTools(rootFile: string, buildTools: Tool[]): Tool[] {
+function populateTools(rootFile: string, buildTools: Tool[], secureBuildDir: string): Tool[] {
     const configuration = vscode.workspace.getConfiguration('latex-workshop', lw.file.toUri(rootFile))
     const docker = getSecureConfigurationValueSync(lw.file.toUri(rootFile), 'docker.enabled', false)
-    const secureOutDir = path.resolve(path.dirname(rootFile), lw.file.getSecurityOutDir(rootFile)).split(path.sep).join('/')
-    const secureAuxDir = path.resolve(path.dirname(rootFile), lw.file.getSecurityAuxDir(rootFile)).split(path.sep).join('/')
+    const secureOutDir = secureBuildDir.split(path.sep).join('/')
+    const secureAuxDir = secureOutDir
 
     buildTools.forEach(tool => {
         const isLatexmk = tool.command === 'latexmk'
@@ -355,7 +328,7 @@ function populateTools(rootFile: string, buildTools: Tool[]): Tool[] {
                         ...tool.env,
                         LATEXWORKSHOP_DOCKER_SOURCE_DIR_CONTAINER: DOCKER_SECURE_SOURCE_DIR,
                         LATEXWORKSHOP_DOCKER_OUTPUT_DIR_CONTAINER: DOCKER_SECURE_OUTPUT_DIR,
-                        LATEXWORKSHOP_DOCKER_OUTPUT_DIR_HOST: path.resolve(path.dirname(rootFile), lw.file.getSecurityOutDir(rootFile))
+                        LATEXWORKSHOP_DOCKER_OUTPUT_DIR_HOST: secureBuildDir
                     }
                     break
                 default:

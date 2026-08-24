@@ -1,5 +1,11 @@
 # Change Log
 
+## Unreleased
+
+### Security
+- Reject subfiles roots that resolve outside the active workspace.
+- Reject symbolic links in the secure build-output path before build and cleanup.
+
 ## [11.2.13] - 2026-08-05
 
 ### Changed

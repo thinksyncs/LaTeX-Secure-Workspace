@@ -117,9 +117,21 @@ function splitGlobs(globs: string[]): { fileOrFolderGlobs: string[], folderGlobs
 async function cleanGlob(rootFile: string): Promise<void> {
     const globs = FIXED_CLEAN_FILE_TYPES
         .map(globType => replaceArgumentPlaceholders(rootFile, lw.file.tmpDirPath)(globType))
-    const outdir = path.resolve(path.dirname(rootFile), lw.file.getSecurityOutDir(rootFile))
+    let secureBuildDir: string | undefined
+    try {
+        secureBuildDir = lw.file.getValidatedSecurityBuildDir(rootFile)
+    } catch (error) {
+        logger.logError('Secure cleanup directory rejected.', error)
+        logger.refreshStatus('x', 'errorForeground', undefined, 'error')
+        return
+    }
+    if (!secureBuildDir) {
+        logger.log('No secure build directory to clean.')
+        return
+    }
+    const outdir = secureBuildDir
     logger.log(`Clean glob matched files ${JSON.stringify({globs, outdir})} .`)
-    const auxdir = path.resolve(path.dirname(rootFile), lw.file.getSecurityAuxDir(rootFile))
+    const auxdir = secureBuildDir
     logger.log(`Clean glob matched files ${JSON.stringify({globs, auxdir})} .`)
 
     const { fileOrFolderGlobs, folderGlobsExplicit, folderGlobsWithGlobstar } = splitGlobs(globs)

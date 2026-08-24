@@ -16,6 +16,7 @@ export const file = {
     getOutDir,
     getSecurityAuxDir,
     getSecurityOutDir,
+    getValidatedSecurityBuildDir,
     getSecurityPdfPath,
     getLangId,
     getJobname,
@@ -402,6 +403,62 @@ function getAuxDir(texPath?: string): string {
 
 function getSecurityAuxDir(_texPath?: string): string {
     return SECURITY_BUILD_DIR
+}
+
+function getValidatedSecurityBuildDir(texPath: string, create: boolean = false, relativeDir: string = '.'): string | undefined {
+    const projectDir = path.dirname(texPath)
+    const projectRealPath = fs.realpathSync(projectDir)
+    const buildDir = path.resolve(projectDir, SECURITY_BUILD_DIR)
+    if (!ensureRealDirectory(buildDir, create)) {
+        return
+    }
+    const buildRealPath = fs.realpathSync(buildDir)
+    if (!isPathInside(projectRealPath, buildRealPath)) {
+        throw new Error(`Secure output directory resolves outside the project: ${buildDir}`)
+    }
+
+    const requestedDir = path.resolve(buildDir, relativeDir)
+    if (!isPathInside(buildDir, requestedDir)) {
+        throw new Error(`Secure output subdirectory escapes the build directory: ${requestedDir}`)
+    }
+    const relative = path.relative(buildDir, requestedDir)
+    let currentDir = buildDir
+    for (const segment of relative.split(path.sep).filter(Boolean)) {
+        currentDir = path.join(currentDir, segment)
+        if (!ensureRealDirectory(currentDir, create)) {
+            return
+        }
+        const currentRealPath = fs.realpathSync(currentDir)
+        if (!isPathInside(buildRealPath, currentRealPath)) {
+            throw new Error(`Secure output subdirectory resolves outside the build directory: ${currentDir}`)
+        }
+    }
+    return fs.realpathSync(requestedDir)
+}
+
+function ensureRealDirectory(directoryPath: string, create: boolean): boolean {
+    let stats: fs.Stats
+    try {
+        stats = fs.lstatSync(directoryPath)
+    } catch (error) {
+        if ((error as NodeJS.ErrnoException).code !== 'ENOENT' || !create) {
+            if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+                return false
+            }
+            throw error
+        }
+        fs.mkdirSync(directoryPath)
+        stats = fs.lstatSync(directoryPath)
+    }
+    if (stats.isSymbolicLink() || !stats.isDirectory()) {
+        throw new Error(`Secure output path must be a real directory: ${directoryPath}`)
+    }
+    return true
+}
+
+function isPathInside(parentPath: string, childPath: string): boolean {
+    const relative = path.relative(parentPath, childPath)
+    return relative === '' || (!path.isAbsolute(relative) && relative !== '..' && !relative.startsWith(`..${path.sep}`))
 }
 
 /**

@@ -42,6 +42,8 @@ Mitigation:
 
 The secure build disables auto build, ignores custom recipes and custom tools, and ignores external build commands. Manual compilation is limited to fixed internal pdfLaTeX and LuaLaTeX recipes so workspace content and settings cannot switch the build command path. Both recipes pass `-no-shell-escape` to `latexmk`, which disables TeX `\write18` command execution.
 
+Secure root resolution rejects existing subfiles roots whose real path is outside the active workspace. Build and cleanup also require `.lw-security` and its created subdirectories to be real project-local directories rather than symbolic links.
+
 It also ignores workspace-scoped argument overrides for formatter and linter helper commands so trusted workspaces cannot silently reshape those command lines. Normal and language-specific workspace settings follow the same override policy.
 
 Restricted Mode does not launch external formatters, `kpsewhich`, or the native forward SyncTeX helper. Forward SyncTeX uses the bundled parser instead.

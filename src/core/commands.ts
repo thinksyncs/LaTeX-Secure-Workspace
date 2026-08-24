@@ -146,8 +146,8 @@ export async function view(mode?: 'tab' | 'browser' | 'external' | vscode.Uri) {
         await lw.viewer.view(mode, 'tab')
         return
     }
-    const currentRoot = lw.root.file.path
     const resolvedRoot = await lw.root.resolveSecurityRoot()
+    const currentRoot = lw.root.file.path
     if (!resolvedRoot && !currentRoot && !lw.compile.compiledPDFPath) {
         logger.log('Cannot view PDF because no root file or compiled PDF is available.')
         return
