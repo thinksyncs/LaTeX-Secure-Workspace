@@ -1,5 +1,7 @@
 import * as vscode from 'vscode'
 import * as path from 'path'
+import * as fs from 'fs'
+import * as os from 'os'
 import * as sinon from 'sinon'
 import { assert, get, mock, set, sleep } from './utils'
 import { lw } from '../../src/lw'
@@ -512,6 +514,26 @@ describe(testFileSuiteName(__filename), () => {
             trustStub.restore()
             assert.strictEqual(resolved, texPath)
             assert.strictEqual(lw.root.file.path, texPath)
+        })
+
+        it('should reject a subfiles root that resolves outside the active workspace', async () => {
+            const externalDir = fs.mkdtempSync(path.join(os.tmpdir(), 'lw-external-root-'))
+            const externalRoot = path.join(externalDir, 'main.tex')
+            fs.writeFileSync(externalRoot, '\\documentclass{article}\n')
+            const activePath = get.path(fixture, 'external-subfile.tex')
+            const stub = mock.activeTextEditor(activePath, `\\documentclass[${externalRoot}]{subfiles}\n`)
+            lw.root.file.path = undefined
+
+            try {
+                const resolved = await lw.root.resolveSecurityRoot()
+
+                assert.notStrictEqual(resolved, externalRoot)
+                assert.notStrictEqual(lw.root.file.path, externalRoot)
+                assert.hasLog('Reject secure root outside the active workspace:')
+            } finally {
+                stub.restore()
+                fs.rmSync(externalDir, { recursive: true, force: true })
+            }
         })
     })
 

@@ -25,7 +25,8 @@ export const root = {
     resolveSecurityRoot,
     getWorkspace,
     components: {
-        includesProjectFile
+        includesProjectFile,
+        isSecurityRootInWorkspace
     }
 }
 
@@ -106,6 +107,13 @@ async function resolveSecurityRoot(): Promise<string | undefined> {
             logger.log(`Discard stale secure root search result: ${rootFilePath}`)
             return
         }
+        if (!await isSecurityRootInWorkspace(rootFilePath)) {
+            logger.log(`Reject secure root outside the active workspace: ${rootFilePath}`)
+            clearResolvedRoot()
+            void lw.outline.refresh()
+            lw.event.fire(lw.event.RootFileSearched)
+            return
+        }
         applyResolvedRoot(rootFilePath)
         lw.event.fire(lw.event.RootFileSearched)
         return rootFilePath
@@ -118,6 +126,31 @@ async function resolveSecurityRoot(): Promise<string | undefined> {
     void lw.outline.refresh()
     lw.event.fire(lw.event.RootFileSearched)
     return
+}
+
+async function isSecurityRootInWorkspace(rootFilePath: string): Promise<boolean> {
+    const editor = getEditorForRootDetection()
+    const workspace = editor
+        ? vscode.workspace.getWorkspaceFolder(editor.document.uri)
+        : vscode.workspace.getWorkspaceFolder(vscode.Uri.file(rootFilePath))
+    if (!workspace || workspace.uri.scheme !== 'file') {
+        return false
+    }
+    try {
+        const [workspacePath, rootPath] = await Promise.all([
+            fs.promises.realpath(workspace.uri.fsPath),
+            fs.promises.realpath(rootFilePath)
+        ])
+        return isPathInside(workspacePath, rootPath)
+    } catch {
+        return false
+    }
+}
+
+function clearResolvedRoot(): void {
+    root.file = { path: undefined, langId: undefined }
+    root.dir = { path: undefined }
+    root.subfiles = { path: undefined, langId: undefined }
 }
 
 function applyResolvedRoot(rootFilePath: string) {

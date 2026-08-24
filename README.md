@@ -67,7 +67,7 @@ For repository organization and cleanup rules, see [Repository Layout](./docs/ma
 
 ## Build Behavior
 
-- Build LaTeX documents manually with the fixed internal `secure-latexmk` recipe, or choose `secure-lualatexmk` from **Build with recipe** for LuaLaTeX. Both profiles invoke `latexmk` with `-norc`, `-no-shell-escape`, and SyncTeX output enabled, and ignore workspace-selected recipes, tools, external build commands, and build-control magic comments.
+- Build LaTeX documents manually with the fixed internal `secure-latexmk` recipe, or choose `secure-lualatexmk` from **Build with recipe** for LuaLaTeX. Both profiles invoke `latexmk` with `-norc`, `-no-shell-escape`, and SyncTeX output enabled, and ignore workspace-selected recipes, tools, external build commands, and build-control magic comments. Secure root and output paths are resolved to real project-local directories; outside-workspace subfiles roots and symbolic-link output directories are rejected.
 - Check the required local tools before spawning the build. A missing or broken `latexmk` or selected LaTeX engine stops before compilation and reports macOS, Windows, or Linux recovery guidance.
 - Report a missing `.sty`, `.cls`, or related TeX resource directly, with guidance to check project files or the providing TeX package.
 - Resolve the build root with a fixed internal policy and always run manual build and clean against the resolved main root file. When the active TeX file is an included fragment, the resolver follows project-local `\input` and `\include` relationships to its parent document; a standalone document remains its own root. Secure build and viewer flows do not honor file-level `%!TEX root` comments.

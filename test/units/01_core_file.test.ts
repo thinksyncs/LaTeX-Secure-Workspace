@@ -1,5 +1,6 @@
 import * as vscode from 'vscode'
 import * as os from 'os'
+import * as fs from 'fs'
 import * as path from 'path'
 import { EventEmitter } from 'events'
 import { PassThrough } from 'stream'
@@ -77,6 +78,44 @@ describe(testFileSuiteName(__filename), () => {
                 assert.ok(path.isAbsolute(lw.file.tmpDirPath), lw.file.tmpDirPath)
                 assert.ok(!/['"]/.test(lw.file.tmpDirPath), lw.file.tmpDirPath)
             })
+        })
+    })
+
+    describe('lw.file.getValidatedSecurityBuildDir', () => {
+        const temporaryRoots: string[] = []
+
+        afterEach(() => {
+            temporaryRoots.splice(0).forEach(root => fs.rmSync(root, { recursive: true, force: true }))
+        })
+
+        function makeRoot(): string {
+            const root = fs.mkdtempSync(path.join(os.tmpdir(), 'lw-secure-output-'))
+            temporaryRoots.push(root)
+            const rootFile = path.join(root, 'main.tex')
+            fs.writeFileSync(rootFile, '\\documentclass{article}\n')
+            return rootFile
+        }
+
+        it('should create and return a real project-local build directory', () => {
+            const rootFile = makeRoot()
+
+            const buildDir = lw.file.getValidatedSecurityBuildDir(rootFile, true)
+
+            assert.pathStrictEqual(buildDir, path.join(path.dirname(rootFile), '.lw-security'))
+            assert.ok(fs.lstatSync(buildDir!).isDirectory())
+            assert.ok(!fs.lstatSync(buildDir!).isSymbolicLink())
+        })
+
+        it('should reject a symbolic link used as the secure build directory', () => {
+            const rootFile = makeRoot()
+            const target = fs.mkdtempSync(path.join(os.tmpdir(), 'lw-secure-target-'))
+            temporaryRoots.push(target)
+            fs.symlinkSync(target, path.join(path.dirname(rootFile), '.lw-security'), process.platform === 'win32' ? 'junction' : 'dir')
+
+            assert.throws(
+                () => lw.file.getValidatedSecurityBuildDir(rootFile, true),
+                /must be a real directory/
+            )
         })
     })
 
