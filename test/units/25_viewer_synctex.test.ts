@@ -266,7 +266,7 @@ describe(testFileSuiteName(__filename), () => {
 
         await synctex.toPDF(pdfUri)
 
-        assert.ok(computeStub.calledOnceWithExactly(2, 3, rootFile, pdfUri, sinon.match.string))
+        assert.ok(computeStub.calledOnceWithExactly(2, 3, vscode.Uri.file(rootFile).fsPath, pdfUri, sinon.match.string))
         assert.ok(locateStub.calledOnceWithExactly(pdfUri, record))
     })
 
