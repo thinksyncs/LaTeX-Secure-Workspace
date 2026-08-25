@@ -13,7 +13,8 @@ const logger = lw.log('SyncTeX')
 
 export {
     syncTeXToPDF,
-    syncTeXToTeX
+    syncTeXToTeX,
+    resolveForwardLineNumbers
 }
 
 class Rectangle {
@@ -156,17 +157,18 @@ async function syncTeXToPDF(line: number, filePath: string, pdfUri: vscode.Uri):
 
     const linePageBlocks = pdfSyncObject.blockNumberLine[inputFilePath]
     const lineNums = Object.keys(linePageBlocks).map(x => Number(x)).sort( (a, b) => { return (a - b) } )
-    const i = lineNums.findIndex( x => x >= line )
-    if (i === 0 || lineNums[i] === line) {
-        const l = lineNums[i]
-        const blocks = getBlocks(linePageBlocks, l)
+    const lineBounds = resolveForwardLineNumbers(lineNums, line)
+    if (!lineBounds) {
+        return undefined
+    }
+    const [line0, line1] = lineBounds
+    if (line0 === line1) {
+        const blocks = getBlocks(linePageBlocks, line1)
         const c = toRect(blocks)
         return { page: blocks[0].page, x: c.left + pdfSyncObject.offset.x, y: c.bottom + pdfSyncObject.offset.y, indicator: true }
     }
-    const line0 = lineNums[i - 1]
     const blocks0 = getBlocks(linePageBlocks, line0)
     const c0 = toRect(blocks0)
-    const line1 = lineNums[i]
     const blocks1 = getBlocks(linePageBlocks, line1)
     const c1 = toRect(blocks1)
     let bottom: number
@@ -176,6 +178,22 @@ async function syncTeXToPDF(line: number, filePath: string, pdfUri: vscode.Uri):
         bottom = c1.bottom
     }
     return { page: blocks1[0].page, x: c1.left + pdfSyncObject.offset.x, y: bottom + pdfSyncObject.offset.y, indicator: true }
+}
+
+function resolveForwardLineNumbers(lineNums: number[], line: number): [number, number] | undefined {
+    if (lineNums.length === 0) {
+        return undefined
+    }
+    const upperIndex = lineNums.findIndex(candidate => candidate >= line)
+    if (upperIndex < 0) {
+        const lastLine = lineNums[lineNums.length - 1]
+        return [lastLine, lastLine]
+    }
+    if (upperIndex === 0 || lineNums[upperIndex] === line) {
+        const matchedLine = lineNums[upperIndex]
+        return [matchedLine, matchedLine]
+    }
+    return [lineNums[upperIndex - 1], lineNums[upperIndex]]
 }
 
 async function syncTeXToTeX(page: number, x: number, y: number, pdfUri: vscode.Uri): Promise<SyncTeXRecordToTeX | undefined> {

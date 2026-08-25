@@ -92,6 +92,16 @@ export async function reloadCustomEditorPanels(pdfUri?: vscode.Uri): Promise<voi
     }
 }
 
+export async function refreshCustomEditorPanels(pdfUri?: vscode.Uri): Promise<void> {
+    const panelStates = pdfUri
+        ? viewerStates.get(toKey(pdfUri))
+        : undefined
+    const panels = pdfUri
+        ? Array.from(panelStates?.keys() ?? [])
+        : Array.from(viewerStates.values()).flatMap(states => Array.from(states.keys()))
+    await Promise.all(panels.map(panel => panel.webview.postMessage({type: 'reload'})))
+}
+
 async function getPdfViewerCustomEditorHtml(pdfUri: vscode.Uri, webview: vscode.Webview): Promise<string> {
     return getSecurePdfViewerHtml(pdfUri, webview, lw.viewer.getParams())
 }
@@ -112,13 +122,16 @@ async function handleCustomEditorMessage(pdfUri: vscode.Uri, webviewPanel: vscod
     if ((payload.type === 'viewer-log' || payload.type === 'log' || payload.type === 'document-error') && typeof payload.message === 'string') {
         logger.log(payload.message)
     }
-    if (payload.type === 'state' && payload.state && typeof payload.state === 'object') {
+    if ((payload.type === 'state' || payload.type === 'synctex-applied') && payload.state && typeof payload.state === 'object') {
         const nextState = {
             ...baseState,
             ...payload.state
         }
         updateViewerState(pdfUri, webviewPanel, nextState)
         lw.event.fire(lw.event.ViewerStatusChanged, nextState)
+        if (payload.type === 'synctex-applied') {
+            pendingSyncTeX.delete(toKey(pdfUri))
+        }
         return
     }
     if (payload.type === 'document-loaded' || payload.type === 'viewer-loaded' || payload.type === 'initialized') {
@@ -134,8 +147,12 @@ async function handleCustomEditorMessage(pdfUri: vscode.Uri, webviewPanel: vscod
         && Array.isArray(payload.pos)
         && payload.pos.length === 2
         && typeof payload.pos[0] === 'number'
+        && Number.isFinite(payload.pos[0])
         && typeof payload.pos[1] === 'number'
+        && Number.isFinite(payload.pos[1])
         && typeof payload.page === 'number'
+        && Number.isInteger(payload.page)
+        && payload.page > 0
     ) {
         await lw.locate.synctex.toTeX(payload as Extract<ClientRequest, { type: 'reverse_synctex' }>, pdfUri)
     }
@@ -158,11 +175,7 @@ async function deliverPendingSyncTeX(pdfUri: vscode.Uri, panel?: vscode.WebviewP
             data: record
         })
     }))
-    if (delivered.some(result => result)) {
-        pendingSyncTeX.delete(toKey(pdfUri))
-        return true
-    }
-    return false
+    return delivered.some(result => result)
 }
 
 function toKey(pdfUri: vscode.Uri): string {

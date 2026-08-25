@@ -2,9 +2,18 @@
 
 ## Unreleased
 
+### Fixed
+- Restore Add TeX root, project-editor builds, and forward SyncTeX command routing.
+- Keep secure builds usable after post-build errors and reject Docker builds without a configured image.
+- Use the fixed recipe's root filename for PDF discovery and prefer the current project over stale build output.
+- Preserve PDF viewer state during refresh, retain forward SyncTeX until the viewer applies it, and handle source positions past the last SyncTeX record.
+- Clean exact auxiliary-file names, report cleanup failures, and make the existing coverage command enforce a first-party source baseline.
+- Keep default local tests in-process and reserve isolated VS Code hosts for explicit integration and CI checks.
+
 ### Security
 - Reject subfiles roots that resolve outside the active workspace.
 - Reject symbolic links in the secure build-output path before build and cleanup.
+- Require Docker isolation for LuaLaTeX builds and disable the Lua socket library inside that profile.
 
 ## [11.2.13] - 2026-08-05
 

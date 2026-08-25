@@ -5,7 +5,7 @@ Secure LaTeX tools for [Visual Studio Code](https://code.visualstudio.com/) with
 ## TL;DR
 
 - Project-local completions for citations, labels, commands, packages, and input paths
-- Manual pdfLaTeX and LuaLaTeX build with fixed secure recipes
+- Manual local pdfLaTeX build and Docker-isolated LuaLaTeX build with fixed secure recipes
 - Preflight checks for required LaTeX tools with OS-specific recovery guidance
 - Build-root inspection, project health checks, and build provenance reports
 - Local PDF tab viewer with refresh, bounded render recovery, and forward/reverse SyncTeX
@@ -21,13 +21,13 @@ LaTeX Workspace Security is best for controlled workspaces that need manual LaTe
 
 ## Requirements
 
-- A local TeX distribution that provides `latexmk` and the selected engine (`pdflatex` or `lualatex`) is required for local builds.
+- A local TeX distribution that provides `latexmk` and `pdflatex` is required for local pdfLaTeX builds. Secure LuaLaTeX builds require Docker and a configured `latex-workshop.docker.image.latex` user setting.
 - In trusted workspaces, `kpsewhich` supports TeX file lookup and the native `synctex` helper can accelerate forward synchronization. Restricted Mode uses the bundled SyncTeX parser without launching these helpers.
 - On macOS, the extension automatically adds the standard MacTeX path `/Library/TeX/texbin` when it exists.
 - Build, clean, kill, and reveal-output commands require a trusted, non-virtual workspace.
 
 Run **LaTeX-Secure-Workspace: Show secure build status** from the Command Palette to see the detected tools, versions, execution mode, root file, fixed recipe, and output paths.
-Use **LaTeX-Secure-Workspace: Build with recipe** and select `secure-lualatexmk` when the document requires LuaLaTeX.
+Enable Docker in user settings, then use **LaTeX-Secure-Workspace: Build with recipe** and select `secure-lualatexmk` when the document requires LuaLaTeX.
 
 ## Compared With LaTeX Workshop
 
@@ -48,7 +48,7 @@ For repository organization and cleanup rules, see [Repository Layout](./docs/ma
 | Workflow | Included behavior |
 | --- | --- |
 | Editing | Project-local completion for citations, labels, commands, environments, classes, packages, and input paths; snippets, wrapping, outline, and hover help. |
-| Build | Explicit manual build with fixed `secure-latexmk` (pdfLaTeX) and `secure-lualatexmk` (LuaLaTeX) profiles and shell escape disabled; fixed root and output policy; no workspace-selected command path. |
+| Build | Explicit manual build with fixed `secure-latexmk` (local pdfLaTeX) and `secure-lualatexmk` (Docker-isolated LuaLaTeX) profiles and shell escape disabled; fixed root and output policy; no workspace-selected command path. |
 | Project insight | On-demand root candidates and dependency tree, project health checks, and the latest successful build provenance. |
 | Environment | Engine-aware preflight checks for `latexmk` and pdfLaTeX or LuaLaTeX, tool versions in Secure Build Status, standard MacTeX PATH recovery, and targeted missing-resource guidance. |
 | PDF | Local VS Code tab viewer with refresh, bounded retry after page-render failures, and forward/reverse SyncTeX inside the bundled viewer path. |
@@ -63,12 +63,12 @@ For repository organization and cleanup rules, see [Repository Layout](./docs/ma
 - For a missing `\input`, `\includegraphics`, or bibliography path, VS Code Quick Fix offers same-name files found inside the workspace. A path changes only after you select a candidate, and the replacement remains relative to the current document.
 - Rename a label with VS Code's **Rename Symbol** command (`F2`). The extension updates exact project-local `\label`, `\ref`, `\eqref`, `\autoref`, `\pageref`, `\cref`, `\Cref`, `\vref`, and `\Vref` references only.
 - **Show build provenance** reports the latest successful build's root, fixed recipe command, timestamps, PDF size, and SHA-256 digest. Home-directory prefixes are redacted.
-- When a pdfLaTeX build fails and the project contains direct LuaLaTeX evidence such as `fontspec`, the extension offers a one-time **Build with LuaLaTeX** action. It never changes engines silently.
+- When a pdfLaTeX build fails and the project contains direct LuaLaTeX evidence such as `fontspec`, the extension offers a one-time **Build with LuaLaTeX** action. It never changes engines silently, and the LuaLaTeX build proceeds only when Docker isolation is enabled.
 
 ## Build Behavior
 
-- Build LaTeX documents manually with the fixed internal `secure-latexmk` recipe, or choose `secure-lualatexmk` from **Build with recipe** for LuaLaTeX. Both profiles invoke `latexmk` with `-norc`, `-no-shell-escape`, and SyncTeX output enabled, and ignore workspace-selected recipes, tools, external build commands, and build-control magic comments. Secure root and output paths are resolved to real project-local directories; outside-workspace subfiles roots and symbolic-link output directories are rejected.
-- Check the required local tools before spawning the build. A missing or broken `latexmk` or selected LaTeX engine stops before compilation and reports macOS, Windows, or Linux recovery guidance.
+- Build LaTeX documents manually with the fixed internal `secure-latexmk` recipe, or enable Docker and choose `secure-lualatexmk` from **Build with recipe** for LuaLaTeX. Both profiles invoke `latexmk` with `-norc`, `-no-shell-escape`, and SyncTeX output enabled; the LuaLaTeX profile also disables the Lua socket library. They ignore workspace-selected recipes, tools, external build commands, and build-control magic comments. Secure root and output paths are resolved to real project-local directories; outside-workspace subfiles roots and symbolic-link output directories are rejected.
+- Check the required runtime before spawning the build. Local pdfLaTeX checks `latexmk` and `pdflatex`; LuaLaTeX checks the configured Docker runtime and image. Missing requirements stop before compilation with targeted guidance.
 - Report a missing `.sty`, `.cls`, or related TeX resource directly, with guidance to check project files or the providing TeX package.
 - Resolve the build root with a fixed internal policy and always run manual build and clean against the resolved main root file. When the active TeX file is an included fragment, the resolver follows project-local `\input` and `\include` relationships to its parent document; a standalone document remains its own root. Secure build and viewer flows do not honor file-level `%!TEX root` comments.
 - Write build outputs and auxiliary files into the resolved root file directory, rather than honoring workspace-controlled output-path overrides.
@@ -79,7 +79,7 @@ For repository organization and cleanup rules, see [Repository Layout](./docs/ma
 The following surfaces remain present only in a narrowed form.
 
 - Build, clean, kill, and reveal-output commands require a trusted workspace.
-- Manual builds use the fixed `secure-latexmk` or `secure-lualatexmk` recipe rather than workspace-selected recipes or tools.
+- Manual builds use the fixed `secure-latexmk` or `secure-lualatexmk` recipe rather than workspace-selected recipes or tools. The LuaLaTeX profile runs only through the hardened Docker wrapper.
 - Auto-build settings are retained for compatibility but cannot start TeX; compilation requires an explicit build command.
 - Secure build and viewer flows use the resolved main root file and ignore root-changing magic comments.
 - Build outputs and auxiliary files are resolved in the root file directory instead of workspace-controlled output or auxiliary directories.

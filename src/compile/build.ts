@@ -95,9 +95,12 @@ async function build(skipSelection: boolean = false, rootFile: string | undefine
     const configuration = vscode.workspace.getConfiguration('latex-workshop', workspace)
     const externalBuildCommand = configuration.get('latex.external.build.command') as string
 
-    if (rootFile === undefined && lw.file.hasLaTeXLangId(activeEditor.document.languageId)) {
-        await lw.root.resolveSecurityRoot()
-        rootFile = lw.root.file.path
+    const activeLanguageId = activeEditor.document.languageId
+    const canResolveProjectRoot = lw.file.hasLaTeXLangId(activeLanguageId)
+        || lw.file.hasLaTeXClassPackageLangId(activeLanguageId)
+        || lw.file.hasBibLangId(activeLanguageId)
+    if (rootFile === undefined && canResolveProjectRoot) {
+        rootFile = await lw.root.resolveSecurityRoot()
         languageId = lw.root.file.langId
     }
     if (externalBuildCommand) {
@@ -120,9 +123,24 @@ async function build(skipSelection: boolean = false, rootFile: string | undefine
 
 function isBuildEnvironmentReady(scope: vscode.ConfigurationScope, recipeName?: string): boolean {
     const dockerEnabled = getSecureConfigurationValueSync(scope, 'docker.enabled', false)
+    if (getSecureRecipeEngine(recipeName) === 'lualatex' && !dockerEnabled) {
+        logger.log('Secure LuaLaTeX builds require Docker isolation.')
+        logger.refreshStatus('x', 'errorForeground', undefined, 'error')
+        void logger.showErrorMessageWithExtensionLogButton('Secure LuaLaTeX builds require Docker isolation because LuaLaTeX can execute document-supplied Lua. Enable latex-workshop.docker.enabled and configure latex-workshop.docker.image.latex in user settings.')
+        return false
+    }
+    if (dockerEnabled) {
+        const dockerImage = getSecureConfigurationValueSync(scope, 'docker.image.latex', '').trim()
+        if (!dockerImage) {
+            logger.log('Docker build is enabled, but no LaTeX image is configured.')
+            logger.refreshStatus('x', 'errorForeground', undefined, 'error')
+            void logger.showErrorMessageWithExtensionLogButton('Docker build is enabled, but no LaTeX image is configured. Set latex-workshop.docker.image.latex in user settings or disable Docker.')
+            return false
+        }
+    }
     const definitions = dockerEnabled
         ? [{
-            command: getSecureConfigurationValueSync(scope, 'docker.path', 'docker') || 'docker',
+            command: getSecureConfigurationValueSync(scope, 'docker.path', 'docker').trim() || 'docker',
             args: ['--version'],
             purpose: 'container build runtime',
             requiredForBuild: true
@@ -166,22 +184,34 @@ async function buildLoop(): Promise<boolean> {
     let skipped = true
     let completedBuild = false
     let failed = false
-    while (true) {
-        const step = queue.getStep()
-        if (step === undefined) {
-            break
+    try {
+        while (true) {
+            const step = queue.getStep()
+            if (step === undefined) {
+                break
+            }
+            const env = spawnProcess(step)
+            const success = await monitorProcess(step, env)
+            failed = failed || !success
+            skipped = skipped && !step.isExternal && step.isSkipped
+            if (success && queue.isLastStep(step)) {
+                await afterSuccessfulBuilt(step, skipped)
+                completedBuild = true
+            }
         }
-        const env = spawnProcess(step)
-        const success = await monitorProcess(step, env)
-        failed = failed || !success
-        skipped = skipped && !step.isExternal && step.isSkipped
-        if (success && queue.isLastStep(step)) {
-            await afterSuccessfulBuilt(step, skipped)
-            completedBuild = true
-        }
+    } catch (error) {
+        failed = true
+        queue.clear()
+        logger.logError('Unexpected error while running secure build.', error)
+        logger.refreshStatus('x', 'errorForeground', undefined, 'error')
+        const detail = error instanceof Error ? error.message : String(error)
+        void logger.showErrorMessageWithExtensionLogButton(`Secure build could not finish: ${detail}`)
+    } finally {
+        isBuilding = false
+        setTimeout(() => {
+            lw.compile.compiledPDFWriting = Math.max(0, lw.compile.compiledPDFWriting - 1)
+        }, vscode.workspace.getConfiguration('latex-workshop').get('latex.watch.pdf.delay') as number * 2)
     }
-    isBuilding = false
-    setTimeout(() => lw.compile.compiledPDFWriting--, vscode.workspace.getConfiguration('latex-workshop').get('latex.watch.pdf.delay') as number * 2)
     return completedBuild && !failed
 }
 /** Normalizes a command-line argument that represents a file path to be

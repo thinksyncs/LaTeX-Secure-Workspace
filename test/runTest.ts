@@ -3,6 +3,7 @@ import * as process from 'process'
 import * as cp from 'child_process'
 import * as tmpFile from 'tmp'
 import { downloadAndUnzipVSCode, TestRunFailedError, runTests } from '@vscode/test-electron'
+import { selectTestFixtures, TestFixture } from './fixture-selection'
 
 type TempDir = ReturnType<typeof tmpFile.dirSync>
 type VSCodeTestHost = {
@@ -74,7 +75,7 @@ function ensureSupportedElectronTestHost() {
         return
     }
     console.error('Electron integration tests cannot run inside the Codex seatbelt sandbox on macOS.')
-    console.error('Run `npm test` or `npm run test:ci` from a normal terminal session, or rerun with sandbox access disabled.')
+    console.error('Run `npm run test:integration` or `npm run test:ci` from a normal terminal session, or rerun with sandbox access disabled.')
     console.error('Set LATEXWORKSHOP_ALLOW_SANDBOX_ELECTRON=1 only if you explicitly want to try the crash-prone sandbox path.')
     process.exit(1)
 }
@@ -152,7 +153,7 @@ function makeTempDir(): TempDir {
     return tmpFile.dirSync({ unsafeCleanup: true })
 }
 
-async function runTestSuites(fixture: 'testground' | 'multiroot' | 'unittest') {
+async function runTestSuites(fixture: TestFixture) {
     const envSnapshot = snapshotEnv()
     const userDataDir = makeTempDir()
     const extensionsDir = makeTempDir()
@@ -201,9 +202,9 @@ async function main() {
     try {
         ensureSupportedElectronTestHost()
         stripHostEditorEnv()
-        await runTestSuites('unittest')
-        await runTestSuites('testground')
-        await runTestSuites('multiroot')
+        for (const fixture of selectTestFixtures()) {
+            await runTestSuites(fixture)
+        }
     } catch (_) {
         console.error('Failed to run tests')
         process.exit(1)

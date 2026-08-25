@@ -154,9 +154,9 @@ export async function view(mode?: 'tab' | 'browser' | 'external' | vscode.Uri) {
     }
 
     const candidates = [
-        lw.compile.compiledPDFPath,
+        resolvedRoot ? lw.file.getSecurityPdfPath(resolvedRoot) : undefined,
         currentRoot ? lw.file.getSecurityPdfPath(currentRoot) : undefined,
-        resolvedRoot ? lw.file.getSecurityPdfPath(resolvedRoot) : undefined
+        lw.compile.compiledPDFPath
     ].filter((p): p is string => !!p)
 
     const visited = new Set<string>()
@@ -276,7 +276,10 @@ export async function clean(): Promise<void> {
 
 export function addTexRoot() {
     logger.log('ADDTEXROOT command invoked.')
-    if (!vscode.window.activeTextEditor || !lw.file.hasLaTeXLangId(vscode.window.activeTextEditor.document.languageId) || !lw.file.hasLaTeXClassPackageLangId(vscode.window.activeTextEditor.document.languageId)) {
+    if (!vscode.window.activeTextEditor || (
+        !lw.file.hasLaTeXLangId(vscode.window.activeTextEditor.document.languageId)
+        && !lw.file.hasLaTeXClassPackageLangId(vscode.window.activeTextEditor.document.languageId)
+    )) {
         logger.log('Cannot add tex root. The active editor is undefined, or the document is not related to a LaTeX document.')
         return
     }

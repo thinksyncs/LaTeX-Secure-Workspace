@@ -580,6 +580,18 @@ describe(testFileSuiteName(__filename), () => {
         })
     })
 
+    describe('lw.file.getSecurityPdfPath', () => {
+        it('should ignore latex.jobname for fixed secure recipe output', () => {
+            const texPath = get.path(fixture, 'main.tex')
+            set.config('latex.jobname', 'custom-job')
+
+            assert.pathStrictEqual(
+                lw.file.getSecurityPdfPath(texPath),
+                path.join(path.dirname(texPath), '.lw-security', 'main.pdf')
+            )
+        })
+    })
+
     describe('lw.file.hasTeXExt', () => {
         it('should return true for supported TeX extensions', () => {
             assert.ok(lw.file.hasTeXExt('.tex'))

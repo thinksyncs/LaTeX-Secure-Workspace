@@ -49,17 +49,26 @@ To build a release image, run
 
     npm run release
 
-To run tests, run
+To run the default Node-based tests without starting VS Code, run
 
     npm run test
 
-To run the property-based fuzzing check used by CI and OpenSSF Scorecard detection, run
+To run the isolated VS Code integration tests, run
+
+    npm run test:integration
+
+CI runs both groups with
+
+    npm run test:ci
+
+To run the property-based fuzzing check directly, run
 
     npm run test:fuzz
 
-To run a specific test, run
+To run a specific unit group or integration suite, run
 
-    npm run test build/fixture001
+    LATEXWORKSHOP_UNIT=08_compile_build npm run test:integration
+    LATEXWORKSHOP_SUITE=01_build npm run test:integration
 
 ## Testing and debugging the extension
 

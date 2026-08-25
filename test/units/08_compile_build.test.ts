@@ -73,6 +73,23 @@ describe(testFileSuiteName(__filename), () => {
             assert.ok(findStub.called)
         })
 
+        for (const [languageId, fileName] of [
+            ['latex-class', 'document.cls'],
+            ['latex-package', 'helpers.sty'],
+            ['bibtex', 'references.bib']
+        ] as const) {
+            it(`should resolve the secure root when building from a ${languageId} editor`, async () => {
+                activeStub.restore()
+                activeStub = mock.activeTextEditor(get.path(fileName), '', { languageId })
+
+                const succeeded = await build()
+
+                assert.strictEqual(succeeded, true)
+                assert.ok(findStub.calledOnce)
+                assert.hasLog(`Building root file: ${get.path('main.tex')}`)
+            })
+        }
+
         it('should skip finding root if given as an argument', async () => {
             await build(false, get.path('alt.tex'), 'latex')
 
@@ -127,15 +144,41 @@ describe(testFileSuiteName(__filename), () => {
             assert.hasLog('Required LaTeX tools unavailable: latexmk:')
         })
 
-        it('should validate LuaLaTeX instead of pdfLaTeX for the secure LuaLaTeX recipe', async () => {
+        it('should reject a local LuaLaTeX build before spawning', async () => {
+            const syncStub = lw.external.sync as sinon.SinonStub
+            const spawnStub = lw.external.spawn as sinon.SinonStub
+
+            const succeeded = await build(false, undefined, undefined, 'secure-lualatexmk')
+
+            assert.strictEqual(succeeded, false)
+            assert.ok(syncStub.neverCalledWith('lualatex', ['--version']))
+            assert.ok(spawnStub.notCalled)
+            assert.hasLog('Secure LuaLaTeX builds require Docker isolation.')
+        })
+
+        it('should validate the Docker runtime for the secure LuaLaTeX recipe', async () => {
+            set.config('docker.enabled', true)
+            set.config('docker.image.latex', 'example/texlive:stable')
             const syncStub = lw.external.sync as sinon.SinonStub
 
             await build(false, undefined, undefined, 'secure-lualatexmk')
 
-            assert.ok(syncStub.calledWith('latexmk', ['-version']))
-            assert.ok(syncStub.calledWith('lualatex', ['--version']))
+            assert.ok(syncStub.calledWith('docker', ['--version']))
+            assert.ok(syncStub.neverCalledWith('lualatex', ['--version']))
             assert.ok(syncStub.neverCalledWith('pdflatex', ['--version']))
-            assert.hasLog('Recipe step 1 The command is latexmk:')
+            assert.hasLog('Recipe step 1 The command is')
+        })
+
+        it('should stop before spawning when Docker has no configured image', async () => {
+            set.config('docker.enabled', true)
+            set.config('docker.image.latex', '')
+            const spawnStub = lw.external.spawn as sinon.SinonStub
+
+            const succeeded = await build()
+
+            assert.strictEqual(succeeded, false)
+            assert.ok(spawnStub.notCalled)
+            assert.hasLog('Docker build is enabled, but no LaTeX image is configured.')
         })
 
         it('should open the built pdf when the viewer is not already open', async () => {
@@ -177,6 +220,23 @@ describe(testFileSuiteName(__filename), () => {
 
             assert.ok(refreshStub.calledOnceWithExactly(vscode.Uri.file(get.path('.lw-security', 'main.pdf'))))
             assert.ok(viewStub.notCalled)
+        })
+
+        it('should recover after post-build processing throws', async () => {
+            const fileStat = { type: vscode.FileType.File }
+            sinon.stub(lw.file, 'exists').resolves(fileStat as vscode.FileStat)
+            ;(lw.viewer.isViewing as sinon.SinonStub).returns(false)
+            const viewStub = lw.viewer.view as sinon.SinonStub
+            viewStub.onFirstCall().rejects(new Error('viewer failed'))
+            viewStub.onSecondCall().resolves()
+
+            const firstBuild = await build()
+            const secondBuild = await build()
+
+            assert.strictEqual(firstBuild, false)
+            assert.strictEqual(secondBuild, true)
+            assert.strictEqual(viewStub.callCount, 2)
+            assert.hasLog('Unexpected error while running secure build.')
         })
     })
 

@@ -2,11 +2,12 @@ import * as path from 'path'
 import * as vscode from 'vscode'
 import * as sinon from 'sinon'
 import type { PdfViewerParams } from '../../types/latex-workshop-protocol-types/index'
-import { assert, mock } from './utils'
+import { assert, mock, TextEditor } from './utils'
 import { lw } from '../../src/lw'
 import * as customEditor from '../../src/preview/pdfcustomeditor'
 import { configureSecurePdfViewerWebview, getSecurePdfViewerHtml } from '../../src/preview/viewer/securepdfviewer'
 import { synctex } from '../../src/locate/synctex'
+import { resolveForwardLineNumbers } from '../../src/locate/synctex/worker'
 import { testFileSuiteName } from '../file-name'
 
 describe(testFileSuiteName(__filename), () => {
@@ -19,6 +20,7 @@ describe(testFileSuiteName(__filename), () => {
     })
 
     afterEach(() => {
+        lw.previousActive = undefined
         synctex.components.setSynctexToPDFCombinedForTest(undefined)
         sinon.restore()
         customEditor.resetCustomEditorStateForTest()
@@ -71,6 +73,57 @@ describe(testFileSuiteName(__filename), () => {
         }))
     })
 
+    it('should redeliver SyncTeX until the viewer acknowledges applying it', async () => {
+        const pdfUri = vscode.Uri.file('/tmp/main.pdf')
+        const postMessage = sinon.stub().resolves(true)
+        const panel = {
+            reveal: sinon.stub(),
+            webview: {
+                postMessage,
+            },
+        } as unknown as vscode.WebviewPanel
+        const record = { page: 3, x: 24, y: 48, indicator: true }
+
+        customEditor.registerCustomEditorPanelForTest(pdfUri, panel, { pdfFileUri: pdfUri.toString(true) })
+        assert.strictEqual(await customEditor.revealLocationInCustomEditor(pdfUri, record), true)
+
+        await customEditor.handleCustomEditorMessageForTest(pdfUri, panel, {}, { type: 'initialized' })
+        assert.strictEqual(postMessage.callCount, 2)
+
+        await customEditor.handleCustomEditorMessageForTest(pdfUri, panel, {}, {
+            type: 'synctex-applied',
+            state: { page: 3 }
+        })
+        await customEditor.handleCustomEditorMessageForTest(pdfUri, panel, {}, { type: 'initialized' })
+
+        assert.strictEqual(postMessage.callCount, 2)
+        assert.ok(postMessage.alwaysCalledWithExactly({
+            type: 'synctex',
+            data: record
+        }))
+    })
+
+    it('should refresh the PDF without replacing viewer HTML or state', async () => {
+        const pdfUri = vscode.Uri.file('/tmp/main.pdf')
+        const postMessage = sinon.stub().resolves(true)
+        const webview = {
+            html: '<html>existing viewer</html>',
+            postMessage,
+        }
+        const panel = {
+            reveal: sinon.stub(),
+            webview,
+        } as unknown as vscode.WebviewPanel
+        const viewerState = { pdfFileUri: pdfUri.toString(true), scale: '1.5', scrollTop: 640 }
+
+        customEditor.registerCustomEditorPanelForTest(pdfUri, panel, viewerState)
+        await customEditor.refreshCustomEditorPanels(pdfUri)
+
+        assert.ok(postMessage.calledOnceWithExactly({type: 'reload'}))
+        assert.strictEqual(webview.html, '<html>existing viewer</html>')
+        assert.deepStrictEqual(customEditor.getCustomEditorStates(pdfUri), [viewerState])
+    })
+
     it('should route reverse SyncTeX messages to the locator', async () => {
         const pdfUri = vscode.Uri.file('/tmp/main.pdf')
         const panel = {
@@ -100,6 +153,32 @@ describe(testFileSuiteName(__filename), () => {
             textBeforeSelection: '',
             textAfterSelection: ''
         }, pdfUri))
+    })
+
+    it('should reject invalid reverse SyncTeX coordinates and pages', async () => {
+        const pdfUri = vscode.Uri.file('/tmp/main.pdf')
+        const panel = {
+            webview: {
+                postMessage: sinon.stub().resolves(true),
+            },
+        } as unknown as vscode.WebviewPanel
+        const toTeX = sinon.stub().resolves()
+        lw.locate = {
+            synctex: {
+                toTeX,
+            },
+        } as unknown as typeof lw.locate
+
+        for (const message of [
+            { type: 'reverse_synctex', page: 0, pos: [12, 34] },
+            { type: 'reverse_synctex', page: 1.5, pos: [12, 34] },
+            { type: 'reverse_synctex', page: 1, pos: [Number.NaN, 34] },
+            { type: 'reverse_synctex', page: 1, pos: [12, Number.POSITIVE_INFINITY] }
+        ]) {
+            await customEditor.handleCustomEditorMessageForTest(pdfUri, panel, {}, message)
+        }
+
+        assert.ok(toTeX.notCalled)
     })
 
     it('should keep the custom editor open when a deleted PDF reappears quickly', async () => {
@@ -169,6 +248,32 @@ describe(testFileSuiteName(__filename), () => {
         await synctex.toPDF(pdfUri, { line: 1, filePath: rootFile })
 
         assert.ok(locateStub.calledOnceWithExactly(pdfUri, record))
+    })
+
+    it('should use the previous LaTeX editor coordinates when the PDF tab is focused', async () => {
+        const rootFile = '/tmp/main.tex'
+        const pdfUri = vscode.Uri.file('/tmp/.lw-security/main.pdf')
+        const record = { page: 2, x: 18, y: 36, indicator: true }
+        const editor = new TextEditor(rootFile, 'first\nsecond\nthird', {})
+        editor.setSelections([new vscode.Selection(1, 3, 1, 3)])
+        lw.previousActive = editor
+        lw.root.file.path = rootFile
+        lw.root.file.langId = 'latex'
+        sinon.stub(vscode.window, 'activeTextEditor').value(undefined)
+        const locateStub = sinon.stub(lw.viewer, 'locate').resolves()
+        const computeStub = sinon.stub().resolves(record)
+        synctex.components.setSynctexToPDFCombinedForTest(computeStub)
+
+        await synctex.toPDF(pdfUri)
+
+        assert.ok(computeStub.calledOnceWithExactly(2, 3, vscode.Uri.file(rootFile).fsPath, pdfUri, sinon.match.string))
+        assert.ok(locateStub.calledOnceWithExactly(pdfUri, record))
+    })
+
+    it('should clamp bundled forward SyncTeX past EOF to the last source record', () => {
+        assert.deepStrictEqual(resolveForwardLineNumbers([4, 12, 20], 99), [20, 20])
+        assert.deepStrictEqual(resolveForwardLineNumbers([4, 12, 20], 15), [12, 20])
+        assert.strictEqual(resolveForwardLineNumbers([], 99), undefined)
     })
 
     it('should target the fixed secure output directory by default', async () => {

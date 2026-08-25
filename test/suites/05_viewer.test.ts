@@ -12,6 +12,9 @@ suite('PDF viewer test suite', () => {
 
     suiteSetup(async () => {
         await test.activateExtension()
+        const registeredCommands = await vscode.commands.getCommands(true)
+        assert.ok(registeredCommands.includes('latex-workshop.synctex'))
+        assert.ok(registeredCommands.includes('latex-workshop.synctexto'))
         await vscode.workspace.getConfiguration('latex-workshop').update('latex.autoBuild.run', 'never')
         await vscode.workspace.getConfiguration('latex-workshop').update('view.pdf.viewer', 'tab')
     })

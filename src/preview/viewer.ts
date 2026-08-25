@@ -43,10 +43,10 @@ function reload(): void {
  */
 function refresh(pdfUri?: vscode.Uri): void {
     if (pdfUri) {
-        void customEditor.reloadCustomEditorPanels(pdfUri)
+        void customEditor.refreshCustomEditorPanels(pdfUri)
         return
     }
-    void customEditor.reloadCustomEditorPanels()
+    void customEditor.refreshCustomEditorPanels()
 }
 
 async function view(pdfUri: vscode.Uri, mode?: 'tab' | 'browser' | 'external'): Promise<void> {

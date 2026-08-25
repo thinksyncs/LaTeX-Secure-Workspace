@@ -34,7 +34,7 @@ function createFixedSecureTool(engine: SecureLatexEngine): Tool {
         command: 'latexmk',
         args: [
             ...FIXED_SECURE_TOOL_ARGS_BEFORE_ENGINE,
-            engine === 'lualatex' ? '-lualatex' : '-pdf',
+            ...(engine === 'lualatex' ? ['-lualatex', '-latexoption=--no-socket'] : ['-pdf']),
             ...FIXED_SECURE_TOOL_ARGS_AFTER_ENGINE
         ],
         env: {}
@@ -309,6 +309,8 @@ function findRecipe(rootFile: string, langId: string, recipeName?: string): Reci
 function populateTools(rootFile: string, buildTools: Tool[], secureBuildDir: string): Tool[] {
     const configuration = vscode.workspace.getConfiguration('latex-workshop', lw.file.toUri(rootFile))
     const docker = getSecureConfigurationValueSync(lw.file.toUri(rootFile), 'docker.enabled', false)
+    const dockerImage = getSecureConfigurationValueSync(lw.file.toUri(rootFile), 'docker.image.latex', '').trim()
+    const dockerPath = getSecureConfigurationValueSync(lw.file.toUri(rootFile), 'docker.path', 'docker').trim() || 'docker'
     const secureOutDir = secureBuildDir.split(path.sep).join('/')
     const secureAuxDir = secureOutDir
 
@@ -328,7 +330,9 @@ function populateTools(rootFile: string, buildTools: Tool[], secureBuildDir: str
                         ...tool.env,
                         LATEXWORKSHOP_DOCKER_SOURCE_DIR_CONTAINER: DOCKER_SECURE_SOURCE_DIR,
                         LATEXWORKSHOP_DOCKER_OUTPUT_DIR_CONTAINER: DOCKER_SECURE_OUTPUT_DIR,
-                        LATEXWORKSHOP_DOCKER_OUTPUT_DIR_HOST: secureBuildDir
+                        LATEXWORKSHOP_DOCKER_OUTPUT_DIR_HOST: secureBuildDir,
+                        LATEXWORKSHOP_DOCKER_LATEX: dockerImage,
+                        LATEXWORKSHOP_DOCKER_PATH: dockerPath
                     }
                     break
                 default:
