@@ -101,6 +101,8 @@ The following upstream features are intentionally disabled or not exposed in thi
 
 ## Security Note
 
+The source at revision `a8cf9923` received a point-in-time static security review with OpenAI Daybreak Blue (`gpt-daybreak-blue-latest`) on 2026-08-25. The review identified one remaining medium-severity risk: local pdfLaTeX is not a filesystem sandbox and may read OS-user-readable files outside the workspace when the installed TeX policy permits it. Use the Docker build path for documents you do not fully trust.
+
 This fork applies security hardening intended to reduce risk. It does not make arbitrary TeX toolchains safe by itself and does not replace workstation hardening, sandboxing, enterprise policy controls, or adopter validation.
 
 ## Release Channels
