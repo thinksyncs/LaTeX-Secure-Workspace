@@ -2,19 +2,37 @@
 
 ## Executing tests
 
-We start a new VS Code instance for `testground` and `multiroot` directories in `test/fixtures/`, which includes a series of TeX-related files for tests, and execute appropriate tests defined in `suites/*.test.ts` while skipping other tests not related to the directory.
+`npm test` runs the Node-based checks in `test/node/` and `test/fuzz/`. It does not start VS Code or change the active window.
+
+`npm run test:integration` runs the extension integration tests. These tests load `src/main`, call VS Code APIs, and exercise commands, editors, webviews, workspace trust, and multi-root behavior. They therefore require an isolated Extension Development Host instead of the VS Code window used for development.
+
+The integration runner starts a new VS Code instance for the `unittest`, `testground`, and `multiroot` fixtures. The `testground` and `multiroot` directories in `test/fixtures/` include TeX-related files used by tests in `suites/*.test.ts`.
 For tests of building a LaTeX file, we try to build a LaTeX file in the directory.
 If a PDF file is not generated, the test fails.
 The TeX files related are automatically created before the test and removed after.
 
-Property-based fuzz coverage for parser-facing code lives in `test/fuzz/` and is executed with `npm run test:fuzz`.
+Property-based fuzz coverage for parser-facing code lives in `test/fuzz/` and can also be executed directly with `npm run test:fuzz`.
+
+CI runs both groups through `npm run test:ci`. Coverage and release verification also invoke the integration tests explicitly, so changing the local default does not reduce those checks.
 
 ### How tests are executed via CLI
 
-1. `runTest.ts` starts a new VS Code instance for each `fixture` directory and executes `suites/index.ts`.
+1. `runTest.ts` starts an isolated VS Code instance for each required fixture and executes `units/index.ts` or `suites/index.ts`.
 2. Tests in `*.test.ts` are executed through test `runTest()` function defined in `suites/utils.ts`, which skip tests in `*.test.ts` if they are not related to the current `fixture` directory.
 
-On macOS local runs, `runTest.ts` now starts the test host in the background by default to avoid stealing focus with an `Extension Development Host` window.
+To run one unit group without opening the other fixture hosts:
+
+```sh
+LATEXWORKSHOP_UNIT=08_compile_build npm run test:integration
+```
+
+To run one integration suite:
+
+```sh
+LATEXWORKSHOP_SUITE=05_viewer npm run test:integration
+```
+
+On macOS local runs, `runTest.ts` starts the integration test host in the background by default to reduce focus changes.
 Set `LATEXWORKSHOP_FOREGROUND_TESTS=1` if you explicitly want the foreground window back for debugging.
 
 The CLI test runner does not download VS Code unless that is explicitly requested. Set `LATEXWORKSHOP_VSCODE_TEST_PATH` to an existing VS Code executable, or set `LATEXWORKSHOP_ALLOW_VSCODE_TEST_DOWNLOAD=1` to let `@vscode/test-electron` download the pinned test host. `LATEXWORKSHOP_VSCODE_TEST_VERSION` overrides the default pinned version.

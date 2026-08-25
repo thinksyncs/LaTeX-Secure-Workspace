@@ -522,7 +522,7 @@ function getPdfPath(texPath: string): string {
 }
 
 function getSecurityPdfPath(texPath: string): string {
-    return path.resolve(path.dirname(texPath), getSecurityOutDir(texPath), path.basename(`${getJobname(texPath)}.pdf`))
+    return path.resolve(path.dirname(texPath), getSecurityOutDir(texPath), `${path.parse(texPath).name}.pdf`)
 }
 
 /**

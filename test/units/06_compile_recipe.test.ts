@@ -135,8 +135,10 @@ describe(testFileSuiteName(__filename), () => {
             ])
         })
 
-        it('should use the fixed LuaLaTeX recipe when explicitly selected', async () => {
+        it('should use the fixed Docker LuaLaTeX recipe when explicitly selected', async () => {
             const rootFile = set.root('main.tex')
+            set.config('docker.enabled', true)
+            set.config('docker.image.latex', 'example/texlive:stable')
 
             await build(rootFile, 'latex', async () => {}, 'secure-lualatexmk')
 
@@ -146,6 +148,7 @@ describe(testFileSuiteName(__filename), () => {
             assert.ok(!step.args?.includes('-pdf'))
             assert.ok(step.args?.includes('-norc'))
             assert.ok(step.args?.includes('-no-shell-escape'))
+            assert.ok(step.args?.includes('-latexoption=--no-socket'))
             assert.ok(!step.args?.some(arg => arg.includes('safer')))
         })
 
@@ -224,6 +227,8 @@ describe(testFileSuiteName(__filename), () => {
         it('should modify the fixed command when Docker is enabled on non-Windows', async () => {
             const rootFile = set.root('main.tex')
             set.config('docker.enabled', true)
+            set.config('docker.image.latex', 'example/texlive:stable')
+            set.config('docker.path', 'podman')
             setPlatform('linux')
             lw.extensionRoot = '/path/to/extension'
 
@@ -240,6 +245,8 @@ describe(testFileSuiteName(__filename), () => {
             assert.strictEqual(step.env?.LATEXWORKSHOP_DOCKER_SOURCE_DIR_CONTAINER, '/latex-workshop/src')
             assert.strictEqual(step.env?.LATEXWORKSHOP_DOCKER_OUTPUT_DIR_CONTAINER, '/latex-workshop/out')
             assert.pathStrictEqual(step.env?.LATEXWORKSHOP_DOCKER_OUTPUT_DIR_HOST ?? '', path.join(path.dirname(rootFile), '.lw-security'))
+            assert.strictEqual(step.env?.LATEXWORKSHOP_DOCKER_LATEX, 'example/texlive:stable')
+            assert.strictEqual(step.env?.LATEXWORKSHOP_DOCKER_PATH, 'podman')
         })
 
         it('should append max print line to the fixed latexmk invocation on MiKTeX', async () => {

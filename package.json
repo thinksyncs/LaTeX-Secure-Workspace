@@ -1100,13 +1100,13 @@
               ]
             }
           ],
-          "markdownDescription": "Compatibility setting retained from upstream. Custom recipes are ignored in this secure build. **Build with recipe** exposes only the fixed `secure-latexmk` and `secure-lualatexmk` profiles."
+          "markdownDescription": "Compatibility setting retained from upstream. Custom recipes are ignored in this secure build. **Build with recipe** exposes only the fixed `secure-latexmk` and `secure-lualatexmk` profiles. The LuaLaTeX profile requires Docker isolation."
         },
         "latex-workshop.latex.recipe.default": {
           "scope": "resource",
           "type": "string",
           "default": "first",
-          "markdownDescription": "Compatibility setting retained from upstream. The normal build command uses fixed `secure-latexmk`; use **Build with recipe** to explicitly select fixed `secure-lualatexmk`."
+          "markdownDescription": "Compatibility setting retained from upstream. The normal build command uses fixed `secure-latexmk`; after enabling Docker, use **Build with recipe** to explicitly select fixed `secure-lualatexmk`."
         },
         "latex-workshop.latex.tools": {
           "scope": "resource",
@@ -1351,7 +1351,7 @@
           "scope": "resource",
           "type": "string",
           "default": "",
-          "markdownDescription": "The jobname argument of the compiling tool, which is used by the extension to find project files (e.g., PDF and SyncTeX files). This config should be set identical to the value provided to the `-jobname=` argument, and should not have placeholders. Leave the config empty to ignore jobname and keep the default behavior."
+          "markdownDescription": "Compatibility setting retained from upstream. Fixed secure recipes do not pass `-jobname`, so secure build output, viewing, and SyncTeX ignore this setting and use the root document filename."
         },
         "latex-workshop.latex.build.rootfileInStatus": {
           "scope": "resource",
@@ -2968,7 +2968,7 @@
     "audit:native": "node ./dev/auditNativeAddons.mjs",
     "audit:prod": "npm audit --omit=dev --package-lock-only",
     "compile": "tsc -p tsconfig.json && npm run build:extension-bundle",
-    "coverage": "c8 --check-coverage npm run test --src out/src/",
+    "coverage": "c8 --include=\"src/**/*.ts\" --exclude-after-remap --check-coverage --lines=33 npm run test:integration",
     "extension:cleanup-local": "node ./dev/cleanupLocalExtensions.mjs",
     "extension:package-local": "node ./dev/manageLocalExtension.mjs package",
     "extension:install-local": "node ./dev/manageLocalExtension.mjs install",
@@ -2977,10 +2977,12 @@
     "lint:fix": "eslint --fix --cache .",
     "release": "npm run release:package",
     "release:package": "npm run release:verify && npx vsce package",
-    "release:verify": "npm run clean && npm run compile && npm test",
-    "test": "node ./dev/runTestCi.mjs",
-    "test:ci": "node ./dev/runTestCi.mjs",
+    "release:verify": "npm run clean && npm run compile && npm run test:ci",
+    "test": "npm run test:node",
+    "test:ci": "npm test && npm run test:integration",
     "test:fuzz": "node --test ./test/fuzz/*.test.js",
+    "test:integration": "node ./dev/runTestCi.mjs",
+    "test:node": "node --test ./test/node/fixture-selection.test.js ./test/node/test-command-boundaries.test.js ./test/fuzz/graphics-diagnostics-utils.test.js ./test/fuzz/parser.fast-check.test.js",
     "watch-src": "tsc -watch -p tsconfig.json",
     "update-grammar": "node ./dev/update-grammar.mjs"
   },

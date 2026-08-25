@@ -189,18 +189,18 @@ function parseToPDFList(result: string): SyncTeXRecordToPDFAll[] {
  * Locates the current cursor position in the TeX file editor.
  * @returns The current editor coordinates including line, column, and input file URI.
  */
-function getCurrentEditorCoordinates(): {line: number, column: number, inputFileUri: vscode.Uri} | undefined {
-    if (!vscode.window.activeTextEditor) {
+function getCurrentEditorCoordinates(editor: vscode.TextEditor): {line: number, column: number, inputFileUri: vscode.Uri} | undefined {
+    if (!editor) {
         logger.log('No active editor found.')
         return
     }
 
-    const inputFileUri = vscode.window.activeTextEditor.document.uri
-    if (!lw.file.hasLaTeXLangId(vscode.window.activeTextEditor.document.languageId)) {
+    const inputFileUri = editor.document.uri
+    if (!lw.file.hasLaTeXLangId(editor.document.languageId)) {
         logger.log(`${inputFileUri} is not valid LaTeX.`)
         return
     }
-    const position = vscode.window.activeTextEditor.selection.active
+    const position = editor.selection.active
     if (!position) {
         logger.log(`No cursor position from ${position}`)
         return
@@ -209,8 +209,8 @@ function getCurrentEditorCoordinates(): {line: number, column: number, inputFile
     let line = position.line + 1
     const column = position.character
 
-    if (vscode.window.activeTextEditor.document.lineCount === line &&
-        vscode.window.activeTextEditor.document.lineAt(line - 1).text === '') {
+    if (editor.document.lineCount === line &&
+        editor.document.lineAt(line - 1).text === '') {
             line -= 1
     }
 
@@ -289,7 +289,7 @@ async function toPDF(pdfUri?: vscode.Uri, args?: {line: number, filePath: string
     }
 
     if (args === undefined) {
-        const currentEditorCoordinates = getCurrentEditorCoordinates()
+        const currentEditorCoordinates = getCurrentEditorCoordinates(active)
         if (currentEditorCoordinates === undefined) {
             return
         }

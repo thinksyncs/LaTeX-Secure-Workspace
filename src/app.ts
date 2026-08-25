@@ -170,6 +170,8 @@ function registerLatexWorkshopCommands(extensionContext: vscode.ExtensionContext
         vscode.commands.registerCommand('latex-workshop.build-recipe', () => lw.commands.buildRecipe()),
         vscode.commands.registerCommand('latex-workshop.view', (mode?: 'tab' | 'browser' | 'external' | vscode.Uri) => lw.commands.view(mode)),
         vscode.commands.registerCommand('latex-workshop.refresh-viewer', () => lw.commands.refresh()),
+        vscode.commands.registerCommand('latex-workshop.synctex', () => lw.commands.synctex()),
+        vscode.commands.registerCommand('latex-workshop.synctexto', (line: number, filePath: string) => lw.commands.synctexonref(line, filePath)),
         vscode.commands.registerCommand('latex-workshop.secure-build-status', () => lw.commands.secureBuildStatus()),
         vscode.commands.registerCommand('latex-workshop.secure-mode-report', () => lw.commands.secureModeReport()),
         vscode.commands.registerCommand('latex-workshop.build-root-inspector', () => lw.commands.buildRootInspector()),

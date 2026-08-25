@@ -20,6 +20,7 @@ export default [{
         "types/**/*.ts",
         "resources/**/*.js",
         "test/fuzz/*.js",
+        "test/node/*.js",
         "**/out",
         "**/node_modules",
         "**/.idea/",
