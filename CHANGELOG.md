@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## [11.2.14] - 2026-08-26
+
 ### Fixed
 - Restore Add TeX root, project-editor builds, and forward SyncTeX command routing.
 - Keep secure builds usable after post-build errors and reject Docker builds without a configured image.
