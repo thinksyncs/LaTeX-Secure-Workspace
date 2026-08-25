@@ -40,7 +40,7 @@ Risk:
 
 Mitigation:
 
-The secure build disables auto build, ignores custom recipes and custom tools, and ignores external build commands. Manual compilation is limited to fixed internal pdfLaTeX and LuaLaTeX recipes so workspace content and settings cannot switch the build command path. Both recipes pass `-no-shell-escape` to `latexmk`, which disables TeX `\write18` command execution. Because LuaLaTeX can execute Lua embedded in a document and its `--safer` mode is incompatible with `luaotfload`, the LuaLaTeX profile requires the hardened Docker path. The wrapper disables networking, mounts the source read-only, narrows the writable output mount, and the recipe disables the Lua socket library.
+The secure build disables auto build, ignores custom recipes and tools, and ignores external build commands. Manual compilation is limited to fixed internal pdfLaTeX and LuaLaTeX recipes. Both pass `-no-shell-escape` to `latexmk`. By default both profiles use the hardened Docker wrapper, which disables networking, mounts the owning workspace read-only, exposes only `.lw-security` as a writable output mount, drops capabilities, and prevents privilege gain. The LuaLaTeX recipe also disables the Lua socket library. Host pdfLaTeX remains available only through the `latex-workshop.security.allowLocalPdfLaTeX` user setting as a weaker compatibility mode; workspace settings cannot enable it, and it is not a filesystem sandbox.
 
 Secure root resolution rejects existing subfiles roots whose real path is outside the active workspace. Build and cleanup also require `.lw-security` and its created subdirectories to be real project-local directories rather than symbolic links.
 

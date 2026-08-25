@@ -62,6 +62,21 @@ describe('30_utils_security:', () => {
         assert.ok(showWarningStub.notCalled)
     })
 
+    it('should not let a workspace enable local pdfLaTeX compatibility', () => {
+        sinon.stub(vscode.workspace, 'getConfiguration').returns({
+            inspect: sinon.stub().withArgs('security.allowLocalPdfLaTeX').returns({
+                defaultValue: false,
+                globalValue: false,
+                workspaceValue: true
+            }),
+            get: sinon.stub().withArgs('security.allowLocalPdfLaTeX', sinon.match.any).returns(true)
+        } as unknown as vscode.WorkspaceConfiguration)
+
+        const value = getSecureConfigurationValueSync(undefined, 'security.allowLocalPdfLaTeX', false)
+
+        assert.strictEqual(value, false)
+    })
+
     it('should ignore language-specific workspace overrides and keep the user language value', async () => {
         const showWarningStub = sinon.stub(vscode.window, 'showWarningMessage').resolves(undefined)
         sinon.stub(vscode.workspace, 'getConfiguration').returns({

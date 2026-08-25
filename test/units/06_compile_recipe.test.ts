@@ -21,6 +21,7 @@ describe(testFileSuiteName(__filename), () => {
 
     beforeEach(() => {
         initialize()
+        set.config('security.allowLocalPdfLaTeX', true)
         getIncludedTeXStub.returns([])
         secureBuildDirStub.callsFake((rootFile: string) => path.join(path.dirname(rootFile), '.lw-security'))
     })
@@ -135,6 +136,19 @@ describe(testFileSuiteName(__filename), () => {
             ])
         })
 
+        it('should reject host pdfLaTeX when local compatibility mode is not allowed', async () => {
+            const rootFile = set.root('main.tex')
+            const buildLoop = sinon.stub().resolves()
+            set.config('security.allowLocalPdfLaTeX', false)
+
+            const succeeded = await build(rootFile, 'latex', buildLoop)
+
+            assert.strictEqual(succeeded, false)
+            assert.strictEqual(queue.getStep(), undefined)
+            assert.ok(buildLoop.notCalled)
+            assert.hasLog('Secure build blocked because Docker isolation is disabled')
+        })
+
         it('should use the fixed Docker LuaLaTeX recipe when explicitly selected', async () => {
             const rootFile = set.root('main.tex')
             set.config('docker.enabled', true)
@@ -228,7 +242,7 @@ describe(testFileSuiteName(__filename), () => {
             const rootFile = set.root('main.tex')
             set.config('docker.enabled', true)
             set.config('docker.image.latex', 'example/texlive:stable')
-            set.config('docker.path', 'podman')
+            set.config('docker.path', '/opt/%DOC%/podman')
             setPlatform('linux')
             lw.extensionRoot = '/path/to/extension'
 
@@ -242,11 +256,33 @@ describe(testFileSuiteName(__filename), () => {
             assert.strictEqual(chmodStub.getCall(0).args?.[1], 0o755)
             assert.ok(step.args?.includes('-outdir=/latex-workshop/out'))
             assert.ok(step.args?.includes('-auxdir=/latex-workshop/out'))
+            assert.pathStrictEqual(step.env?.LATEXWORKSHOP_DOCKER_SOURCE_DIR_HOST ?? '', get.path())
             assert.strictEqual(step.env?.LATEXWORKSHOP_DOCKER_SOURCE_DIR_CONTAINER, '/latex-workshop/src')
+            assert.strictEqual(step.env?.LATEXWORKSHOP_DOCKER_WORKDIR_CONTAINER, '/latex-workshop/src')
             assert.strictEqual(step.env?.LATEXWORKSHOP_DOCKER_OUTPUT_DIR_CONTAINER, '/latex-workshop/out')
             assert.pathStrictEqual(step.env?.LATEXWORKSHOP_DOCKER_OUTPUT_DIR_HOST ?? '', path.join(path.dirname(rootFile), '.lw-security'))
             assert.strictEqual(step.env?.LATEXWORKSHOP_DOCKER_LATEX, 'example/texlive:stable')
-            assert.strictEqual(step.env?.LATEXWORKSHOP_DOCKER_PATH, 'podman')
+            assert.strictEqual(step.env?.LATEXWORKSHOP_DOCKER_PATH, '/opt/%DOC%/podman')
+        })
+
+        it('should mount the owning workspace read-only and use a nested root workdir', async () => {
+            const rootFile = set.root('paper', 'main.tex')
+            set.config('docker.enabled', true)
+            set.config('docker.image.latex', 'example/texlive:stable')
+            setPlatform('linux')
+            lw.extensionRoot = '/path/to/extension'
+
+            const chmodStub = sinon.stub(lw.external, 'chmodSync')
+            await build(rootFile, 'latex', async () => {})
+            chmodStub.restore()
+
+            const step = queue.getStep()
+            assert.ok(step)
+            assert.pathStrictEqual(step.env?.LATEXWORKSHOP_DOCKER_SOURCE_DIR_HOST ?? '', get.path())
+            assert.strictEqual(step.env?.LATEXWORKSHOP_DOCKER_SOURCE_DIR_CONTAINER, '/latex-workshop/src')
+            assert.strictEqual(step.env?.LATEXWORKSHOP_DOCKER_WORKDIR_CONTAINER, '/latex-workshop/src/paper')
+            assert.ok(step.args?.includes('main'))
+            assert.ok(!step.args?.some(arg => arg.includes(rootFile.replace(/\\/g, '/'))))
         })
 
         it('should append max print line to the fixed latexmk invocation on MiKTeX', async () => {
@@ -299,6 +335,19 @@ describe(testFileSuiteName(__filename), () => {
             assert.ok(step)
             assert.strictEqual(step.command, 'latexmk')
             assert.ok(step.args?.includes(rootFile.replace(/\\/g, '/').replace('.tex', '')))
+        })
+
+        it('should ignore a workspace override that enables local pdfLaTeX compatibility', async () => {
+            const rootFile = set.root('main.tex')
+            set.config('security.allowLocalPdfLaTeX', false)
+
+            await set.codeConfig('security.allowLocalPdfLaTeX', true)
+            await sleep(150)
+            const succeeded = await build(rootFile, 'latex', async () => {})
+
+            assert.strictEqual(succeeded, false)
+            assert.strictEqual(queue.getStep(), undefined)
+            assert.hasLog('Ignoring workspace-scoped override for latex-workshop.security.allowLocalPdfLaTeX')
         })
 
         it('should ignore workspace overrides for LATEXWORKSHOP_DOCKER_LATEX', async () => {

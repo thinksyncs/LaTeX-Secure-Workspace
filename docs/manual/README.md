@@ -7,7 +7,7 @@ LaTeX-Secure-Workspace fork.
 
 LaTeX-Secure-Workspace keeps a deliberately small workflow surface:
 
-- Manual local pdfLaTeX or Docker-isolated LuaLaTeX build with fixed internal recipes
+- Manual Docker-isolated pdfLaTeX and LuaLaTeX builds with fixed internal recipes
 - Root-file detection with the secure root-resolution policy
 - On-demand root inspection, project health, and build provenance reports
 - Local tab-based PDF viewing with bounded render recovery and forward/reverse SyncTeX
@@ -20,10 +20,10 @@ count, or the math preview panel.
 
 ## User Quick Start
 
-1. Install a TeX distribution that provides `latexmk` and `pdflatex` for local builds. Install Docker and configure a LaTeX image when LuaLaTeX is required.
+1. Install Docker or Podman, enable `latex-workshop.docker.enabled` in User settings, and configure a trusted LaTeX image in `latex-workshop.docker.image.latex`.
 2. Open the LaTeX project in a trusted local workspace.
 3. Open the main document and run **LaTeX-Secure-Workspace: Build LaTeX project** from the Command Palette or the editor build button.
-4. For LuaLaTeX, enable Docker in user settings, configure `latex-workshop.docker.image.latex`, then run **LaTeX-Secure-Workspace: Build with recipe** and select `secure-lualatexmk`.
+4. For LuaLaTeX, run **LaTeX-Secure-Workspace: Build with recipe** and select `secure-lualatexmk`.
 5. Use **LaTeX-Secure-Workspace: Show secure build status** when a tool, root file, output path, or PDF cannot be found.
 6. When working in an included fragment, use **Show build root inspector** to review the selected parent and dependency chain, or **Build with project root** to select a detected parent for one build.
 7. Run **Check project health** to find project-local missing inputs, graphics, citations, references, and label issues without launching external tools.
@@ -32,11 +32,9 @@ count, or the math preview panel.
 On macOS, the extension restores the standard MacTeX path
 `/Library/TeX/texbin` for GUI-launched VS Code. On Windows, the TeX Live or
 MiKTeX binary directory must be present in the user or system `Path`. On Linux,
-the TeX Live binary directory must be present in `PATH`.
+the TeX Live binary directory must be present in `PATH`. These host paths are used only by the optional local pdfLaTeX compatibility mode.
 
-Before each local pdfLaTeX build, the extension checks `latexmk` and `pdflatex`. A secure LuaLaTeX build instead checks the configured Docker runtime and image.
-The status report also checks `pdflatex`, `lualatex`, `kpsewhich`, and `synctex`,
-shows the detected version line, and provides OS-specific recovery guidance.
+Secure builds check the configured Docker runtime and image. The status report clearly labels Docker, blocked, and local pdfLaTeX compatibility modes. To use host pdfLaTeX for a fully trusted document, explicitly enable `latex-workshop.security.allowLocalPdfLaTeX` in User settings; workspace values are ignored, and this mode can read files available to your OS account.
 Missing `.sty`, `.cls`, and related TeX resources are reported directly with
 guidance to check project files or possible distribution packages. The compiler
 log remains available for details.

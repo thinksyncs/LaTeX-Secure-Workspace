@@ -70,6 +70,7 @@
         "latex-workshop.latex.rootFile.indicator",
         "latex-workshop.latex.search.rootFiles.include",
         "latex-workshop.latex.search.rootFiles.exclude",
+        "latex-workshop.security.allowLocalPdfLaTeX",
         "latex-workshop.docker.enabled",
         "latex-workshop.docker.image.latex",
         "latex-workshop.docker.path",
@@ -1100,13 +1101,13 @@
               ]
             }
           ],
-          "markdownDescription": "Compatibility setting retained from upstream. Custom recipes are ignored in this secure build. **Build with recipe** exposes only the fixed `secure-latexmk` and `secure-lualatexmk` profiles. The LuaLaTeX profile requires Docker isolation."
+          "markdownDescription": "Compatibility setting retained from upstream. Custom recipes are ignored in this secure build. **Build with recipe** exposes only the fixed `secure-latexmk` and `secure-lualatexmk` profiles. Both profiles use Docker isolation by default."
         },
         "latex-workshop.latex.recipe.default": {
           "scope": "resource",
           "type": "string",
           "default": "first",
-          "markdownDescription": "Compatibility setting retained from upstream. The normal build command uses fixed `secure-latexmk`; after enabling Docker, use **Build with recipe** to explicitly select fixed `secure-lualatexmk`."
+          "markdownDescription": "Compatibility setting retained from upstream. The normal build command uses fixed `secure-latexmk`; use **Build with recipe** to explicitly select fixed `secure-lualatexmk`. Secure builds require Docker by default."
         },
         "latex-workshop.latex.tools": {
           "scope": "resource",
@@ -2560,23 +2561,29 @@
           "default": false,
           "markdownDescription": "Enable automatic conversion of `$...$` to `\\(...\\)` and `$$...$$` to `\\[...\\]` during formatting."
         },
+        "latex-workshop.security.allowLocalPdfLaTeX": {
+          "scope": "window",
+          "type": "boolean",
+          "default": false,
+          "markdownDescription": "Compatibility escape hatch. Allow the fixed `secure-latexmk` profile to run host `latexmk` when Docker is disabled. Host TeX is not a filesystem sandbox and may read files available to your OS account. Configure this only in User settings for documents you fully trust; workspace values are ignored."
+        },
         "latex-workshop.docker.enabled": {
           "scope": "window",
           "type": "boolean",
           "default": false,
-          "markdownDescription": "Enable docker-based LaTeX distribution support. Do not set this item to `true` unless you are aware of what it means. This extension will use the images defined in `#latex-workshop.docker.image.latex#` to execute `latexmk`, `synctex`, `texcount`, and `latexindent`."
+          "markdownDescription": "Enable the Docker or Podman build boundary. Secure pdfLaTeX and LuaLaTeX builds require this by default. The extension uses the image defined in `#latex-workshop.docker.image.latex#` for `latexmk`."
         },
         "latex-workshop.docker.image.latex": {
           "scope": "window",
           "type": "string",
           "default": "",
-          "markdownDescription": "Define the image for `latexmk`, `synctex`, `texcount`, and `latexindent`."
+          "markdownDescription": "Define the trusted LaTeX image used by the fixed Docker-isolated build profiles."
         },
         "latex-workshop.docker.path": {
           "scope": "window",
           "type": "string",
           "default": "docker",
-          "markdownDescription": "Docker (or Podman) executable name or path."
+          "markdownDescription": "Docker or Podman executable name or path. Workspace values are ignored."
         },
         "latex-workshop.showContextMenu": {
           "scope": "window",

@@ -104,6 +104,11 @@ export function sleep(ms: number) {
 
 export async function activateExtension() {
     snapshotWorkspaceFile()
+    // Cross-platform integration tests intentionally exercise the documented
+    // host compatibility mode. Production defaults remain Docker-only.
+    await vscode.workspace.getConfiguration('latex-workshop').update(
+        'security.allowLocalPdfLaTeX', true, vscode.ConfigurationTarget.Global
+    )
     const extension = vscode.extensions.getExtension(extensionId)
     ok(extension, `Expected extension ${extensionId} to be available in tests`)
     await extension.activate()
