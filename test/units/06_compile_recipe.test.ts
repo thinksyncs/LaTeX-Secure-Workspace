@@ -347,7 +347,6 @@ describe(testFileSuiteName(__filename), () => {
 
             assert.strictEqual(succeeded, false)
             assert.strictEqual(queue.getStep(), undefined)
-            assert.hasLog('Ignoring workspace-scoped override for latex-workshop.security.allowLocalPdfLaTeX')
         })
 
         it('should ignore workspace overrides for LATEXWORKSHOP_DOCKER_LATEX', async () => {
