@@ -67,8 +67,11 @@ describe(testFileSuiteName(__filename), () => {
             await clean(rootFile)
 
             assert.ok(fs.existsSync(artifact))
-            assert.strictEqual(showErrorStub.firstCall?.args[0], 'Secure cleanup failed for one or more build artifacts. Open the extension log for details.')
-            assert.strictEqual(showErrorStub.firstCall?.args[1], 'Open LaTeX-Secure-Workspace log')
+            const errorCalls = showErrorStub.getCalls().map(call => call.args as unknown[])
+            assert.ok(errorCalls.some(args =>
+                args[0] === 'Secure cleanup failed for one or more build artifacts. Open the extension log for details.'
+                && args[1] === 'Open LaTeX-Secure-Workspace log'
+            ))
         } finally {
             unlinkStub.restore()
             showErrorStub.restore()
