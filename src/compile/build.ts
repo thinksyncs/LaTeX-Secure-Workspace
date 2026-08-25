@@ -12,7 +12,7 @@ import {
     getRequiredBuildToolDefinitions,
     type TexToolRunner
 } from '../utils/tex-environment'
-import { build as buildRecipe, getSecureRecipeEngine } from './recipe'
+import { build as buildRecipe, getSecureBuildExecution, getSecureRecipeEngine } from './recipe'
 import { queue } from './queue'
 
 const logger = lw.log('Build')
@@ -122,30 +122,37 @@ async function build(skipSelection: boolean = false, rootFile: string | undefine
 }
 
 function isBuildEnvironmentReady(scope: vscode.ConfigurationScope, recipeName?: string): boolean {
-    const dockerEnabled = getSecureConfigurationValueSync(scope, 'docker.enabled', false)
-    if (getSecureRecipeEngine(recipeName) === 'lualatex' && !dockerEnabled) {
-        logger.log('Secure LuaLaTeX builds require Docker isolation.')
+    const engine = getSecureRecipeEngine(recipeName)
+    const execution = getSecureBuildExecution(scope, recipeName)
+    if (execution === 'blocked') {
+        const isLuaLaTeX = engine === 'lualatex'
+        const message = isLuaLaTeX
+            ? 'Secure LuaLaTeX builds require Docker isolation because LuaLaTeX can execute document-supplied Lua. Enable latex-workshop.docker.enabled and configure latex-workshop.docker.image.latex in user settings.'
+            : 'Secure pdfLaTeX builds require Docker isolation by default because host TeX can read files available to your OS account. Enable latex-workshop.docker.enabled and configure latex-workshop.docker.image.latex in user settings. If you accept that weaker boundary for a fully trusted document, enable latex-workshop.security.allowLocalPdfLaTeX in user settings.'
+        logger.log(isLuaLaTeX
+            ? 'Secure LuaLaTeX builds require Docker isolation.'
+            : 'Secure pdfLaTeX builds require Docker isolation unless local compatibility mode is explicitly allowed.')
         logger.refreshStatus('x', 'errorForeground', undefined, 'error')
-        void logger.showErrorMessageWithExtensionLogButton('Secure LuaLaTeX builds require Docker isolation because LuaLaTeX can execute document-supplied Lua. Enable latex-workshop.docker.enabled and configure latex-workshop.docker.image.latex in user settings.')
+        void logger.showErrorMessageWithExtensionLogButton(message)
         return false
     }
-    if (dockerEnabled) {
+    if (execution === 'docker') {
         const dockerImage = getSecureConfigurationValueSync(scope, 'docker.image.latex', '').trim()
         if (!dockerImage) {
             logger.log('Docker build is enabled, but no LaTeX image is configured.')
             logger.refreshStatus('x', 'errorForeground', undefined, 'error')
-            void logger.showErrorMessageWithExtensionLogButton('Docker build is enabled, but no LaTeX image is configured. Set latex-workshop.docker.image.latex in user settings or disable Docker.')
+            void logger.showErrorMessageWithExtensionLogButton('Docker build is enabled, but no LaTeX image is configured. Set latex-workshop.docker.image.latex in user settings.')
             return false
         }
     }
-    const definitions = dockerEnabled
+    const definitions = execution === 'docker'
         ? [{
             command: getSecureConfigurationValueSync(scope, 'docker.path', 'docker').trim() || 'docker',
             args: ['--version'],
             purpose: 'container build runtime',
             requiredForBuild: true
         }]
-        : getRequiredBuildToolDefinitions(getSecureRecipeEngine(recipeName))
+        : getRequiredBuildToolDefinitions(engine)
     const statuses = inspectTexEnvironment(lw.external.sync as TexToolRunner, definitions)
     const missing = statuses.filter(status => !status.available)
     if (missing.length === 0) {

@@ -14,6 +14,7 @@
 - Reject subfiles roots that resolve outside the active workspace.
 - Reject symbolic links in the secure build-output path before build and cleanup.
 - Require Docker isolation for LuaLaTeX builds and disable the Lua socket library inside that profile.
+- Require Docker isolation for pdfLaTeX by default and label host execution as an explicit, weaker compatibility mode.
 
 ## [11.2.13] - 2026-08-05
 

@@ -12,6 +12,7 @@ const DOCKER_SECURE_SOURCE_DIR = '/latex-workshop/src'
 const DOCKER_SECURE_OUTPUT_DIR = '/latex-workshop/out'
 
 export type SecureLatexEngine = 'pdflatex' | 'lualatex'
+export type SecureBuildExecution = 'docker' | 'local-pdflatex' | 'blocked'
 
 const FIXED_SECURE_PDFLATEX_RECIPE_NAME = 'secure-latexmk'
 const FIXED_SECURE_LUALATEX_RECIPE_NAME = 'secure-lualatexmk'
@@ -50,6 +51,19 @@ function createFixedSecureRecipe(engine: SecureLatexEngine): Recipe {
 
 export function getSecureRecipeEngine(recipeName?: string): SecureLatexEngine {
     return recipeName === FIXED_SECURE_LUALATEX_RECIPE_NAME ? 'lualatex' : 'pdflatex'
+}
+
+export function getSecureBuildExecution(scope: vscode.ConfigurationScope | undefined, recipeName?: string): SecureBuildExecution {
+    if (getSecureConfigurationValueSync(scope, 'docker.enabled', false)) {
+        return 'docker'
+    }
+    if (
+        getSecureRecipeEngine(recipeName) === 'pdflatex'
+        && getSecureConfigurationValueSync(scope, 'security.allowLocalPdfLaTeX', false)
+    ) {
+        return 'local-pdflatex'
+    }
+    return 'blocked'
 }
 
 let isMikTeXCache: boolean | undefined
@@ -103,7 +117,13 @@ export async function getAvailableRecipes(scope?: vscode.ConfigurationScope): Pr
  */
 export async function build(rootFile: string, langId: string, buildLoop: () => Promise<unknown>, recipeName?: string): Promise<boolean> {
     logger.log(`Build root file ${rootFile}`)
-    const cwd: string = path.dirname(lw.file.toUri(rootFile).fsPath)
+    const rootUri = lw.file.toUri(rootFile)
+    const cwd: string = path.dirname(rootUri.fsPath)
+    const execution = getSecureBuildExecution(rootUri, recipeName)
+    if (execution === 'blocked') {
+        logger.log('Secure build blocked because Docker isolation is disabled and local pdfLaTeX compatibility mode is not allowed.')
+        return false
+    }
 
     // Save all open files in the workspace
     await vscode.workspace.saveAll()
@@ -115,7 +135,7 @@ export async function build(rootFile: string, langId: string, buildLoop: () => P
     }
 
     // Create build tools based on the recipe system
-    const tools = await createBuildTools(rootFile, langId, secureBuildDir, recipeName)
+    const tools = await createBuildTools(rootFile, langId, secureBuildDir, execution, recipeName)
 
     // Check for invalid toolchain
     if (tools === undefined) {
@@ -182,7 +202,7 @@ function createAuxSubFolders(rootFile: string): string | undefined {
  * @returns {Tool[] | undefined} - An array of Tool objects representing the
  * build tools.
  */
-async function createBuildTools(rootFile: string, langId: string, secureBuildDir: string, recipeName?: string): Promise<Tool[] | undefined> {
+async function createBuildTools(rootFile: string, langId: string, secureBuildDir: string, execution: SecureBuildExecution, recipeName?: string): Promise<Tool[] | undefined> {
     const buildTools: Tool[] = []
 
     const configuration = vscode.workspace.getConfiguration('latex-workshop', lw.file.toUri(rootFile))
@@ -211,7 +231,7 @@ async function createBuildTools(rootFile: string, langId: string, secureBuildDir
         return
     }
 
-    populateTools(rootFile, buildTools, secureBuildDir)
+    populateTools(rootFile, buildTools, secureBuildDir, execution)
 
     return buildTools
 }
@@ -306,11 +326,17 @@ function findRecipe(rootFile: string, langId: string, recipeName?: string): Reci
  * @param {Tool[]} buildTools - An array of Tool objects to be populated.
  * @returns {Tool[]} - An array of Tool objects with expanded values.
  */
-function populateTools(rootFile: string, buildTools: Tool[], secureBuildDir: string): Tool[] {
+function populateTools(rootFile: string, buildTools: Tool[], secureBuildDir: string, execution: SecureBuildExecution): Tool[] {
     const configuration = vscode.workspace.getConfiguration('latex-workshop', lw.file.toUri(rootFile))
-    const docker = getSecureConfigurationValueSync(lw.file.toUri(rootFile), 'docker.enabled', false)
+    const docker = execution === 'docker'
     const dockerImage = getSecureConfigurationValueSync(lw.file.toUri(rootFile), 'docker.image.latex', '').trim()
     const dockerPath = getSecureConfigurationValueSync(lw.file.toUri(rootFile), 'docker.path', 'docker').trim() || 'docker'
+    const workspaceDir = vscode.workspace.getWorkspaceFolder(lw.file.toUri(rootFile))?.uri.fsPath ?? path.dirname(rootFile)
+    const rootDir = path.dirname(rootFile)
+    const relativeRootDir = path.relative(workspaceDir, rootDir)
+    const dockerWorkingDir = relativeRootDir
+        ? path.posix.join(DOCKER_SECURE_SOURCE_DIR, ...relativeRootDir.split(path.sep))
+        : DOCKER_SECURE_SOURCE_DIR
     const secureOutDir = secureBuildDir.split(path.sep).join('/')
     const secureAuxDir = secureOutDir
 
@@ -328,7 +354,9 @@ function populateTools(rootFile: string, buildTools: Tool[], secureBuildDir: str
                     }
                     tool.env = {
                         ...tool.env,
+                        LATEXWORKSHOP_DOCKER_SOURCE_DIR_HOST: workspaceDir,
                         LATEXWORKSHOP_DOCKER_SOURCE_DIR_CONTAINER: DOCKER_SECURE_SOURCE_DIR,
+                        LATEXWORKSHOP_DOCKER_WORKDIR_CONTAINER: dockerWorkingDir,
                         LATEXWORKSHOP_DOCKER_OUTPUT_DIR_CONTAINER: DOCKER_SECURE_OUTPUT_DIR,
                         LATEXWORKSHOP_DOCKER_OUTPUT_DIR_HOST: secureBuildDir,
                         LATEXWORKSHOP_DOCKER_LATEX: dockerImage,
@@ -340,7 +368,7 @@ function populateTools(rootFile: string, buildTools: Tool[], secureBuildDir: str
                     break
             }
         }
-        tool.args = tool.args?.map(replaceArgumentPlaceholders(rootFile, lw.file.tmpDirPath))
+        tool.args = tool.args?.map(replaceArgumentPlaceholders(rootFile, lw.file.tmpDirPath, docker))
         if (isLatexmk) {
             tool.args = tool.args?.map(arg => {
                 if (arg.startsWith('-out-directory=') || arg.startsWith('-outdir=')) {
@@ -361,7 +389,9 @@ function populateTools(rootFile: string, buildTools: Tool[], secureBuildDir: str
         }
         const env = tool.env ?? {}
         Object.entries(env).forEach(([key, value]) => {
-            env[key] = value && replaceArgumentPlaceholders(rootFile, lw.file.tmpDirPath)(value)
+            if (!key.startsWith('LATEXWORKSHOP_DOCKER_')) {
+                env[key] = value && replaceArgumentPlaceholders(rootFile, lw.file.tmpDirPath, docker)(value)
+            }
         })
         if (configuration.get('latex.option.maxPrintLine.enabled')) {
             tool.args = tool.args ?? []

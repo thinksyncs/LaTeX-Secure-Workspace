@@ -14,6 +14,7 @@ describe(testFileSuiteName(__filename), () => {
 
     beforeEach(() => {
         mock.init(lw)
+        set.config('security.allowLocalPdfLaTeX', true)
         ;(lw.cache.getIncludedTeX as sinon.SinonStub).returns([get.path('main.tex')])
         ;(lw.extra.clean as sinon.SinonStub).resolves(Promise.resolve())
         lw.compile.lastAutoBuildTime = 0
@@ -126,6 +127,20 @@ describe(testFileSuiteName(__filename), () => {
             lw.root.file.langId = undefined
 
             assert.hasLog(`Building root file: ${get.path('main.tex')}`)
+        })
+
+        it('should reject host pdfLaTeX by default before probing or spawning', async () => {
+            set.config('security.allowLocalPdfLaTeX', false)
+            const syncStub = lw.external.sync as sinon.SinonStub
+            const spawnStub = lw.external.spawn as sinon.SinonStub
+
+            const succeeded = await build()
+
+            assert.strictEqual(succeeded, false)
+            assert.ok(syncStub.neverCalledWith('latexmk', ['--version']))
+            assert.ok(syncStub.neverCalledWith('pdflatex', ['--version']))
+            assert.ok(spawnStub.notCalled)
+            assert.hasLog('Secure pdfLaTeX builds require Docker isolation unless local compatibility mode is explicitly allowed.')
         })
 
         it('should stop before spawning when required LaTeX tools are unavailable', async () => {

@@ -341,10 +341,10 @@ export function resolveFileGlob(dirs: string[], inputGlob: string, suffix: strin
  * @param tmpDir The path of a temporary directory.
  * @returns A function replacing placeholders.
  */
-export function replaceArgumentPlaceholders(rootFile: string, tmpDir: string): (arg: string) => string {
+export function replaceArgumentPlaceholders(rootFile: string, tmpDir: string, dockerOverride?: boolean): (arg: string) => string {
     return (arg: string) => {
         const configuration = vscode.workspace.getConfiguration('latex-workshop', lw.file.toUri(rootFile))
-        const docker = getSecureConfigurationValueSync(lw.file.toUri(rootFile), 'docker.enabled', false)
+        const docker = dockerOverride ?? getSecureConfigurationValueSync(lw.file.toUri(rootFile), 'docker.enabled', false)
 
         const workspaceFolder = vscode.workspace.workspaceFolders?.[0]
         const workspaceDir = workspaceFolder?.uri.fsPath.split(path.sep).join('/') || ''

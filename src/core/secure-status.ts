@@ -1,12 +1,12 @@
 import * as path from 'path'
 import * as vscode from 'vscode'
-import { getAvailableRecipes } from '../compile/recipe'
+import { getAvailableRecipes, getSecureBuildExecution } from '../compile/recipe'
 import { lw } from '../lw'
 import { getSecureConfigurationValueSync } from '../utils/security'
 import {
     getTexEnvironmentInstallAdvice,
+    getRequiredBuildToolDefinitions,
     inspectTexEnvironment,
-    TEX_TOOL_DEFINITIONS,
     type TexToolRunner,
     type TexToolStatus
 } from '../utils/tex-environment'
@@ -26,6 +26,7 @@ const restrictedConfigurations = [
     'latex.auxDir',
     'latex.clean.command',
     'latex.clean.args',
+    'security.allowLocalPdfLaTeX',
     'docker.enabled',
     'docker.image.latex',
     'docker.path',
@@ -68,9 +69,12 @@ async function renderReport(kind: ReportKind): Promise<string> {
     const outDir = rootFile ? resolveAgainstRoot(rootFile, lw.file.getSecurityOutDir(rootFile)) : undefined
     const ignoredSettings = collectOverriddenRestrictedSettings(rootFile ? lw.file.toUri(rootFile) : undefined)
     const configurationScope = rootFile ? lw.file.toUri(rootFile) : workspaceScope
-    const dockerEnabled = getSecureConfigurationValueSync(configurationScope, 'docker.enabled', false)
-    const texTools = inspectTexEnvironment(lw.external.sync as TexToolRunner, TEX_TOOL_DEFINITIONS)
-    const dockerTool = dockerEnabled
+    const execution = getSecureBuildExecution(configurationScope, recipe?.name)
+    const dockerImage = getSecureConfigurationValueSync(configurationScope, 'docker.image.latex', '').trim()
+    const texTools = execution === 'local-pdflatex'
+        ? inspectTexEnvironment(lw.external.sync as TexToolRunner, getRequiredBuildToolDefinitions('pdflatex'))
+        : []
+    const dockerTool = execution === 'docker'
         ? inspectTexEnvironment(lw.external.sync as TexToolRunner, [{
             command: getSecureConfigurationValueSync(configurationScope, 'docker.path', 'docker') || 'docker',
             args: ['--version'],
@@ -78,7 +82,14 @@ async function renderReport(kind: ReportKind): Promise<string> {
             requiredForBuild: true
         }])[0]
         : undefined
-    const buildReady = dockerTool?.available ?? texTools.filter(tool => tool.requiredForBuild).every(tool => tool.available)
+    const buildReady = execution === 'docker'
+        ? Boolean(dockerImage && dockerTool?.available)
+        : execution === 'local-pdflatex' && texTools.every(tool => tool.available)
+    const executionLabel = execution === 'docker'
+        ? 'Docker'
+        : execution === 'local-pdflatex'
+            ? 'local pdfLaTeX compatibility mode (not filesystem-isolated)'
+            : 'Docker required (disabled)'
     const title = kind === 'status' ? 'Secure Build Status' : 'Secure Mode Report'
     const lines = [
         `# ${title}`,
@@ -95,13 +106,20 @@ async function renderReport(kind: ReportKind): Promise<string> {
         '',
         '## LaTeX Environment',
         '',
-        `- Execution mode: ${dockerEnabled ? 'Docker' : 'local TeX installation'}`,
+        `- Execution mode: ${executionLabel}`,
         `- Build toolchain ready: ${buildReady ? 'yes' : 'no'}`,
+        ...(execution === 'docker' ? [`- LaTeX image configured: ${dockerImage ? 'yes' : 'no'}`] : []),
         ...(dockerTool ? [formatTexToolStatus(dockerTool)] : []),
         ...texTools.map(formatTexToolStatus),
         `- Process PATH: \`${escapeInlineCode(process.env.PATH ?? '(unset)')}\``,
         ...(!buildReady ? [
-            `- Guidance: ${dockerEnabled ? 'Verify that Docker is installed and running and that the configured Docker command is available, then reload VS Code.' : getTexEnvironmentInstallAdvice()}`
+            `- Guidance: ${execution === 'docker'
+                ? dockerImage
+                    ? 'Verify that Docker is installed and running and that the configured Docker command is available, then reload VS Code.'
+                    : 'Configure latex-workshop.docker.image.latex in User settings.'
+                : execution === 'local-pdflatex'
+                    ? getTexEnvironmentInstallAdvice()
+                    : 'Enable latex-workshop.docker.enabled and configure latex-workshop.docker.image.latex in User settings.'}`
         ] : []),
         ''
     ]
@@ -111,7 +129,7 @@ async function renderReport(kind: ReportKind): Promise<string> {
             '## Secure Execution Policy',
             '',
             '- Manual build and clean require a trusted, non-virtual workspace.',
-            '- Secure builds use a fixed local pdfLaTeX profile and a Docker-isolated LuaLaTeX profile.',
+            '- Secure pdfLaTeX and LuaLaTeX builds use the hardened Docker wrapper by default. Host pdfLaTeX is available only as an explicitly enabled, weaker compatibility mode.',
             '- Workspace-controlled recipes, tools, magic comments, output paths, and external viewer commands are ignored in secure execution paths.',
             '- PDF preview uses the local VS Code tab viewer.',
             '- External command paths can require explicit confirmation when they come from workspace-scoped settings.',
