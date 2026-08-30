@@ -2,12 +2,19 @@
 
 ## Unreleased
 
+## [11.4.0] - 2026-08-30
+
 ### Added
 - Exercise the fixed Docker-isolated pdfLaTeX and LuaLaTeX profiles in release-gating Linux CI.
 
 ### Fixed
 - Give containerized LuaLaTeX a writable TeX cache inside the isolated build output.
 - Correct contributor and data-documentation links and add the Japanese **Build with recipe** label.
+- Correct the test documentation link to this repository's workflows.
+
+### Security
+- Verify in Docker CI that LuaLaTeX populates only its output-local cache and cannot write through the source mount.
+- Execute the Windows Docker wrapper boundary test in Windows CI.
 
 ## [11.2.14] - 2026-08-26
 
