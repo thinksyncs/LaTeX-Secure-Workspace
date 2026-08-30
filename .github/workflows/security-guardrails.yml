@@ -93,6 +93,10 @@ jobs:
           grep -q -- '--network=none' scripts/latexmk || { echo "Docker wrapper must disable networking."; exit 1; }
           grep -q -- '--cap-drop=ALL' scripts/latexmk || { echo "Docker wrapper must drop capabilities."; exit 1; }
           grep -q -- ':ro' scripts/latexmk || { echo "Docker wrapper must mount source read-only."; exit 1; }
+          for wrapper in scripts/latexmk scripts/latexmk.bat; do
+            grep -q 'TEXMFVAR' "$wrapper" || { echo "Docker wrapper must provide a writable TeX variable cache: $wrapper"; exit 1; }
+            grep -q 'TEXMFCACHE' "$wrapper" || { echo "Docker wrapper must provide a writable LuaTeX font cache: $wrapper"; exit 1; }
+          done
           grep -A13 '^  workflow_run:' .github/workflows/auto-stable-release.yml | grep -q -- '- Docker secure builds on Linux' || { echo "Docker build E2E must trigger auto stable release after completion."; exit 1; }
           grep -q 'AUTORELEASE_REQUIRED_WORKFLOWS:.*Docker secure builds on Linux' .github/workflows/auto-stable-release.yml || { echo "Auto stable release must require Docker build E2E."; exit 1; }
 
