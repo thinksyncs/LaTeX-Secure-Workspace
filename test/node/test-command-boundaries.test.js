@@ -98,8 +98,8 @@ test('Windows Docker wrapper forwards the isolated mounts and cache', {
   fs.mkdirSync(outputDir, { recursive: true })
   fs.writeFileSync(runtimePath, '@echo off\r\n> "%LW_CAPTURE%" echo %*\r\n')
 
-  const command = `call "${path.resolve(__dirname, '../../scripts/latexmk.bat')}" -pdf main`
-  const result = spawnSync('cmd.exe', ['/d', '/s', '/c', command], {
+  const result = spawnSync(path.resolve(__dirname, '../../scripts/latexmk.bat'), ['-pdf', 'main'], {
+    shell: true,
     cwd: rootDir,
     env: {
       ...process.env,
