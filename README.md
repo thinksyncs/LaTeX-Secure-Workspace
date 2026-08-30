@@ -108,6 +108,7 @@ This fork applies security hardening intended to reduce risk. It does not make a
 ## Release Channels
 
 - Stable releases publish GitHub release tags to the VS Code Marketplace stable channel.
+- The Marketplace does not retain a separate pre-release channel.
 - Stable publication waits for approval through the protected `marketplace` GitHub environment.
 - Each stable GitHub Release includes the VSIX and its SPDX SBOM; GitHub artifact attestations bind the VSIX to its build provenance and SBOM.
 - Daily releases build, test, and package a VSIX every day, refresh the rolling GitHub daily prerelease, and attach open PR, CodeQL, and Dependabot summaries. They do not publish to extension registries.

@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { spawnSync } from 'node:child_process'
-import { mkdtempSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdtempSync, mkdirSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -12,6 +12,13 @@ const dockerPath = process.env.LATEXWORKSHOP_DOCKER_PATH ?? 'docker'
 const fixedRecipeArguments = JSON.parse(
     readFileSync(path.join(repositoryRoot, 'src', 'compile', 'fixedSecureRecipeArguments.json'), 'utf8')
 )
+
+function listFilesRecursively(directory) {
+    return readdirSync(directory, { withFileTypes: true }).flatMap(entry => {
+        const entryPath = path.join(directory, entry.name)
+        return entry.isDirectory() ? listFilesRecursively(entryPath) : [entryPath]
+    })
+}
 
 assert.match(
     image,
@@ -37,11 +44,20 @@ const cases = [
         enginePattern: /This is Lua(?:HB)?TeX/u,
         body: [
             '\\documentclass{article}',
+            '\\usepackage{fontspec}',
+            '\\setmainfont{Latin Modern Roman}',
             '\\immediate\\write18{touch /latex-workshop/out/shell-escape-canary}',
             '\\directlua{',
             '  local loaded = pcall(require, "socket")',
             '  if loaded then',
             '    error("Lua socket library unexpectedly enabled")',
+            '  end',
+            '  local source = "/latex-workshop/src/lualatex/source-write-canary"',
+            '  local handle = io.open(source, "w")',
+            '  if handle then',
+            '    handle:write("source mount was writable")',
+            '    handle:close()',
+            '    error("Read-only source mount unexpectedly allowed a write")',
             '  end',
             '}',
             '\\begin{document}',
@@ -107,6 +123,19 @@ try {
             !readdirSync(outputDir).includes('shell-escape-canary'),
             testCase.name + ' unexpectedly allowed shell escape.'
         )
+        assert.ok(
+            !existsSync(path.join(projectDir, 'source-write-canary')),
+            testCase.name + ' unexpectedly wrote through the read-only source mount.'
+        )
+        if (testCase.name === 'lualatex') {
+            const cacheDir = path.join(outputDir, '.texlive-cache')
+            assert.ok(existsSync(cacheDir), 'lualatex did not create its isolated TeX cache.')
+            assert.ok(statSync(cacheDir).isDirectory(), 'lualatex TeX cache path is not a directory.')
+            assert.ok(
+                listFilesRecursively(cacheDir).length > 0,
+                'lualatex did not populate its isolated TeX cache.'
+            )
+        }
         assert.deepEqual(
             readdirSync(projectDir).sort(),
             ['.lw-security', 'main.tex'],

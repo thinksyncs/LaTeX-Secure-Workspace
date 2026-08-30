@@ -91,6 +91,9 @@ jobs:
           grep -q 'fixedSecureRecipeArguments.json' dev/testDockerBuild.mjs || { echo "Docker build E2E must use the production recipe arguments."; exit 1; }
           grep -q -- '"-pdf"' src/compile/fixedSecureRecipeArguments.json || { echo "Docker build E2E must exercise pdfLaTeX."; exit 1; }
           grep -q -- '"-lualatex"' src/compile/fixedSecureRecipeArguments.json || { echo "Docker build E2E must exercise LuaLaTeX."; exit 1; }
+          grep -q 'source-write-canary' dev/testDockerBuild.mjs || { echo "Docker build E2E must challenge the read-only source mount."; exit 1; }
+          grep -q 'did not populate its isolated TeX cache' dev/testDockerBuild.mjs || { echo "Docker build E2E must verify the LuaTeX cache is populated."; exit 1; }
+          grep -q 'Windows Docker wrapper forwards the isolated mounts and cache' test/node/test-command-boundaries.test.js || { echo "Windows CI must exercise the Docker wrapper boundary."; exit 1; }
           grep -q -- '"-latexoption=--no-socket"' src/compile/fixedSecureRecipeArguments.json || { echo "Docker build E2E must disable Lua sockets."; exit 1; }
           grep -q -- '--network=none' scripts/latexmk || { echo "Docker wrapper must disable networking."; exit 1; }
           grep -q -- '--cap-drop=ALL' scripts/latexmk || { echo "Docker wrapper must drop capabilities."; exit 1; }

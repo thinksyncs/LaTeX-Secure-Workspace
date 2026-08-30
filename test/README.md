@@ -15,7 +15,7 @@ Property-based fuzz coverage for parser-facing code lives in `test/fuzz/` and ca
 
 CI runs both groups through `npm run test:ci`. Coverage and release verification also invoke the integration tests explicitly, so changing the local default does not reduce those checks.
 
-The `Docker secure builds on Linux` workflow separately runs `npm run test:docker` against an immutable TeX Live image. It invokes the production `scripts/latexmk` wrapper for both fixed profiles and verifies that each profile produces a PDF in the isolated output directory. It also checks that shell escape remains disabled and that LuaLaTeX cannot load the socket library.
+The `Docker secure builds on Linux` workflow separately runs `npm run test:docker` against an immutable TeX Live image. It invokes the production `scripts/latexmk` wrapper for both fixed profiles and verifies that each profile produces a PDF in the isolated output directory. It also checks that shell escape remains disabled, LuaLaTeX cannot load the socket library, the source mount rejects writes, and LuaLaTeX populates its cache inside the isolated output directory.
 
 The Docker test does not pull an implicit image. For a local run, first pull a digest-pinned TeX Live image and set `LATEXWORKSHOP_DOCKER_TEST_IMAGE` to the same `repository@sha256:...` value. This keeps the test input explicit and reproducible.
 
@@ -55,4 +55,4 @@ This reduces debugger-driven focus changes, though macOS may still briefly foreg
 
 ## Executing Tests on GitHub Actions
 
-Read [.github/workflows](https://github.com/James-Yu/LaTeX-Workshop/tree/master/.github/workflows) to see how tests are executed on GitHub Actions.
+Read [.github/workflows](https://github.com/thinksyncs/LaTeX-Secure-Workspace/tree/master/.github/workflows) to see how tests are executed on GitHub Actions.

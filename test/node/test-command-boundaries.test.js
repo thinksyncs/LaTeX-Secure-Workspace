@@ -84,3 +84,46 @@ test('Unix Docker wrapper forwards only the workspace and output host mounts', {
   )
   assert.deepEqual(args.slice(-4), ['example/texlive@sha256:test', 'latexmk', '-pdf', 'main'])
 })
+
+test('Windows Docker wrapper forwards the isolated mounts and cache', {
+  skip: process.platform !== 'win32'
+}, t => {
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'lw-docker-wrapper-'))
+  t.after(() => fs.rmSync(tempDir, { recursive: true, force: true }))
+  const workspaceDir = path.join(tempDir, 'workspace')
+  const rootDir = path.join(workspaceDir, 'paper')
+  const outputDir = path.join(rootDir, '.lw-security')
+  const capturePath = path.join(tempDir, 'args.txt')
+  const runtimePath = path.join(tempDir, 'fake-docker.cmd')
+  fs.mkdirSync(outputDir, { recursive: true })
+  fs.writeFileSync(runtimePath, '@echo off\r\n> "%LW_CAPTURE%" echo %*\r\n')
+
+  const command = `call "${path.resolve(__dirname, '../../scripts/latexmk.bat')}" -pdf main`
+  const result = spawnSync('cmd.exe', ['/d', '/s', '/c', command], {
+    cwd: rootDir,
+    env: {
+      ...process.env,
+      PATH: tempDir + path.delimiter + process.env.PATH,
+      LATEXWORKSHOP_DOCKER_PATH: 'fake-docker',
+      LATEXWORKSHOP_DOCKER_LATEX: 'example/texlive@sha256:test',
+      LATEXWORKSHOP_DOCKER_SOURCE_DIR_HOST: workspaceDir,
+      LATEXWORKSHOP_DOCKER_SOURCE_DIR_CONTAINER: '/latex-workshop/src',
+      LATEXWORKSHOP_DOCKER_WORKDIR_CONTAINER: '/latex-workshop/src/paper',
+      LATEXWORKSHOP_DOCKER_OUTPUT_DIR_HOST: outputDir,
+      LATEXWORKSHOP_DOCKER_OUTPUT_DIR_CONTAINER: '/latex-workshop/out',
+      LW_CAPTURE: capturePath
+    }
+  })
+  assert.equal(result.status, 0, result.stderr.toString())
+  const args = fs.readFileSync(capturePath, 'utf8')
+  assert.match(args, /--pull=never/u)
+  assert.match(args, /--network=none/u)
+  assert.match(args, /--cap-drop=ALL/u)
+  assert.match(args, /--security-opt=no-new-privileges/u)
+  assert.match(args, /-w "\/latex-workshop\/src\/paper"/u)
+  assert.ok(args.includes(`-v "${workspaceDir}:/latex-workshop/src:ro"`))
+  assert.ok(args.includes(`-v "${outputDir}:/latex-workshop/out"`))
+  assert.match(args, /TEXMFVAR=\/latex-workshop\/out\/\.texlive-cache/u)
+  assert.match(args, /TEXMFCACHE=\/latex-workshop\/out\/\.texlive-cache/u)
+  assert.match(args, /example\/texlive@sha256:test latexmk -pdf main/u)
+})
