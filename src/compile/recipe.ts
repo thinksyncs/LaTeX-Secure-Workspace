@@ -6,6 +6,7 @@ import { getSecureConfigurationValue, getSecureConfigurationValueSync } from '..
 import { lw } from '../lw'
 import type { Recipe, Tool } from '../types'
 import { queue } from './queue'
+import fixedSecureRecipeArguments from './fixedSecureRecipeArguments.json'
 
 const logger = lw.log('Build', 'Recipe')
 const DOCKER_SECURE_SOURCE_DIR = '/latex-workshop/src'
@@ -16,27 +17,14 @@ export type SecureBuildExecution = 'docker' | 'local-pdflatex' | 'blocked'
 
 const FIXED_SECURE_PDFLATEX_RECIPE_NAME = 'secure-latexmk'
 const FIXED_SECURE_LUALATEX_RECIPE_NAME = 'secure-lualatexmk'
-const FIXED_SECURE_TOOL_ARGS_BEFORE_ENGINE = [
-    '-norc',
-    '-no-shell-escape',
-    '-synctex=1',
-    '-interaction=nonstopmode',
-    '-file-line-error',
-]
-const FIXED_SECURE_TOOL_ARGS_AFTER_ENGINE = [
-    '-outdir=%DOCFILE%',
-    '-auxdir=%DOCFILE%',
-    '%DOC%'
-]
-
 function createFixedSecureTool(engine: SecureLatexEngine): Tool {
     return {
         name: 'latexmk',
         command: 'latexmk',
         args: [
-            ...FIXED_SECURE_TOOL_ARGS_BEFORE_ENGINE,
-            ...(engine === 'lualatex' ? ['-lualatex', '-latexoption=--no-socket'] : ['-pdf']),
-            ...FIXED_SECURE_TOOL_ARGS_AFTER_ENGINE
+            ...fixedSecureRecipeArguments.commonArgsBeforeEngine,
+            ...fixedSecureRecipeArguments.engineArgs[engine],
+            ...fixedSecureRecipeArguments.commonArgsAfterEngine
         ],
         env: {}
     }

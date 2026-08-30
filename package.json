@@ -2987,6 +2987,7 @@
     "release:verify": "npm run clean && npm run compile && npm run test:ci",
     "test": "npm run test:node",
     "test:ci": "npm test && npm run test:integration",
+    "test:docker": "node ./dev/testDockerBuild.mjs",
     "test:fuzz": "node --test ./test/fuzz/*.test.js",
     "test:integration": "node ./dev/runTestCi.mjs",
     "test:node": "node --test ./test/node/fixture-selection.test.js ./test/node/test-command-boundaries.test.js ./test/fuzz/graphics-diagnostics-utils.test.js ./test/fuzz/parser.fast-check.test.js",

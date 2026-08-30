@@ -14,4 +14,6 @@ exec "$LATEXWORKSHOP_DOCKER_PATH" run -i --rm --pull=never --network=none \
     -w "$WORKDIR_CONTAINER" \
     -v "$SOURCE_DIR_HOST:$SOURCE_DIR_CONTAINER:ro" \
     -v "$OUTPUT_DIR_HOST:$OUTPUT_DIR_CONTAINER" \
+    -e "TEXMFVAR=$OUTPUT_DIR_CONTAINER/.texlive-cache" \
+    -e "TEXMFCACHE=$OUTPUT_DIR_CONTAINER/.texlive-cache" \
     "$LATEXWORKSHOP_DOCKER_LATEX" latexmk "$@"

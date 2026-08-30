@@ -1,0 +1,23 @@
+{
+  "commonArgsBeforeEngine": [
+    "-norc",
+    "-no-shell-escape",
+    "-synctex=1",
+    "-interaction=nonstopmode",
+    "-file-line-error"
+  ],
+  "engineArgs": {
+    "pdflatex": [
+      "-pdf"
+    ],
+    "lualatex": [
+      "-lualatex",
+      "-latexoption=--no-socket"
+    ]
+  },
+  "commonArgsAfterEngine": [
+    "-outdir=%DOCFILE%",
+    "-auxdir=%DOCFILE%",
+    "%DOC%"
+  ]
+}

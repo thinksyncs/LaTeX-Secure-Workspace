@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+### Added
+- Exercise the fixed Docker-isolated pdfLaTeX and LuaLaTeX profiles in release-gating Linux CI.
+
+### Fixed
+- Give containerized LuaLaTeX a writable TeX cache inside the isolated build output.
+- Correct contributor and data-documentation links and add the Japanese **Build with recipe** label.
+
 ## [11.2.14] - 2026-08-26
 
 ### Fixed

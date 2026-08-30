@@ -1,0 +1,34 @@
+name: Docker secure builds on Linux
+
+on:
+  push:
+    branches: [master, main]
+  pull_request:
+
+permissions:
+  contents: read
+
+env:
+  LATEXWORKSHOP_DOCKER_TEST_IMAGE: texlive/texlive@sha256:bd551dda2195c6830bb714f731d74c4f71cda812178abae15a206fd68b5dbb7c
+
+jobs:
+  docker-secure-builds:
+    name: docker-secure-builds
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
+      - name: Set up Node.js
+        uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6
+        with:
+          node-version: '20'
+
+      - name: Pull pinned TeX Live image
+        run: |
+          docker version
+          docker pull "$LATEXWORKSHOP_DOCKER_TEST_IMAGE"
+
+      - name: Exercise fixed secure build profiles
+        run: npm run test:docker

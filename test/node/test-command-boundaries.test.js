@@ -31,6 +31,8 @@ test('Docker wrappers keep source read-only and output on a separate mount', () 
     assert.match(wrapper, /LATEXWORKSHOP_DOCKER_SOURCE_DIR_HOST/)
     assert.match(wrapper, /LATEXWORKSHOP_DOCKER_WORKDIR_CONTAINER/)
     assert.match(wrapper, /LATEXWORKSHOP_DOCKER_OUTPUT_DIR_HOST/)
+    assert.match(wrapper, /TEXMFVAR/)
+    assert.match(wrapper, /TEXMFCACHE/)
   }
   assert.match(unixDockerWrapper, /-v "\$SOURCE_DIR_HOST:\$SOURCE_DIR_CONTAINER:ro"/)
   assert.doesNotMatch(unixDockerWrapper, /-v "\$\(pwd\):\$SOURCE_DIR_CONTAINER:ro"/)
@@ -74,6 +76,8 @@ test('Unix Docker wrapper forwards only the workspace and output host mounts', {
   assert.equal(result.status, 0, result.stderr.toString())
   const args = fs.readFileSync(capturePath, 'utf8').trim().split('\n')
   assert.equal(args[args.indexOf('-w') + 1], '/latex-workshop/src/paper')
+  assert.ok(args.includes('TEXMFVAR=/latex-workshop/out/.texlive-cache'))
+  assert.ok(args.includes('TEXMFCACHE=/latex-workshop/out/.texlive-cache'))
   assert.deepEqual(
     args.filter(arg => arg.includes(':/latex-workshop/')).sort(),
     [workspaceDir + ':/latex-workshop/src:ro', outputDir + ':/latex-workshop/out'].sort()
