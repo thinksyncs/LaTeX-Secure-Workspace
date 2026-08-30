@@ -12,6 +12,7 @@
   "command.revealoutput": "OSで出力フォルダを表示",
   "command.saveWithoutBuilding": "ビルドせずに保存",
   "command.build": "LaTeXプロジェクトをビルド",
+  "command.buildRecipe": "レシピを選択してビルド",
   "command.recipes": "レシピでビルド",
   "command.view": "LaTeX PDFファイルを表示",
   "command.tab": "VSCodeタブでLaTeX PDFファイルを表示",

@@ -5,9 +5,7 @@ Please note that pull requests that change default setting values or add additio
 
 ## Review policy
 
-All non-trivial changes should land through a pull request and receive human review before merge.
-
-The repository includes [`.github/CODEOWNERS`](./.github/CODEOWNERS) so GitHub rulesets or branch protection can require maintainer review on protected branches.
+All non-trivial changes should land through a pull request. Protected branches require the configured status checks before merge. Request human review when a change needs independent maintainer judgment.
 
 ## Quickstart
 
@@ -60,6 +58,10 @@ To run the isolated VS Code integration tests, run
 CI runs both groups with
 
     npm run test:ci
+
+CI also exercises the fixed Docker-isolated pdfLaTeX and LuaLaTeX profiles with
+
+    npm run test:docker
 
 To run the property-based fuzzing check directly, run
 

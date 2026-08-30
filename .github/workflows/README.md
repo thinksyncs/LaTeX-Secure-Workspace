@@ -7,6 +7,7 @@ The release automation uses one public registry channel and one preview artifact
 - `stable-release.yml`: builds from a published GitHub release tag, waits for approval through the protected `marketplace` environment, publishes the package to the VS Code Marketplace, and fails closed in the canonical repository if the Marketplace credential is missing.
 - `auto-stable-release.yml`: watches the required push CI workflows on `master`, creates the matching stable GitHub release when they have all passed for the current `package.json` version, and dispatches `stable-release.yml` for that tag.
 - `daily-release.yml`: builds, tests, packages a daily preview VSIX, refreshes the rolling GitHub `daily` prerelease, and attaches summaries of open pull requests, CodeQL alerts, and Dependabot alerts. It does not publish to extension registries.
+- `docker-secure-builds.yml`: runs the production Docker wrapper with the fixed pdfLaTeX and LuaLaTeX profiles against a digest-pinned TeX Live image.
 
 The canonical repository expects:
 
@@ -17,6 +18,7 @@ Forks skip registry publication when the Marketplace secret is absent, but the c
 The stable job cannot access its credentials or begin publication until the `marketplace` environment approval is granted.
 Stable packages contain bundled JavaScript and a curated PDF.js runtime instead of runtime `node_modules`. The workflow rejects unexpected `node_modules`, generates an SPDX 2.3 SBOM without development or optional dependencies, publishes GitHub build-provenance and SBOM attestations for the VSIX, and attaches both the VSIX and SBOM to the GitHub Release.
 The release jobs run VS Code integration tests on Linux under `xvfb-run` so Electron can start in a headless GitHub Actions environment.
+The Docker build workflow separately verifies real PDF output from both fixed secure profiles, a read-only source mount, disabled shell escape, and disabled Lua sockets. It is one of the workflows required by `auto-stable-release.yml`.
 All workflows that run VS Code integration tests set `LATEXWORKSHOP_ALLOW_VSCODE_TEST_DOWNLOAD=1` and `LATEXWORKSHOP_VSCODE_TEST_VERSION` explicitly. Local test runs should instead prefer `LATEXWORKSHOP_VSCODE_TEST_PATH` when a preinstalled VS Code build is being audited.
 Stable Marketplace publication is prepared only after the required push CI, including Security Guardrails, is green on the current `master` commit and no GitHub release already exists for the `package.json` version. The protected environment approval remains a required manual gate before publishing.
 

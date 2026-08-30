@@ -15,7 +15,7 @@ Default lists of commands and environments are defined in
 
 ## Bibtex
 
-The file [`bibtex-entries.json`](]bibtex-entries.json) lists for every bibtex entry type the mandatory fields. The file [`bibtex-optional-entries.json`](]bibtex-optional-entries.json) lists for every bibtex entry type the optional fields.
+The file [`bibtex-entries.json`](bibtex-entries.json) lists for every bibtex entry type the mandatory fields. The file [`bibtex-optional-entries.json`](bibtex-optional-entries.json) lists for every bibtex entry type the optional fields.
 
 ## Files inside `packages/`
 

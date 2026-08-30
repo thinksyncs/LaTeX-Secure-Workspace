@@ -81,6 +81,21 @@ jobs:
             grep -q 'npm ci --ignore-scripts' "$file" || { echo "Missing npm --ignore-scripts hardening in $file"; exit 1; }
           done
 
+      - name: Ensure Docker build E2E stays release-gating
+        run: |
+          file=.github/workflows/docker-secure-builds.yml
+          test -f "$file" || { echo "Missing Docker build E2E workflow"; exit 1; }
+          grep -Eq 'LATEXWORKSHOP_DOCKER_TEST_IMAGE: [^[:space:]@]+@sha256:[0-9a-f]{64}$' "$file" || { echo "Docker build E2E image must use an immutable digest."; exit 1; }
+          grep -q 'npm run test:docker' "$file" || { echo "Docker build E2E workflow must run the Docker test."; exit 1; }
+          grep -q -- "'-pdf'" dev/testDockerBuild.mjs || { echo "Docker build E2E must exercise pdfLaTeX."; exit 1; }
+          grep -q -- "'-lualatex'" dev/testDockerBuild.mjs || { echo "Docker build E2E must exercise LuaLaTeX."; exit 1; }
+          grep -q -- "'-latexoption=--no-socket'" dev/testDockerBuild.mjs || { echo "Docker build E2E must disable Lua sockets."; exit 1; }
+          grep -q -- '--network=none' scripts/latexmk || { echo "Docker wrapper must disable networking."; exit 1; }
+          grep -q -- '--cap-drop=ALL' scripts/latexmk || { echo "Docker wrapper must drop capabilities."; exit 1; }
+          grep -q -- ':ro' scripts/latexmk || { echo "Docker wrapper must mount source read-only."; exit 1; }
+          grep -A13 '^  workflow_run:' .github/workflows/auto-stable-release.yml | grep -q -- '- Docker secure builds on Linux' || { echo "Docker build E2E must trigger auto stable release after completion."; exit 1; }
+          grep -q 'AUTORELEASE_REQUIRED_WORKFLOWS:.*Docker secure builds on Linux' .github/workflows/auto-stable-release.yml || { echo "Auto stable release must require Docker build E2E."; exit 1; }
+
       - name: Ensure runtime dependencies do not use native addons
         run: node ./dev/auditNativeAddons.mjs
 

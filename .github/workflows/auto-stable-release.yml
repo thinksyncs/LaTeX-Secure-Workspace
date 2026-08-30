@@ -8,6 +8,7 @@ on:
       - Scorecard supply-chain security
       - CodeQL
       - Security Guardrails
+      - Docker secure builds on Linux
       - TeX Live (current) on Linux
       - TeX Live (current) on macOS
       - TeX Live (current) on Windows
@@ -47,6 +48,6 @@ jobs:
           AUTORELEASE_DEFAULT_BRANCH: ${{ github.event.repository.default_branch || 'master' }}
           AUTORELEASE_HEAD_SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
           AUTORELEASE_HEAD_BRANCH: ${{ github.event.workflow_run.head_branch || github.ref_name }}
-          AUTORELEASE_REQUIRED_WORKFLOWS: npm Audit,Fuzzing,Scorecard supply-chain security,CodeQL,Security Guardrails,TeX Live (current) on Linux,TeX Live (current) on macOS,TeX Live (current) on Windows
+          AUTORELEASE_REQUIRED_WORKFLOWS: npm Audit,Fuzzing,Scorecard supply-chain security,CodeQL,Security Guardrails,Docker secure builds on Linux,TeX Live (current) on Linux,TeX Live (current) on macOS,TeX Live (current) on Windows
           AUTORELEASE_STABLE_WORKFLOW: stable-release.yml
         run: node ./dev/createStableReleaseAfterCi.mjs
