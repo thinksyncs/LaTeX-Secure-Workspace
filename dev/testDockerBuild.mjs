@@ -9,6 +9,9 @@ const repositoryRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url))
 const wrapper = path.join(repositoryRoot, 'scripts', 'latexmk')
 const image = process.env.LATEXWORKSHOP_DOCKER_TEST_IMAGE ?? ''
 const dockerPath = process.env.LATEXWORKSHOP_DOCKER_PATH ?? 'docker'
+const fixedRecipeArguments = JSON.parse(
+    readFileSync(path.join(repositoryRoot, 'src', 'compile', 'fixedSecureRecipeArguments.json'), 'utf8')
+)
 
 assert.match(
     image,
@@ -19,7 +22,6 @@ assert.match(
 const cases = [
     {
         name: 'pdflatex',
-        engineArgs: ['-pdf'],
         enginePattern: /This is pdfTeX/u,
         body: [
             '\\documentclass{article}',
@@ -32,7 +34,6 @@ const cases = [
     },
     {
         name: 'lualatex',
-        engineArgs: ['-lualatex', '-latexoption=--no-socket'],
         enginePattern: /This is Lua(?:HB)?TeX/u,
         body: [
             '\\documentclass{article}',
@@ -60,19 +61,17 @@ try {
         mkdirSync(outputDir, { recursive: true })
         writeFileSync(path.join(projectDir, 'main.tex'), testCase.body)
 
+        const recipeArgs = [
+            ...fixedRecipeArguments.commonArgsBeforeEngine,
+            ...fixedRecipeArguments.engineArgs[testCase.name],
+            ...fixedRecipeArguments.commonArgsAfterEngine
+        ].map(arg => arg
+            .replaceAll('%DOCFILE%', '/latex-workshop/out')
+            .replaceAll('%DOC%', 'main'))
+
         const result = spawnSync(
             wrapper,
-            [
-                '-norc',
-                '-no-shell-escape',
-                '-synctex=1',
-                '-interaction=nonstopmode',
-                '-file-line-error',
-                ...testCase.engineArgs,
-                '-outdir=/latex-workshop/out',
-                '-auxdir=/latex-workshop/out',
-                'main'
-            ],
+            recipeArgs,
             {
                 cwd: projectDir,
                 encoding: 'utf8',

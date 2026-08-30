@@ -87,9 +87,11 @@ jobs:
           test -f "$file" || { echo "Missing Docker build E2E workflow"; exit 1; }
           grep -Eq 'LATEXWORKSHOP_DOCKER_TEST_IMAGE: [^[:space:]@]+@sha256:[0-9a-f]{64}$' "$file" || { echo "Docker build E2E image must use an immutable digest."; exit 1; }
           grep -q 'npm run test:docker' "$file" || { echo "Docker build E2E workflow must run the Docker test."; exit 1; }
-          grep -q -- "'-pdf'" dev/testDockerBuild.mjs || { echo "Docker build E2E must exercise pdfLaTeX."; exit 1; }
-          grep -q -- "'-lualatex'" dev/testDockerBuild.mjs || { echo "Docker build E2E must exercise LuaLaTeX."; exit 1; }
-          grep -q -- "'-latexoption=--no-socket'" dev/testDockerBuild.mjs || { echo "Docker build E2E must disable Lua sockets."; exit 1; }
+          grep -q 'fixedSecureRecipeArguments.json' src/compile/recipe.ts || { echo "Production recipes must use the shared fixed arguments."; exit 1; }
+          grep -q 'fixedSecureRecipeArguments.json' dev/testDockerBuild.mjs || { echo "Docker build E2E must use the production recipe arguments."; exit 1; }
+          grep -q -- '"-pdf"' src/compile/fixedSecureRecipeArguments.json || { echo "Docker build E2E must exercise pdfLaTeX."; exit 1; }
+          grep -q -- '"-lualatex"' src/compile/fixedSecureRecipeArguments.json || { echo "Docker build E2E must exercise LuaLaTeX."; exit 1; }
+          grep -q -- '"-latexoption=--no-socket"' src/compile/fixedSecureRecipeArguments.json || { echo "Docker build E2E must disable Lua sockets."; exit 1; }
           grep -q -- '--network=none' scripts/latexmk || { echo "Docker wrapper must disable networking."; exit 1; }
           grep -q -- '--cap-drop=ALL' scripts/latexmk || { echo "Docker wrapper must drop capabilities."; exit 1; }
           grep -q -- ':ro' scripts/latexmk || { echo "Docker wrapper must mount source read-only."; exit 1; }
