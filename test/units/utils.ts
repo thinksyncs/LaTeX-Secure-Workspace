@@ -79,6 +79,7 @@ export const get = {
 
 const configs: Map<string, any> = new Map()
 const changedConfigs: Set<string> = new Set()
+let configUpdateHandler: vscode.WorkspaceConfiguration['update'] | undefined
 export const set = {
     root: (...paths: string[]) => {
         const rootFile = get.path(...paths)
@@ -89,6 +90,9 @@ export const set = {
     },
     config: (section: string, value: any) => {
         configs.set(section, value)
+    },
+    configUpdate: (handler: vscode.WorkspaceConfiguration['update']) => {
+        configUpdateHandler = handler
     },
     codeConfig: async (section: string, value: any) => {
         changedConfigs.add(section)
@@ -105,6 +109,7 @@ export const reset = {
         lw.cache.reset()
     },
     config: async () => {
+        configUpdateHandler = undefined
         for (const section of changedConfigs.values()) {
             await set.codeConfig(section, undefined)
         }
@@ -171,7 +176,10 @@ export const mock = {
             const originalConfig = original(section, scope)
             const configItem: vscode.WorkspaceConfiguration = {
                 ...originalConfig,
-                get: getConfig
+                get: getConfig,
+                update: (configName, value, configurationTarget, overrideInLanguage) => configUpdateHandler
+                    ? configUpdateHandler(configName, value, configurationTarget, overrideInLanguage)
+                    : originalConfig.update(configName, value, configurationTarget, overrideInLanguage)
             }
             return configItem
         })

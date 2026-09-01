@@ -131,6 +131,7 @@ describe(testFileSuiteName(__filename), () => {
 
         it('should reject host pdfLaTeX by default before probing or spawning', async () => {
             set.config('security.allowLocalPdfLaTeX', false)
+            const warningStub = sinon.stub(vscode.window, 'showWarningMessage').resolves('No' as unknown as vscode.MessageItem)
             const syncStub = lw.external.sync as sinon.SinonStub
             const spawnStub = lw.external.spawn as sinon.SinonStub
 
@@ -140,7 +141,32 @@ describe(testFileSuiteName(__filename), () => {
             assert.ok(syncStub.neverCalledWith('latexmk', ['--version']))
             assert.ok(syncStub.neverCalledWith('pdflatex', ['--version']))
             assert.ok(spawnStub.notCalled)
-            assert.hasLog('Secure pdfLaTeX builds require Docker isolation unless local compatibility mode is explicitly allowed.')
+            assert.ok(String(warningStub.firstCall.args[0]).includes('This is not a TeX compilation error.'))
+            assert.deepStrictEqual(warningStub.firstCall.args.slice(1), [{ modal: true }, 'Yes', 'No'])
+            assert.hasLog('Build stopped by the security policy before pdfLaTeX started.')
+            assert.hasLog('Local pdfLaTeX compatibility was not enabled.')
+        })
+
+        it('should enable local pdfLaTeX in User Settings and continue after Yes', async () => {
+            set.config('security.allowLocalPdfLaTeX', false)
+            const updateHandler: vscode.WorkspaceConfiguration['update'] = (section, value, target) => {
+                assert.strictEqual(section, 'security.allowLocalPdfLaTeX')
+                assert.strictEqual(value, true)
+                assert.strictEqual(target, vscode.ConfigurationTarget.Global)
+                set.config('security.allowLocalPdfLaTeX', true)
+                return Promise.resolve()
+            }
+            const updateSpy = sinon.spy(updateHandler)
+            set.configUpdate(updateSpy)
+            const warningStub = sinon.stub(vscode.window, 'showWarningMessage').resolves('Yes' as unknown as vscode.MessageItem)
+
+            const succeeded = await build()
+
+            assert.strictEqual(succeeded, true)
+            assert.ok(warningStub.calledOnce)
+            assert.ok(updateSpy.calledOnce)
+            assert.hasLog('Enabled local pdfLaTeX compatibility in User Settings.')
+            assert.hasLog(`Building root file: ${get.path('main.tex')}`)
         })
 
         it('should stop before spawning when required LaTeX tools are unavailable', async () => {
@@ -160,6 +186,7 @@ describe(testFileSuiteName(__filename), () => {
         })
 
         it('should reject a local LuaLaTeX build before spawning', async () => {
+            const warningStub = sinon.stub(vscode.window, 'showWarningMessage')
             const syncStub = lw.external.sync as sinon.SinonStub
             const spawnStub = lw.external.spawn as sinon.SinonStub
 
@@ -168,7 +195,8 @@ describe(testFileSuiteName(__filename), () => {
             assert.strictEqual(succeeded, false)
             assert.ok(syncStub.neverCalledWith('lualatex', ['--version']))
             assert.ok(spawnStub.notCalled)
-            assert.hasLog('Secure LuaLaTeX builds require Docker isolation.')
+            assert.ok(String(warningStub.firstCall.args[0]).includes('This is not a TeX compilation error.'))
+            assert.hasLog('Build stopped by the security policy before LuaLaTeX started.')
         })
 
         it('should validate the Docker runtime for the secure LuaLaTeX recipe', async () => {
