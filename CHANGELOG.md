@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## [11.4.1] - 2026-09-02
+
 ### Changed
 - Identify pre-TeX security-policy stops as warnings rather than compilation errors.
 - Offer an explicit **Yes/No** choice to enable host pdfLaTeX compatibility in User Settings and continue the requested build.
