@@ -23,7 +23,7 @@ Press <kbd>F5</kbd> in VS Code to start the development version in debug mode.
 
 Make sure you have installed:
 
-- [`Node.js`](https://nodejs.org/) v18
+- [`Node.js`](https://nodejs.org/) v20 (matching CI)
 - `npm` v10
 - the [`eslint`](https://marketplace.visualstudio.com/items?itemName=dbaeumer.vscode-eslint) extension for VS Code (recommended)
 

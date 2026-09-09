@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+### Fixed
+- Offer a LuaLaTeX retry only after a build execution fails, not after a security-policy stop, declined confirmation, or failed preflight.
+- Preserve the resolved document language when accepting a LuaLaTeX retry.
+
+### Security
+- Update audited parser and development dependencies to resolve the dependency advisories blocking CI and daily packaging.
+
+### Documentation
+- Shorten the README around setup and common tasks, and correct output-directory, contributor, and release instructions.
+
 ## [11.4.1] - 2026-09-02
 
 ### Changed

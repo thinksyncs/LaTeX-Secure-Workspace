@@ -1,134 +1,66 @@
 # LaTeX Workspace Security
 
-Secure LaTeX tools for [Visual Studio Code](https://code.visualstudio.com/) with project-local completions, manual build, diagnostics, and a local PDF tab viewer with SyncTeX.
+LaTeX editing, manual builds, and a local PDF viewer for [Visual Studio Code](https://code.visualstudio.com/), with a smaller execution surface than upstream LaTeX Workshop.
 
-## TL;DR
+This is an independent fork, not the official `James-Yu.latex-workshop` extension. Settings and command IDs retain the `latex-workshop.*` prefix for compatibility.
 
-- Project-local completions for citations, labels, commands, packages, and input paths
-- Manual Docker-isolated pdfLaTeX and LuaLaTeX builds with fixed secure recipes
-- Preflight checks for required LaTeX tools with OS-specific recovery guidance
-- Build-root inspection, project health checks, and build provenance reports
-- Local PDF tab viewer with refresh, bounded render recovery, and forward/reverse SyncTeX
-- Diagnostics, log parsing, and safe project-wide label rename inside VS Code
-- No telemetry, auto build, custom build recipes, external build commands, or browser viewer workflow
+[Install from Marketplace](https://marketplace.visualstudio.com/items?itemName=ToppyMicroServices.tex-workspace-secure) · [User manual](./docs/manual/README.md) · [Releases](https://github.com/thinksyncs/LaTeX-Secure-Workspace/releases)
 
-## Best For
+## What you can do
 
-LaTeX Workspace Security is best for controlled workspaces that need manual LaTeX build, project-local completions, diagnostics, and an in-editor PDF viewer without auto-build or workspace-defined build commands.
+- Write with project-local completions, snippets, hover help, outlines, and diagnostics.
+- Build pdfLaTeX or LuaLaTeX manually with fixed recipes and shell escape disabled.
+- Read PDFs in a VS Code tab with refresh and forward/reverse SyncTeX.
+- Inspect the build root, check missing files and references, rename labels, and view build provenance.
 
-> [!IMPORTANT]
-> This extension is an independent secure fork and is not the official `James-Yu.latex-workshop` marketplace release. For compatibility, settings and command IDs still use the existing `latex-workshop.*` prefix.
+There is no telemetry or automatic build. Custom recipes, workspace-defined build commands, external PDF viewers, browser preview, and Live Share are disabled.
 
-## Requirements
+## Get started
 
-- Secure builds require Docker or Podman and a trusted LaTeX image configured in the `latex-workshop.docker.image.latex` user setting. A local TeX distribution is needed only for the explicitly enabled, weaker host pdfLaTeX compatibility mode.
-- In trusted workspaces, `kpsewhich` supports TeX file lookup and the native `synctex` helper can accelerate forward synchronization. Restricted Mode uses the bundled SyncTeX parser without launching these helpers.
-- On macOS, the extension automatically adds the standard MacTeX path `/Library/TeX/texbin` when it exists.
-- Build, clean, kill, and reveal-output commands require a trusted, non-virtual workspace.
+1. Install the extension and open a LaTeX project in a trusted, local workspace.
+2. Choose a build mode below.
+3. Run **LaTeX-Secure-Workspace: Build LaTeX project** from the Command Palette or the editor build button.
 
-Run **LaTeX-Secure-Workspace: Show secure build status** from the Command Palette to see the detected tools, versions, execution mode, root file, fixed recipe, and output paths.
-Enable Docker and configure the image in user settings. The normal build uses `secure-latexmk`; use **Build with recipe** and select `secure-lualatexmk` when the document requires LuaLaTeX.
+**Docker or Podman — pdfLaTeX and LuaLaTeX**
 
-## Compared With LaTeX Workshop
+Install the container runtime and configure these settings in VS Code **User Settings**:
 
-| Area | This secure fork |
+| Setting | Value |
 | --- | --- |
-| Keeps | Project-local completions, snippets, hover help, diagnostics, manual build, clean, local PDF tab viewing, and SyncTeX inside the bundled viewer path. |
-| Constrains | Build selection, root selection, output paths, Texdoc, formatter/linter helper execution, and compatibility settings that could otherwise expand command execution. |
-| Removes | Auto build, custom recipes, custom tools, external build commands, browser viewer workflows, external PDF viewer execution, external SyncTeX commands, Live Share integration, word count, and the math preview panel. |
+| `latex-workshop.docker.enabled` | `true` |
+| `latex-workshop.docker.image.latex` | A trusted LaTeX image containing `latexmk` and the required TeX packages |
+| `latex-workshop.docker.path` | `docker` (default), or `podman` |
 
-## Manual
+The default recipe is `secure-latexmk` (pdfLaTeX). For LuaLaTeX, run **Build with recipe** and select `secure-lualatexmk`.
 
-Start with the local secure-fork manual in [docs/manual/README.md](./docs/manual/README.md).
+Container builds disable networking, mount the workspace read-only, and write outputs to `.lw-security` beside the root document.
 
-For repository organization and cleanup rules, see [Repository Layout](./docs/manual/repository-layout.md). For the security controls in this fork, see [Security Hardening Summary](./docs/security-hardening.md) or [in Japanese](./docs/security-hardening.ja.md).
+**Without Docker — pdfLaTeX only**
 
-## Feature Map
+Install a local TeX distribution with `latexmk`. With Docker disabled, a build shows a security warning before TeX starts. Choose **Yes** to enable `latex-workshop.security.allowLocalPdfLaTeX` in User Settings and continue, or **No** to leave the build blocked.
 
-| Workflow | Included behavior |
-| --- | --- |
-| Editing | Project-local completion for citations, labels, commands, environments, classes, packages, and input paths; snippets, wrapping, outline, and hover help. |
-| Build | Explicit manual build with fixed, Docker-isolated `secure-latexmk` and `secure-lualatexmk` profiles and shell escape disabled; fixed root and output policy; no workspace-selected command path. |
-| Project insight | On-demand root candidates and dependency tree, project health checks, and the latest successful build provenance. |
-| Environment | Docker runtime and image preflight for secure builds, clearly labeled host pdfLaTeX compatibility status, standard MacTeX PATH recovery for that compatibility mode, and targeted missing-resource guidance. |
-| PDF | Local VS Code tab viewer with refresh, bounded retry after page-render failures, and forward/reverse SyncTeX inside the bundled viewer path. |
-| Diagnostics | LaTeX log parsing, Problems-panel diagnostics, project health checks, safe label rename, graphics checks, compiler log access, and actionable environment failures. |
-| Documentation | Texdoc from trusted workspaces with workspace executable overrides blocked and confirmation before launch. |
+Use this mode only for documents you fully trust: host TeX can read files available to your OS account. The setting applies to all trusted workspaces, not just the current document, and can be turned off in User Settings. LuaLaTeX still requires container isolation.
 
-## Project Insight And Repair
+## When a build does not work
 
-- **Show build root inspector** reports the active source, selected root, selection reason, parent candidates, source chain, and project-local input dependency tree without changing files.
-- **Build with project root** lets you explicitly select one detected parent document for a single trusted manual build. It does not persist the choice or add a magic comment.
-- **Check project health** scans project-local TeX and bibliography files for missing inputs, graphics, citations, references, duplicate labels, and unused labels. It does not run external tools.
-- For a missing `\input`, `\includegraphics`, or bibliography path, VS Code Quick Fix offers same-name files found inside the workspace. A path changes only after you select a candidate, and the replacement remains relative to the current document.
-- Rename a label with VS Code's **Rename Symbol** command (`F2`). The extension updates exact project-local `\label`, `\ref`, `\eqref`, `\autoref`, `\pageref`, `\cref`, `\Cref`, `\vref`, and `\Vref` references only.
-- **Show build provenance** reports the latest successful build's root, fixed recipe command, timestamps, PDF size, and SHA-256 digest. Home-directory prefixes are redacted.
-- When a pdfLaTeX build fails and the project contains direct LuaLaTeX evidence such as `fontspec`, the extension offers a one-time **Build with LuaLaTeX** action. It never changes engines silently, and the LuaLaTeX build proceeds only when Docker isolation is enabled.
+Run **Show secure build status** to check the execution mode, tools, root file, and output paths. A warning that says the build stopped *before TeX started* means the security policy blocked execution; it is not a TeX compilation error.
 
-## Build Behavior
+Use **Show build root inspector** if the wrong document is selected, or **Check project health** for missing inputs, graphics, citations, and references. The [manual](./docs/manual/README.md) covers these commands, PDF viewing, and platform setup.
 
-- Build LaTeX documents manually with the fixed internal `secure-latexmk` recipe, or choose `secure-lualatexmk` from **Build with recipe** for LuaLaTeX. Both profiles use the hardened Docker wrapper by default and invoke `latexmk` with `-norc`, `-no-shell-escape`, and SyncTeX output enabled; the LuaLaTeX profile also disables the Lua socket library. The owning workspace is mounted read-only and `.lw-security` is the separate writable output mount. Workspace-selected recipes, tools, external build commands, and build-control magic comments are ignored.
-- Check the Docker runtime and configured image before spawning a secure build. A security-policy stop before TeX starts is reported as a warning, not a TeX compilation error. For pdfLaTeX, the warning offers **Yes/No** before enabling `latex-workshop.security.allowLocalPdfLaTeX` in User Settings and continuing the build. This compatibility escape hatch is for fully trusted documents, applies to all trusted workspaces, is disabled by default, ignored at workspace scope, and does not provide filesystem isolation.
-- Report a missing `.sty`, `.cls`, or related TeX resource directly, with guidance to check project files or the providing TeX package.
-- Resolve the build root with a fixed internal policy and always run manual build and clean against the resolved main root file. When the active TeX file is an included fragment, the resolver follows project-local `\input` and `\include` relationships to its parent document; a standalone document remains its own root. Secure build and viewer flows do not honor file-level `%!TEX root` comments.
-- Write build outputs and auxiliary files into the resolved root file directory, rather than honoring workspace-controlled output-path overrides.
-- Open the built PDF in a local VS Code tab using a minimal `pdf.js` runtime, with refresh, forward SyncTeX, and reverse SyncTeX inside the bundled webview path. A manual build reveals the active source location even when `latexmk` reports that the PDF is already up to date. Failed page renders are retried twice with a bounded delay and expose a manual retry button instead of leaving a black page.
+## Security
 
-## Constrained In This Secure Build
+Build and cleanup require workspace trust. Build recipes and output paths are fixed; workspace settings and TeX magic comments cannot choose arbitrary build commands. Restricted Mode keeps editor assistance and the local PDF viewer available.
 
-The following surfaces remain present only in a narrowed form.
+Revision `a8cf9923` received a point-in-time static security review with OpenAI Daybreak Blue (`gpt-daybreak-blue-latest`) on 2026-08-25. It identified a medium-severity host pdfLaTeX file-read risk. Container isolation became the default secure build path; local pdfLaTeX remains an explicit, weaker compatibility option. That review is not a guarantee for later revisions or arbitrary TeX toolchains.
 
-- Build, clean, kill, and reveal-output commands require a trusted workspace.
-- Manual builds use the fixed `secure-latexmk` or `secure-lualatexmk` recipe rather than workspace-selected recipes or tools. Both profiles use the hardened Docker wrapper by default; only pdfLaTeX has an explicitly enabled host compatibility mode.
-- Auto-build settings are retained for compatibility but cannot start TeX; compilation requires an explicit build command.
-- Secure build and viewer flows use the resolved main root file and ignore root-changing magic comments.
-- Build outputs and auxiliary files are resolved in the root file directory instead of workspace-controlled output or auxiliary directories.
-- Texdoc and external formatter helpers require a trusted workspace. Workspace-scoped executable and argument overrides are blocked or ignored; Texdoc runs only from an explicit command.
-- Restricted Mode skips `kpsewhich`, external formatters, and the native forward SyncTeX helper. Forward SyncTeX falls back to the bundled parser.
-- Reverse SyncTeX opens source files only after their real path is confirmed to remain inside the workspace that owns the PDF.
-- The `external` PDF viewer setting is retained for compatibility, but this secure build still opens PDFs in the internal tab viewer.
+See the [security controls](./docs/security-hardening.md), [Japanese summary](./docs/security-hardening.ja.md), and [vulnerability reporting policy](./SECURITY.md).
 
-## Not Included In This Secure Build
+## Development and releases
 
-The following upstream features are intentionally disabled or not exposed in this fork.
+See [Contributing](./CONTRIBUTING.md) for setup and [Testing](./test/README.md) for the test groups. `npm test` runs Node-based checks without opening VS Code. CI also runs isolated VS Code integration tests and real Docker builds.
 
-- Live Share integration.
-- Auto build and other file-watcher-triggered build execution.
-- Custom recipes, custom tools, and external build commands.
-- The internal PDF preview server, browser viewer workflow, external PDF viewer execution, and external SyncTeX command paths.
-- Word count and math preview panel workflows.
-- Other convenience integrations that expand the executable or network-facing surface without being required for core authoring and compilation.
-
-## Security Note
-
-The source at revision `a8cf9923` received a point-in-time static security review with OpenAI Daybreak Blue (`gpt-daybreak-blue-latest`) on 2026-08-25. The review identified a medium-severity host pdfLaTeX file-read risk. Secure builds now use Docker isolation by default; host pdfLaTeX is available only through the explicitly enabled, weaker compatibility mode.
-
-This fork applies security hardening intended to reduce risk. It does not make arbitrary TeX toolchains safe by itself and does not replace workstation hardening, sandboxing, enterprise policy controls, or adopter validation.
-
-## Release Channels
-
-- Stable releases publish GitHub release tags to the VS Code Marketplace stable channel.
-- The Marketplace does not retain a separate pre-release channel.
-- Stable publication waits for approval through the protected `marketplace` GitHub environment.
-- Each stable GitHub Release includes the VSIX and its SPDX SBOM; GitHub artifact attestations bind the VSIX to its build provenance and SBOM.
-- Daily releases build, test, and package a VSIX every day, refresh the rolling GitHub daily prerelease, and attach open PR, CodeQL, and Dependabot summaries. They do not publish to extension registries.
-- The canonical repository fails release publication if the required registry credentials are missing, so security fixes do not silently miss distribution.
-- Stable versioning: `1.2.3 -> 1.2.4`, `1.2 -> 1.3.0`
-- Stable releases must keep the current major version line. Update the minor or patch version instead of bumping the major version.
-- Daily versioning: `1.2.3 -> 1.3.<run_number>`, `1.2 -> 1.3.<run_number>`
-
-Release operations are documented in [RELEASING.md](./RELEASING.md).
-
-## GitHub
-
-The code for this extension is available on GitHub at: https://github.com/thinksyncs/LaTeX-Secure-Workspace
+Stable releases publish to the Marketplace after CI and protected-environment approval. GitHub Releases include the VSIX and SPDX SBOM, with build-provenance and SBOM attestations available through GitHub. Daily previews are GitHub artifacts only. See [Releasing](./RELEASING.md) for the workflow and [Repository layout](./docs/manual/repository-layout.md) for the source structure.
 
 ## License
 
-This repository is distributed under the MIT License.
-
-It is an independent fork of LaTeX Workshop and retains the upstream MIT notice in `LICENSE.txt`.
-
-For fork attribution and notice information, see `NOTICE`.
-
-Some bundled data files or third-party assets may carry their own upstream notices in their respective directories.
+[MIT](./LICENSE.txt), with the upstream LaTeX Workshop notice retained. See [NOTICE](./NOTICE) for attribution; bundled data and third-party assets may have their own notices.

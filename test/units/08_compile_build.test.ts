@@ -5,7 +5,7 @@ import type { SpawnOptions } from 'child_process'
 import * as cs from 'cross-spawn'
 import { assert, get, log, mock, set, TextEditor } from './utils'
 import { lw } from '../../src/lw'
-import { autoBuild, build } from '../../src/compile/build'
+import { autoBuild, build, buildWithResult } from '../../src/compile/build'
 import { testFileSuiteName } from '../file-name'
 
 describe(testFileSuiteName(__filename), () => {
@@ -169,6 +169,49 @@ describe(testFileSuiteName(__filename), () => {
             assert.hasLog(`Building root file: ${get.path('main.tex')}`)
         })
 
+        for (const selection of ['No', undefined]) {
+            it(`should report no build started after ${selection ?? 'dismissing'} the security prompt`, async () => {
+                set.config('security.allowLocalPdfLaTeX', false)
+                sinon.stub(vscode.window, 'showWarningMessage').resolves(selection as unknown as vscode.MessageItem)
+                const updateSpy = sinon.spy(() => Promise.resolve())
+                set.configUpdate(updateSpy)
+
+                const result = await buildWithResult()
+
+                assert.strictEqual(result, 'not-started')
+                assert.ok((lw.external.spawn as sinon.SinonStub).notCalled)
+                assert.ok((lw.external.sync as sinon.SinonStub).notCalled)
+                assert.ok(updateSpy.notCalled)
+            })
+        }
+
+        it('should distinguish failed execution from a request that did not start', async () => {
+            const spawnStub = lw.external.spawn as sinon.SinonStub
+            spawnStub.callsFake(() => cs.spawn(process.execPath, ['-e', 'process.exit(1)']))
+
+            const result = await buildWithResult()
+
+            assert.strictEqual(result, 'failed')
+            assert.ok(spawnStub.calledOnce)
+        })
+
+        it('should report successful execution through the detailed result', async () => {
+            const result = await buildWithResult()
+
+            assert.strictEqual(result, 'succeeded')
+            assert.ok((lw.external.spawn as sinon.SinonStub).calledOnce)
+        })
+
+        it('should report no build started when the output directory is rejected', async () => {
+            sinon.stub(lw.file, 'getValidatedSecurityBuildDir').throws(new Error('unsafe output directory'))
+
+            const result = await buildWithResult()
+
+            assert.strictEqual(result, 'not-started')
+            assert.ok((lw.external.spawn as sinon.SinonStub).notCalled)
+            assert.hasLog('Secure build output directory rejected.')
+        })
+
         it('should stop before spawning when required LaTeX tools are unavailable', async () => {
             const syncStub = lw.external.sync as sinon.SinonStub
             syncStub.withArgs('latexmk').returns({
@@ -179,8 +222,9 @@ describe(testFileSuiteName(__filename), () => {
             })
             const spawnStub = lw.external.spawn as sinon.SinonStub
 
-            await build()
+            const result = await buildWithResult()
 
+            assert.strictEqual(result, 'not-started')
             assert.ok(spawnStub.notCalled)
             assert.hasLog('Required LaTeX tools unavailable: latexmk:')
         })

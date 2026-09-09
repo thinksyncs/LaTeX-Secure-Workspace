@@ -32,10 +32,11 @@ export async function build(skipSelection: boolean = false, rootFile: string | u
     }
     const startedAt = Date.now()
     const source = getBuildSource()
-    const succeeded = await lw.compile.build(skipSelection, rootFile, languageId, recipe)
+    const result = await lw.compile.buildWithResult(skipSelection, rootFile, languageId, recipe)
     const builtRoot = rootFile ?? lw.root.file.path
-    if (!succeeded || !builtRoot) {
-        if (builtRoot && recipe !== 'secure-lualatexmk') {
+    const builtLanguageId = languageId ?? lw.root.file.langId
+    if (result !== 'succeeded' || !builtRoot) {
+        if (result === 'failed' && builtRoot && recipe !== 'secure-lualatexmk') {
             const recommendation = await getEngineRecommendation(builtRoot)
             if (recommendation?.engine === 'lualatex') {
                 const action = await vscode.window.showWarningMessage(
@@ -43,7 +44,7 @@ export async function build(skipSelection: boolean = false, rootFile: string | u
                     'Build with LuaLaTeX'
                 )
                 if (action === 'Build with LuaLaTeX') {
-                    await build(skipSelection, builtRoot, languageId, 'secure-lualatexmk')
+                    await build(skipSelection, builtRoot, builtLanguageId, 'secure-lualatexmk')
                 }
             }
         }

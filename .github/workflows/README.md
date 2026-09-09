@@ -57,24 +57,22 @@ To avoid install TeX Live each time, we use a caching feature, [actions/cache](h
 
 Because these caches contain executable toolchains, any cache-key changes should be treated as a trust-boundary change and reviewed carefully.
 
-The TeX Live workflows now encode the TeX Live year in both the workflow name and the cache key. For example:
+The TeX Live workflows follow the current distribution. Their names use `TeX Live (current)`, and the toolchain cache uses a revision key:
 
 ```yaml
-name: TeX Live 2026 on Linux
+name: TeX Live (current) on Linux
 env:
-  TEXLIVE_YEAR: '2026'
-  cache-version: tl-2026-v1
+  cache-version: tl-current-v1
 ```
 
-When moving to a new TeX Live year, update both values together. That forces an annual cache refresh and makes the intended toolchain year visible in workflow runs.
+Review the installed TeX Live release when the upstream distribution changes and refresh the cache when an upgrade requires a new installation.
 
 The caches are removed if they have not been accessed in over 7 days.
-When we want to remove the caches manually within the same TeX Live year, increase the trailing revision in `cache-version`.
+To force a cache refresh, increase the trailing revision in `cache-version` on the workflows that share the toolchain.
 
 ```yaml
 env:
-  TEXLIVE_YEAR: '2026'
-  cache-version: tl-2026-v2
+  cache-version: tl-current-v2
 ```
 
 ## References
