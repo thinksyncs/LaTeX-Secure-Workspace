@@ -48,7 +48,7 @@ It also ignores workspace-scoped argument overrides for formatter and linter hel
 
 Restricted Mode does not launch external formatters, `kpsewhich`, or the native forward SyncTeX helper. Forward SyncTeX uses the bundled parser instead.
 
-It also uses a fixed internal root-resolution policy for secure build and clean commands, always executes against the resolved main root file, and writes both PDF output and auxiliary files to the resolved root file directory instead of honoring workspace-controlled output-path overrides.
+It also uses a fixed internal root-resolution policy for secure build and clean commands, always executes against the resolved main root file, and writes both PDF output and auxiliary files to `.lw-security` beside that root file instead of honoring workspace-controlled output-path overrides.
 
 ### 3. Ignored magic-command comments in the secure build
 

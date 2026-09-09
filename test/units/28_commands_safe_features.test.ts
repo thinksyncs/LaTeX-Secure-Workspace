@@ -3,11 +3,12 @@ import * as sinon from 'sinon'
 import { assert, get, mock, set } from './utils'
 import { lw } from '../../src/lw'
 import * as commands from '../../src/core/commands'
+import * as projectInsight from '../../src/core/project-insight'
 import { testFileSuiteName } from '../file-name'
 
 describe(testFileSuiteName(__filename), () => {
     before(() => {
-        mock.init(lw)
+        mock.init(lw, 'compile')
     })
 
     afterEach(() => {
@@ -15,7 +16,7 @@ describe(testFileSuiteName(__filename), () => {
     })
 
     it('should forward an explicit secure recipe name to build', async () => {
-        const buildStub = sinon.stub(lw.compile, 'build').resolves()
+        const buildStub = sinon.stub(lw.compile, 'buildWithResult').resolves('not-started')
 
         await commands.recipes('secure-latexmk')
 
@@ -23,7 +24,7 @@ describe(testFileSuiteName(__filename), () => {
     })
 
     it('should build the secure recipe selected from quick pick', async () => {
-        const buildStub = sinon.stub(lw.compile, 'build').resolves()
+        const buildStub = sinon.stub(lw.compile, 'buildWithResult').resolves('not-started')
         sinon.stub(vscode.window, 'showQuickPick').resolves('secure-latexmk' as unknown as vscode.QuickPickItem)
 
         await commands.buildRecipe()
@@ -37,7 +38,7 @@ describe(testFileSuiteName(__filename), () => {
         mock.activeTextEditor(sourceFile, 'First line.\nSecond line.\n')
         const editor = vscode.window.activeTextEditor
         editor!.selection = new vscode.Selection(1, 0, 1, 0)
-        const buildStub = sinon.stub(lw.compile, 'build').resolves(true)
+        const buildStub = sinon.stub(lw.compile, 'buildWithResult').resolves('succeeded')
         const pdfStat: vscode.FileStat = { type: vscode.FileType.File, ctime: 0, mtime: 0, size: 1 }
         sinon.stub(lw.file, 'exists').resolves(pdfStat)
         const currentToPDF = lw.locate.synctex.toPDF as sinon.SinonStub
@@ -55,6 +56,64 @@ describe(testFileSuiteName(__filename), () => {
         assert.pathStrictEqual(pdfUri.fsPath, lw.file.getSecurityPdfPath(rootFile))
         assert.deepStrictEqual(source, { line: 2, filePath: sourceFile })
     })
+
+    it('should not suggest another engine when the build did not start', async () => {
+        set.root('main.tex')
+        sinon.stub(lw.compile, 'buildWithResult').resolves('not-started')
+        const recommendationStub = sinon.stub(projectInsight, 'getEngineRecommendation').resolves({
+            engine: 'lualatex',
+            signals: ['fontspec']
+        })
+        const warningStub = sinon.stub(vscode.window, 'showWarningMessage')
+
+        await commands.build()
+
+        assert.ok(recommendationStub.notCalled)
+        assert.ok(warningStub.notCalled)
+    })
+
+    it('should still suggest LuaLaTeX after a failed build for a fontspec document', async () => {
+        const rootFile = set.root('main.tex')
+        sinon.stub(lw.compile, 'buildWithResult').resolves('failed')
+        const recommendationStub = sinon.stub(projectInsight, 'getEngineRecommendation').resolves({
+            engine: 'lualatex',
+            signals: ['fontspec']
+        })
+        const warningStub = sinon.stub(vscode.window, 'showWarningMessage')
+
+        await commands.build()
+
+        assert.ok(recommendationStub.calledOnceWithExactly(rootFile))
+        assert.ok(warningStub.calledOnce)
+        assert.deepStrictEqual(warningStub.firstCall.args, [
+            'This project uses fontspec, which may require LuaLaTeX.',
+            'Build with LuaLaTeX'
+        ])
+    })
+
+    for (const languageId of [undefined, 'doctex']) {
+        it(`should retry LuaLaTeX with the ${languageId ? 'explicit' : 'resolved'} root language after clicking its action`, async () => {
+            const rootFile = set.root('main.tex')
+            const buildStub = sinon.stub(lw.compile, 'buildWithResult')
+            buildStub.onFirstCall().resolves('failed')
+            buildStub.onSecondCall().resolves('succeeded')
+            sinon.stub(lw.file, 'exists').resolves(false)
+            sinon.stub(projectInsight, 'getEngineRecommendation').resolves({
+                engine: 'lualatex',
+                signals: ['fontspec']
+            })
+            const warningStub = sinon.stub(vscode.window, 'showWarningMessage')
+                .resolves('Build with LuaLaTeX' as unknown as vscode.MessageItem)
+
+            await commands.build(false, undefined, languageId)
+
+            assert.ok(warningStub.calledOnce)
+            assert.strictEqual(buildStub.callCount, 2)
+            assert.deepStrictEqual(buildStub.secondCall.args, [
+                false, rootFile, languageId ?? 'latex', 'secure-lualatexmk'
+            ])
+        })
+    }
 
     it('should delegate texdoc to the extras module', () => {
         const texdocStub = sinon.stub().resolves()

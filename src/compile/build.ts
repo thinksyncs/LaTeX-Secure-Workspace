@@ -20,8 +20,11 @@ const logger = lw.log('Build')
 export {
     autoBuild,
     build,
+    buildWithResult,
     isFileExcludedFromBuildOnSave
 }
+
+type BuildResult = 'succeeded' | 'failed' | 'not-started'
 
 lw.watcher.src.onChange(filePath => autoBuild(filePath.fsPath, 'onFileChange'))
 lw.watcher.bib.onChange(filePath => autoBuild(filePath.fsPath, 'onFileChange', true))
@@ -82,11 +85,16 @@ let isBuilding = false
  * build.
  */
 async function build(skipSelection: boolean = false, rootFile: string | undefined = undefined, languageId: string | undefined = undefined, recipe: string | undefined = undefined): Promise<boolean> {
+    return await buildWithResult(skipSelection, rootFile, languageId, recipe) === 'succeeded'
+}
+
+/** Distinguishes execution failures from requests stopped before a build starts. */
+async function buildWithResult(skipSelection: boolean = false, rootFile: string | undefined = undefined, languageId: string | undefined = undefined, recipe: string | undefined = undefined): Promise<BuildResult> {
     const activeEditor = vscode.window.activeTextEditor ?? lw.previousActive
     if (!activeEditor) {
         logger.log('Cannot start to build because the active editor is undefined.')
         void logger.showErrorMessageWithExtensionLogButton('Cannot start secure build because no LaTeX editor is active. Open a LaTeX document and try again.')
-        return false
+        return 'not-started'
     }
 
     logger.log(`The document of the active editor: ${activeEditor.document.uri.toString(true)}`)
@@ -109,16 +117,18 @@ async function build(skipSelection: boolean = false, rootFile: string | undefine
     if (rootFile === undefined || languageId === undefined) {
         logger.log('Cannot find LaTeX root file. See https://github.com/James-Yu/LaTeX-Workshop/wiki/Compile#the-root-file')
         void logger.showErrorMessageWithExtensionLogButton('Cannot find a LaTeX root file. Open the main TeX document and try again.')
-        return false
+        return 'not-started'
     }
     void skipSelection
 
     if (!await isBuildEnvironmentReady(lw.file.toUri(rootFile), recipe)) {
-        return false
+        return 'not-started'
     }
 
     logger.log(`Building root file: ${rootFile}`)
-    return buildRecipe(rootFile, languageId, buildLoop, recipe)
+    let started = false
+    const succeeded = await buildRecipe(rootFile, languageId, () => buildLoop(() => { started = true }), recipe)
+    return succeeded ? 'succeeded' : started ? 'failed' : 'not-started'
 }
 
 async function isBuildEnvironmentReady(scope: vscode.ConfigurationScope, recipeName?: string): Promise<boolean> {
@@ -207,7 +217,7 @@ async function isBuildEnvironmentReady(scope: vscode.ConfigurationScope, recipeN
  * last step and performs cleanup if necessary. Finally, it sets the `compiling`
  * flag to false.
  */
-async function buildLoop(): Promise<boolean> {
+async function buildLoop(onStarted: () => void): Promise<boolean> {
     if (isBuilding) {
         logger.log('Another build loop is already running.')
         return false
@@ -228,6 +238,7 @@ async function buildLoop(): Promise<boolean> {
             if (step === undefined) {
                 break
             }
+            onStarted()
             const env = spawnProcess(step)
             const success = await monitorProcess(step, env)
             failed = failed || !success

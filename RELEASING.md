@@ -11,9 +11,9 @@ This repository has two release tracks: `stable` and `daily`.
 
 ## Stable Release
 
-1. Update `package.json` to the intended stable version if needed.
+1. Update `package.json` and `package-lock.json` to the intended stable version, and add the release notes to `CHANGELOG.md`.
    Keep the existing major version line and update the minor or patch version instead of bumping the major version.
-2. Commit and push the release changes on `master`.
+2. Push the release changes on a branch, open a pull request, and merge it into protected `master` after the required checks pass.
 3. Wait for all required push CI workflows to pass. `auto-stable-release.yml` creates the matching tag and GitHub Release, then dispatches `stable-release.yml`.
 4. Approve the waiting `marketplace` environment deployment after checking the tag, version, and commit.
 5. `stable-release.yml` builds, tests, audits, and packages the VSIX; generates an SPDX SBOM; publishes build-provenance and SBOM attestations; publishes to the Marketplace stable channel; and uploads the VSIX and SBOM to the GitHub Release.

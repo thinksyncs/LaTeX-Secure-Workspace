@@ -1,9 +1,10 @@
 import type { ChildProcess } from 'child_process'
-import { build, autoBuild, isFileExcludedFromBuildOnSave } from './build'
+import { build, buildWithResult, autoBuild, isFileExcludedFromBuildOnSave } from './build'
 import { terminate } from './terminate'
 
 export const compile = {
     build,
+    buildWithResult,
     autoBuild,
     isFileExcludedFromBuildOnSave,
     terminate,

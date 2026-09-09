@@ -48,7 +48,7 @@ CVSS 風スコア: 8.6 / 10
 
 Restricted Mode では、外部 formatter、`kpsewhich`、native forward SyncTeX helper を起動しません。forward SyncTeX は bundled parser を使用します。
 
-あわせて、セキュアな build と clean の経路では、ルート解決も固定の内部ポリシーで行い、常に解決済みの main root を対象に実行するようにしています。PDF 出力先と補助ファイルの配置先も、その root ファイルのディレクトリに固定し、ワークスペース設定による出力先の上書きは実行経路に反映しません。
+あわせて、セキュアな build と clean の経路では、ルート解決も固定の内部ポリシーで行い、常に解決済みの main root を対象に実行するようにしています。PDF と補助ファイルは、その root ファイルと同じ階層にある `.lw-security` に出力し、ワークスペース設定による出力先の上書きは反映しません。
 
 ### 3. セキュアビルドではマジックコメントを無効化
 
