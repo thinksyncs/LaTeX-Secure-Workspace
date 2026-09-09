@@ -2,12 +2,15 @@
 
 ## Unreleased
 
+## [11.4.2] - 2026-09-10
+
+### Security
+- Update the transitive XML parser `@xmldom/xmldom` to 0.9.12 to resolve its reported security advisories.
+- Update development dependencies `@humanfs/node`, `fast-uri`, `js-yaml`, and `qs` to versions that pass the full dependency audit.
+
 ### Fixed
 - Offer a LuaLaTeX retry only after a build execution fails, not after a security-policy stop, declined confirmation, or failed preflight.
 - Preserve the resolved document language when accepting a LuaLaTeX retry.
-
-### Security
-- Update audited parser and development dependencies to resolve the dependency advisories blocking CI and daily packaging.
 
 ### Documentation
 - Shorten the README around setup and common tasks, and correct output-directory, contributor, and release instructions.
