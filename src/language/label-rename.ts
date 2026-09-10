@@ -4,6 +4,7 @@ import * as vscode from 'vscode'
 
 import { getProjectFilePaths } from '../core/project-insight'
 import { lw } from '../lw'
+import { maskCommentsAndVerbatim } from '../utils/utils'
 
 type LabelMatch = {
     end: number,
@@ -74,12 +75,14 @@ function collectLabelMatches(content: string, label: string): LabelMatch[] {
 }
 
 function collectCommandArgumentMatches(content: string): LabelMatch[] {
+    content = maskCommentsAndVerbatim(content)
     const matches: LabelMatch[] = []
     LABEL_COMMAND.lastIndex = 0
     let match: RegExpExecArray | null
     while ((match = LABEL_COMMAND.exec(content)) !== null) {
         const group = match[1]
-        const groupStart = match.index + match[0].indexOf(group)
+        // The captured argument ends immediately before the final closing brace.
+        const groupStart = match.index + match[0].length - group.length - 1
         let searchFrom = 0
         for (const segment of group.split(',')) {
             const value = segment.trim()

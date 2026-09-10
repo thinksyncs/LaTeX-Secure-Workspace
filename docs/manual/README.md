@@ -40,7 +40,8 @@ guidance to check project files or possible distribution packages. The compiler
 log remains available for details.
 
 Use VS Code's **Rename Symbol** command (`F2`) on a supported label or reference
-to update exact project-local occurrences. Project insight and rename operations
+to update exact project-local occurrences outside comments and verbatim content.
+Project insight and rename operations
 stay inside the open workspace and do not execute LaTeX commands. If direct
 LuaLaTeX-only evidence is found after a failed pdfLaTeX build, the extension can
 offer a one-time LuaLaTeX build; it does not switch the engine automatically, and it requires Docker isolation.
@@ -48,7 +49,7 @@ offer a one-time LuaLaTeX build; it does not switch the engine automatically, an
 When the cursor is on a missing `\input`, `\includegraphics`, or bibliography
 path, **Quick Fix** can list same-name candidates that already exist inside the
 workspace. No file is changed until a candidate is selected, and the inserted
-path is relative to the current document.
+path is relative to the build root's directory, including when editing a child file.
 
 The PDF viewer retries a failed page render at most twice and then provides a
 manual retry button. Reverse SyncTeX opens a source target only after its real

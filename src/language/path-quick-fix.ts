@@ -3,6 +3,7 @@ import * as path from 'path'
 import * as vscode from 'vscode'
 
 import { lw } from '../lw'
+import { maskCommentsAndVerbatim } from '../utils/utils'
 import {
     buildImageResolution,
     collectGraphicspathDirs
@@ -54,7 +55,7 @@ export class PathQuickFixProvider implements vscode.CodeActionProvider {
 
         const candidates = await findReplacementCandidates(reference, document.fileName, workspace, workspacePath)
         return candidates.slice(0, 8).map((candidate, _index, allCandidates) => {
-            const replacement = candidateReplacement(reference, candidate, document.fileName)
+            const replacement = candidateReplacement(reference, candidate, rootDir)
             const action = new vscode.CodeAction(`Replace missing path with ${replacement}`, vscode.CodeActionKind.QuickFix)
             action.edit = new vscode.WorkspaceEdit()
             action.edit.replace(
@@ -69,13 +70,14 @@ export class PathQuickFixProvider implements vscode.CodeActionProvider {
 }
 
 function findPathReferences(content: string): PathReference[] {
+    content = maskCommentsAndVerbatim(content)
     const references: PathReference[] = []
     PATH_COMMAND.lastIndex = 0
     let match: RegExpExecArray | null
     while ((match = PATH_COMMAND.exec(content)) !== null) {
         const value = match[2].trim()
-        const start = match.index + match[0].indexOf(match[2]) + match[2].indexOf(value)
-        if (!value || isOffsetInComment(content, match.index)) {
+        const start = match.index + match[0].length - match[2].length - 1 + match[2].indexOf(value)
+        if (!value) {
             continue
         }
         references.push({
@@ -99,19 +101,18 @@ function commandKind(command: string): PathKind {
 }
 
 async function referenceExists(reference: PathReference, document: vscode.TextDocument, rootDir: string, workspacePath: string): Promise<boolean> {
-    const documentDir = path.dirname(document.fileName)
     let candidates: string[]
     if (reference.kind === 'image') {
         candidates = buildImageResolution(
             reference.value,
-            documentDir,
+            rootDir,
             rootDir,
             collectGraphicspathDirs(document.getText())
         ).candidates
     } else {
         const extension = reference.kind === 'bib' ? '.bib' : '.tex'
         const values = path.extname(reference.value) ? [reference.value] : [reference.value, `${reference.value}${extension}`]
-        candidates = [documentDir, rootDir].flatMap(baseDir => values.map(value => path.resolve(baseDir, value)))
+        candidates = values.map(value => path.resolve(rootDir, value))
     }
     for (const candidate of candidates) {
         if (await isExistingWorkspaceFile(candidate, workspacePath)) {
@@ -150,8 +151,8 @@ function normalizePath(filePath: string): string {
     return process.platform === 'win32' ? normalized.toLowerCase() : normalized
 }
 
-function candidateReplacement(reference: PathReference, candidate: string, documentFile: string): string {
-    let relative = path.relative(path.dirname(documentFile), candidate).split(path.sep).join('/')
+function candidateReplacement(reference: PathReference, candidate: string, rootDir: string): string {
+    let relative = path.relative(rootDir, candidate).split(path.sep).join('/')
     if (!path.extname(reference.value)) {
         relative = relative.slice(0, -path.extname(relative).length)
     }
@@ -166,24 +167,6 @@ function isStaticProjectPath(value: string): boolean {
         && !value.includes('}')
         && !value.includes('#')
         && !value.includes(',')
-}
-
-function isOffsetInComment(content: string, offset: number): boolean {
-    const lineStart = content.lastIndexOf('\n', offset - 1) + 1
-    const prefix = content.slice(lineStart, offset)
-    for (let index = 0; index < prefix.length; index++) {
-        if (prefix[index] !== '%') {
-            continue
-        }
-        let slashCount = 0
-        for (let cursor = index - 1; cursor >= 0 && prefix[cursor] === '\\'; cursor--) {
-            slashCount += 1
-        }
-        if (slashCount % 2 === 0) {
-            return true
-        }
-    }
-    return false
 }
 
 async function isExistingWorkspaceFile(filePath: string, workspacePath: string): Promise<boolean> {

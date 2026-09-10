@@ -231,7 +231,8 @@ export async function buildWithRootCandidate() {
     if (!selected) {
         return
     }
-    await build(false, selected.filePath)
+    const document = await vscode.workspace.openTextDocument(vscode.Uri.file(selected.filePath))
+    await build(false, selected.filePath, document.languageId)
 }
 
 export function kill() {

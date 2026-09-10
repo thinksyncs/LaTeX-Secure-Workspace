@@ -3,10 +3,14 @@ import * as vscode from 'vscode'
 import * as sinon from 'sinon'
 import type { SpawnOptions } from 'child_process'
 import * as cs from 'cross-spawn'
-import { assert, get, log, mock, set, TextEditor } from './utils'
+import { assert, get, log, mock, set, TextDocument, TextEditor } from './utils'
 import { lw } from '../../src/lw'
 import { autoBuild, build, buildWithResult } from '../../src/compile/build'
 import { testFileSuiteName } from '../file-name'
+import * as commands from '../../src/core/commands'
+import * as projectInsight from '../../src/core/project-insight'
+
+const buildWithRootCandidate = commands.buildWithRootCandidate
 
 describe(testFileSuiteName(__filename), () => {
     let activeStub: sinon.SinonStub
@@ -96,6 +100,28 @@ describe(testFileSuiteName(__filename), () => {
 
             assert.ok(!findStub.called)
         })
+
+        for (const candidateCount of [1, 2]) {
+            it('should start the selected root build with ' + candidateCount + ' candidates', async () => {
+                const selectedRoot = get.path('selected.tex')
+                const candidates = candidateCount === 1 ? [selectedRoot] : [get.path('other.tex'), selectedRoot]
+                sinon.stub(projectInsight, 'getBuildRootCandidates').resolves(candidates)
+                const document = new TextDocument(selectedRoot, '', { languageId: 'doctex' })
+                const selected: vscode.QuickPickItem & { filePath: string } = {
+                    label: 'selected.tex', filePath: selectedRoot
+                }
+                sinon.stub(vscode.workspace, 'openTextDocument').resolves(document)
+                sinon.stub(vscode.window, 'showQuickPick').resolves(selected)
+                ;(lw.compile.buildWithResult as sinon.SinonStub).callsFake(buildWithResult)
+
+                await buildWithRootCandidate()
+
+                assert.ok((lw.compile.buildWithResult as sinon.SinonStub).calledOnceWithExactly(false, selectedRoot, 'doctex', undefined))
+                assert.ok((lw.external.spawn as sinon.SinonStub).calledOnce)
+                assert.hasLog('Building root file: ' + selectedRoot)
+                assert.notHasLog('Cannot find LaTeX root file.')
+            })
+        }
 
         it('should ignore external build commands and continue with the fixed secure recipe', async () => {
             set.config('latex.external.build.command', 'bash')
