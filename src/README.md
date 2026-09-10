@@ -1,86 +1,28 @@
-# Overview
+# Source overview
 
-[Providers](https://code.visualstudio.com/api/language-extensions/programmatic-language-features#language-features-listing) are defined under `providers/` and are registered in `main.ts`. All other components of the extension are defined under `components/` and are properties of the `Extension` class defined in `main.ts`, which can be accessed when needed. The `Extension` class is a kind of [service locator](https://martinfowler.com/articles/injection.html#UsingAServiceLocator).
+`main.ts` locates the extension root and loads `app.ts`. The latter initializes
+modules, registers commands and language providers, and handles editor events.
+Modules share services through the `lw` object in `lw.ts`.
 
-## Root file
+| Area | Entry points |
+| --- | --- |
+| Root discovery, file tracking, and project inspection | `core/root.ts`, `core/cache.ts`, `core/project-insight.ts` |
+| Manual builds and fixed recipes | `core/commands.ts`, `compile/build.ts`, `compile/recipe.ts` |
+| Completion, navigation, rename, and path fixes | `completion/`, `language/` |
+| Diagnostics and formatting | `lint/` |
+| PDF tabs and SyncTeX | `preview/pdfcustomeditor.ts`, `locate/synctex.ts` |
 
-Where LaTeX-Secure-Workspace differs from other extensions of VS Code is in treating the root file. For other extensions of programming languages, generally, there is only one compilation target per workspace. However, LaTeX-Secure-Workspace dynamically detects the root file and the target depending on the document being currently edited. See the upstream compile wiki for the original background: https://github.com/James-Yu/LaTeX-Workshop/wiki/Compile#the-root-file . `Manager.findRoot()` does the job. We register `findRoot` with `onDidChangeActiveTextEditor` in `main.ts`. This works well with multi-root workspaces.
+The build command resolves a project-local root and checks workspace trust and
+execution settings before running a fixed recipe. Saving or changing a file
+updates editor assistance; automatic builds are disabled.
 
-## Application Log
+PDF tabs use the webview in `resources/pdfviewer/` and the bundled PDF.js runtime.
+The snippet view uses local webview resources through `extras/snippet-view.ts`.
+Parser work runs through `parse/parser.ts` and its worker in
+`parse/parser/unified.ts`. MathJax work runs through `preview/mathjax.ts` and
+`preview/mathjax/mathjax.ts`.
 
-When something goes wrong, we always add to log messages what went wrong with `Logger.log()`. It is much beneficial for debugging.
-
-## VS Code filesystem and virtual workspaces
-
-See [#2669](https://github.com/James-Yu/LaTeX-Workshop/pull/2669).
-
-## EventBus
-
-See [#3193](https://github.com/James-Yu/LaTeX-Workshop/pull/3193).
-
-## workerpool
-
-To avoid blocking the main loop of the extension host process, we execute some heavy tasks in child processes with [workerpool](https://github.com/josdejong/workerpool).
-
-See:
-
-- https://github.com/James-Yu/LaTeX-Workshop/tree/master/src/components/parser
-- https://github.com/James-Yu/LaTeX-Workshop/tree/master/src/providers/preview
-
-
-## Architecture
-
-```mermaid
-flowchart LR
-  subgraph VSCode["VS Code"]
-    SnippetView["Snippet View\n snippetview.js"] --- PDFRenderer["PDF thumbnail renderer\n pdfrenderer.js"]
-  end
-  subgraph ExtensionHost["VS Code Extension Host"]
-    LW["LaTeX-Secure-Workspace\n main.ts"]
-    LW --- Server["Preview asset server \n(snippet only)\n server.ts "];
-    LW --- ParserPool["Parser pool\n syntax.ts"]
-    LW --- MathJaxPool["MathJax pool\n mathjaxpool.ts"]
-  end
-  ParserPool --> ParserWorkers["parser workers\n syntax_worker.ts"]
-  MathJaxPool --> MathJaxWorkers["MathJax workers\n mathjaxpool_worker.ts "]
-  click SnippetView "https://github.com/James-Yu/LaTeX-Workshop/blob/master/resources/snippetview/snippetview.js"
-  click PDFRenderer "https://github.com/James-Yu/LaTeX-Workshop/blob/master/resources/snippetview/pdfrenderer.js"
-  click LW "https://github.com/James-Yu/LaTeX-Workshop/blob/master/src/main.ts"
-  click Server "https://github.com/James-Yu/LaTeX-Workshop/blob/master/src/components/server.ts"
-  click ParserPool "https://github.com/James-Yu/LaTeX-Workshop/blob/master/src/components/parser/syntax.ts"
-  click MathJaxPool "https://github.com/James-Yu/LaTeX-Workshop/blob/master/src/providers/preview/mathjaxpool.ts"
-  click ParserWorkers "https://github.com/James-Yu/LaTeX-Workshop/blob/master/src/components/parser/syntax_worker.ts"
-  click MathJaxWorkers "https://github.com/James-Yu/LaTeX-Workshop/blob/master/src/providers/preview/mathjaxpool_worker.ts"
-```
-
-PDF files are opened in a VS Code custom editor backed by a curated `pdf.js` runtime bundled from `pdfjs-dist`.
-
-## flowchart
-
-```mermaid
-flowchart LR
-  ActivationEvents{{Activation Events}}
-  Activate["activate"]
-  Ready((Ready))
-  FindRootFile["Find root file"]
-  ActivationEvents --> Activate --> FindRootFile
-  ActiveDocumentOpened{{New document opened}}
-  Ready --> ActiveDocumentOpened
-  ActiveDocumentOpened --> FindRootFile
-  ActiveDocumentChanged{{The active tab changed}}
-  Ready --> ActiveDocumentChanged
-  ActiveDocumentChanged --> FindRootFile
-  FindRootFile --> Parse --> Ready
-  ActiveDocumentSaved{{The active document saved}}
-  Ready --> ActiveDocumentSaved
-  ActiveDocumentSaved --> Build
-  Build["Build the root file"]
-  Parse["Parse files"]
-  BuildCommand{{build command invoked}}
-  Ready --> BuildCommand
-  BuildCommand --> Build
-  Build --> Parse
-  ActiveTextChanged{{The active document edited}}
-  Ready --> ActiveTextChanged
-  ActiveTextChanged --> Parse
-```
+Use `lw.log(...)` for extension logs and `core/event.ts` for shared events.
+See the [repository layout](../docs/manual/repository-layout.md),
+[security controls](../docs/security-hardening.md), and
+[test guide](../test/README.md) for the broader development workflow.

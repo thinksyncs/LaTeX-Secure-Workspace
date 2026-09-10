@@ -178,6 +178,26 @@ export function stripCommentsAndVerbatim(text: string): string {
     return stripEnvironments(content, verbatimEnvs)
 }
 
+/** Mask non-code text without changing UTF-16 offsets used by editor edits. */
+export function maskCommentsAndVerbatim(text: string): string {
+    const configured = vscode.workspace.getConfiguration('latex-workshop').get<string[]>('latex.verbatimEnvs', [])
+    const environments = [...new Set(['verbatim', ...configured])]
+        .map(env => escapeRegExp(env) + '\\*?').join('|')
+    // Consume escapes together so \% and \\ do not start comments or commands.
+    // Match verbatim before comments because its contents may contain percent signs.
+    const ignoredText = new RegExp([
+        '\\\\begin\\s*\\{(' + environments + ')\\}[\\s\\S]*?(?:\\\\end\\s*\\{\\1\\}|$)',
+        '\\\\verb\\*?([^a-zA-Z0-9\\s])[^\\r\\n]*?(?:\\2|(?=\\r?\\n|$))',
+        '%[^\\r\\n]*',
+        '\\\\(?:[a-zA-Z@]+|[^\\r\\n])'
+    ].join('|'), 'gi')
+    return text.replace(ignoredText, (match: string, environment: string | undefined, delimiter: string | undefined) =>
+        environment !== undefined || delimiter !== undefined || match.startsWith('%') || match === '\\\\'
+            ? match.replace(/[^\r\n]/g, ' ')
+            : match
+    )
+}
+
 /**
  * Trim leading and ending spaces on every line
  * See https://blog.stevenlevithan.com/archives/faster-trim-javascript for

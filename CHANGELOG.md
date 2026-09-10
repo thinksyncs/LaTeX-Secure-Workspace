@@ -2,6 +2,17 @@
 
 ## Unreleased
 
+## [11.4.3] - 2026-09-11
+
+### Fixed
+- Keep label rename and missing-path fixes inside command arguments when their text also occurs in a command name or option.
+- Leave comments and verbatim examples unchanged during label rename and path fixes.
+- Resolve missing-path replacements from the build root, including references in child files.
+- Pass the selected root document's language when building from a root candidate.
+
+### Documentation
+- Update the source overview to match the current modules and manual-build workflow.
+
 ## [11.4.2] - 2026-09-10
 
 ### Security
