@@ -54,6 +54,22 @@ describe(testFileSuiteName(__filename), () => {
         assert.deepStrictEqual(labelRenameComponents.collectLabelMatches('\\\\label{literal}', 'literal'), [])
     })
 
+    it('should preserve labels after percent-encoded URLs without accepting real comments', () => {
+        for (const url of [
+            '\\url{https://host/a%20b}',
+            '\\nolinkurl{https://host/a%20b}',
+            '\\path{folder/a%20b}',
+            '\\href{https://host/a%20b}{link}',
+            '\\url|https://host/a%20b|'
+        ]) {
+            const content = url + '\\label{x}'
+            const [match] = labelRenameComponents.collectLabelMatches(content, 'x')
+            assert.ok(match)
+            assert.strictEqual(match.start, content.lastIndexOf('x'))
+        }
+        assert.deepStrictEqual(labelRenameComponents.collectLabelMatches('%20 note \\label{x}', 'x'), [])
+    })
+
     it('should prepare rename on the argument even when it matches the command name', async () => {
         const content = '\\label{label}'
         const document = await vscode.workspace.openTextDocument({ language: 'latex', content })

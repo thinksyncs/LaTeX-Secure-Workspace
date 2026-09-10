@@ -67,6 +67,14 @@ describe(testFileSuiteName(__filename), () => {
         assert.deepStrictEqual(pathQuickFixComponents.findPathReferences('% \\input{missing}'), [])
     })
 
+    it('should find a path after a percent-encoded URL', () => {
+        const content = '\\url{https://host/a%20b}\\input{missing}'
+        const [reference] = pathQuickFixComponents.findPathReferences(content)
+        assert.ok(reference)
+        assert.strictEqual(reference.start, content.indexOf('missing'))
+        assert.strictEqual(reference.value, 'missing')
+    })
+
     it('should reject absolute, dynamic, and multi-value paths', () => {
         assert.strictEqual(pathQuickFixComponents.isStaticProjectPath('sections/intro'), true)
         assert.strictEqual(pathQuickFixComponents.isStaticProjectPath('/tmp/intro.tex'), false)

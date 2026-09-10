@@ -188,11 +188,13 @@ export function maskCommentsAndVerbatim(text: string): string {
     const ignoredText = new RegExp([
         '\\\\begin\\s*\\{(' + environments + ')\\}[\\s\\S]*?(?:\\\\end\\s*\\{\\1\\}|$)',
         '\\\\verb\\*?([^a-zA-Z0-9\\s])[^\\r\\n]*?(?:\\2|(?=\\r?\\n|$))',
+        '\\\\(?:url|nolinkurl|path|href)\\s*(\\{[^}]*\\})',
+        '\\\\(?:url|nolinkurl|path)([^a-zA-Z0-9\\s{])[^\\r\\n]*?\\4',
         '%[^\\r\\n]*',
         '\\\\(?:[a-zA-Z@]+|[^\\r\\n])'
     ].join('|'), 'gi')
-    return text.replace(ignoredText, (match: string, environment: string | undefined, delimiter: string | undefined) =>
-        environment !== undefined || delimiter !== undefined || match.startsWith('%') || match === '\\\\'
+    return text.replace(ignoredText, (match: string, environment: string | undefined, delimiter: string | undefined, url: string | undefined, urlDelimiter: string | undefined) =>
+        environment !== undefined || delimiter !== undefined || url !== undefined || urlDelimiter !== undefined || match.startsWith('%') || match === '\\\\'
             ? match.replace(/[^\r\n]/g, ' ')
             : match
     )
