@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+## [11.4.4] - 2026-09-14
+
+### Maintenance
+- Rebuild the stable Marketplace package from the 11.4.3 implementation. No runtime features or dependency versions have changed.
+
 ## [11.4.3] - 2026-09-11
 
 ### Fixed
