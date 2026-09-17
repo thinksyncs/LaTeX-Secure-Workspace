@@ -324,7 +324,7 @@ function registerProviders(extensionContext: vscode.ExtensionContext) {
 function conflictCheck() {
     function check(ID: string, name: string, suggestion: string) {
         if (vscode.extensions.getExtension(ID) !== undefined) {
-            void vscode.window.showWarningMessage(`LaTeX Workspace Security is incompatible with  "${name}". ${suggestion}`)
+            void vscode.window.showWarningMessage(`LaTeX Workspace Security is incompatible with "${name}". ${suggestion}`)
         }
     }
     check('tomoki1207.pdf', 'vscode-pdf', 'We compete when opening a PDF file from the sidebar. Please consider disabling either extension.')
