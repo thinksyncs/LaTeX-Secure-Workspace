@@ -17,7 +17,11 @@ CI runs both groups through `npm run test:ci`. Coverage and release verification
 
 The `Docker secure builds on Linux` workflow separately runs `npm run test:docker` against an immutable TeX Live image. It invokes the production `scripts/latexmk` wrapper for both fixed profiles and verifies that each profile produces a PDF in the isolated output directory. It also checks that shell escape remains disabled, LuaLaTeX cannot load the socket library, the source mount rejects writes, and LuaLaTeX populates its cache inside the isolated output directory.
 
-The Docker test does not pull an implicit image. For a local run, first pull a digest-pinned TeX Live image and set `LATEXWORKSHOP_DOCKER_TEST_IMAGE` to the same `repository@sha256:...` value. This keeps the test input explicit and reproducible.
+The Docker test also builds the unchanged `samples/sample/t.tex` onboarding sample with the fixed pdfLaTeX profile. This proves compilation through the wrapper, not a visible VS Code walkthrough.
+
+The Docker test does not pull an implicit image. For a local run, first pull the digest-pinned image in the [first-build walkthrough](../README.md#get-started) and set `LATEXWORKSHOP_DOCKER_TEST_IMAGE` to the same `repository@sha256:...` value. This keeps the test input explicit and reproducible.
+
+`test/node/product-surface.test.js` checks the compatibility-setting inventory, command branding, and agreement between the README, sample and CI image. Settings UI visibility still needs a visual check in an isolated VS Code profile: an unset deprecated setting should be hidden, while an explicitly configured one should show its warning. Do not use your normal profile or treat a manifest assertion as visual verification.
 
 ### How tests are executed via CLI
 

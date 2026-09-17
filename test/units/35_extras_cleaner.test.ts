@@ -23,7 +23,7 @@ describe(testFileSuiteName(__filename), () => {
 
             assert.ok(fs.existsSync(targetFile))
             assert.strictEqual(showErrorStub.firstCall?.args[0], 'Secure cleanup directory is unsafe. Remove symbolic links from .lw-security and try again.')
-            assert.strictEqual(showErrorStub.firstCall?.args[1], 'Open LaTeX-Secure-Workspace log')
+            assert.strictEqual(showErrorStub.firstCall?.args[1], 'Open LaTeX Workspace Security log')
         } finally {
             showErrorStub.restore()
             fs.rmSync(projectDir, { recursive: true, force: true })
@@ -70,7 +70,7 @@ describe(testFileSuiteName(__filename), () => {
             const errorCalls = showErrorStub.getCalls().map(call => call.args as unknown[])
             assert.ok(errorCalls.some(args =>
                 args[0] === 'Secure cleanup failed for one or more build artifacts. Open the extension log for details.'
-                && args[1] === 'Open LaTeX-Secure-Workspace log'
+                && args[1] === 'Open LaTeX Workspace Security log'
             ))
         } finally {
             unlinkStub.restore()

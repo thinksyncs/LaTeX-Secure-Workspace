@@ -3,7 +3,7 @@
   "displayName": "LaTeX Workspace Security",
   "description": "Secure LaTeX tools for VS Code with project-local completions, manual build, diagnostics, and a local PDF tab viewer with SyncTeX.",
   "icon": "icons/icon.png",
-  "version": "11.4.4",
+  "version": "11.4.5",
   "publisher": "ToppyMicroServices",
   "license": "MIT",
   "homepage": "https://github.com/thinksyncs/LaTeX-Secure-Workspace",
@@ -266,7 +266,7 @@
       {
         "id": "latex_workshop_log",
         "aliases": [
-          "LaTeX-Secure-Workspace log"
+          "LaTeX Workspace Security log"
         ],
         "configuration": "./syntax/latex-workshop-log-language-configuration.json"
       }
@@ -557,230 +557,230 @@
       {
         "command": "latex-workshop.navigate-envpair",
         "title": "%command.navigate-envpair%",
-        "category": "LaTeX-Secure-Workspace"
+        "category": "LaTeX Workspace Security"
       },
       {
         "command": "latex-workshop.select-envname",
         "title": "%command.select-envname%",
-        "category": "LaTeX-Secure-Workspace"
+        "category": "LaTeX Workspace Security"
       },
       {
         "command": "latex-workshop.select-envcontent",
         "title": "%command.select-envcontent%",
-        "category": "LaTeX-Secure-Workspace"
+        "category": "LaTeX Workspace Security"
       },
       {
         "command": "latex-workshop.select-env",
         "title": "%command.select-env%",
-        "category": "LaTeX-Secure-Workspace"
+        "category": "LaTeX Workspace Security"
       },
       {
         "command": "latex-workshop.multicursor-envname",
         "title": "%command.multicursor-envname%",
-        "category": "LaTeX-Secure-Workspace"
+        "category": "LaTeX Workspace Security"
       },
       {
         "command": "latex-workshop.wrap-env",
         "title": "%command.wrap-env%",
-        "category": "LaTeX-Secure-Workspace"
+        "category": "LaTeX Workspace Security"
       },
       {
         "command": "latex-workshop.surround",
         "title": "%command.surround%",
-        "category": "LaTeX-Secure-Workspace"
+        "category": "LaTeX Workspace Security"
       },
       {
         "command": "latex-workshop.close-env",
         "title": "%command.close-env%",
-        "category": "LaTeX-Secure-Workspace"
+        "category": "LaTeX Workspace Security"
       },
       {
         "command": "latex-workshop.toggle-equation-envname",
         "title": "%command.toggle-equation-envname%",
-        "category": "LaTeX-Secure-Workspace"
+        "category": "LaTeX Workspace Security"
       },
       {
         "command": "latex-workshop.revealOutputDir",
         "title": "%command.revealoutput%",
-        "category": "LaTeX-Secure-Workspace",
+        "category": "LaTeX Workspace Security",
         "enablement": "!virtualWorkspace && isWorkspaceTrusted"
       },
       {
         "command": "latex-workshop.saveWithoutBuilding",
         "title": "%command.saveWithoutBuilding%",
-        "category": "LaTeX-Secure-Workspace"
+        "category": "LaTeX Workspace Security"
       },
       {
         "command": "latex-workshop.activate",
         "title": "Activate LaTeX Workspace Security",
-        "category": "LaTeX-Secure-Workspace"
+        "category": "LaTeX Workspace Security"
       },
       {
         "command": "latex-workshop.build",
         "title": "%command.build%",
-        "category": "LaTeX-Secure-Workspace",
+        "category": "LaTeX Workspace Security",
         "icon": "$(debug-start)",
         "enablement": "!virtualWorkspace && isWorkspaceTrusted"
       },
       {
         "command": "latex-workshop.build-recipe",
         "title": "%command.buildRecipe%",
-        "category": "LaTeX-Secure-Workspace",
+        "category": "LaTeX Workspace Security",
         "enablement": "!virtualWorkspace && isWorkspaceTrusted"
       },
       {
         "command": "latex-workshop.view",
         "title": "%command.view%",
-        "category": "LaTeX-Secure-Workspace",
+        "category": "LaTeX Workspace Security",
         "enablement": "!virtualWorkspace"
       },
       {
         "command": "latex-workshop.refresh-viewer",
         "title": "%command.refresh-viewer%",
-        "category": "LaTeX-Secure-Workspace",
+        "category": "LaTeX Workspace Security",
         "enablement": "!virtualWorkspace"
       },
       {
         "command": "latex-workshop.secure-build-status",
         "title": "%command.secure-build-status%",
-        "category": "LaTeX-Secure-Workspace",
+        "category": "LaTeX Workspace Security",
         "icon": "$(shield)"
       },
       {
         "command": "latex-workshop.secure-mode-report",
         "title": "%command.secure-mode-report%",
-        "category": "LaTeX-Secure-Workspace",
+        "category": "LaTeX Workspace Security",
         "icon": "$(checklist)"
       },
       {
         "command": "latex-workshop.build-root-inspector",
         "title": "%command.build-root-inspector%",
-        "category": "LaTeX-Secure-Workspace",
+        "category": "LaTeX Workspace Security",
         "icon": "$(type-hierarchy)"
       },
       {
         "command": "latex-workshop.project-health",
         "title": "%command.project-health%",
-        "category": "LaTeX-Secure-Workspace",
+        "category": "LaTeX Workspace Security",
         "icon": "$(pulse)"
       },
       {
         "command": "latex-workshop.build-provenance",
         "title": "%command.build-provenance%",
-        "category": "LaTeX-Secure-Workspace",
+        "category": "LaTeX Workspace Security",
         "icon": "$(verified)"
       },
       {
         "command": "latex-workshop.build-with-root-candidate",
         "title": "%command.build-with-root-candidate%",
-        "category": "LaTeX-Secure-Workspace",
+        "category": "LaTeX Workspace Security",
         "icon": "$(run)",
         "enablement": "!virtualWorkspace && isWorkspaceTrusted"
       },
       {
         "command": "latex-workshop.kill",
         "title": "%command.kill%",
-        "category": "LaTeX-Secure-Workspace",
+        "category": "LaTeX Workspace Security",
         "enablement": "!virtualWorkspace && isWorkspaceTrusted"
       },
       {
         "command": "latex-workshop.clean",
         "title": "%command.clean%",
-        "category": "LaTeX-Secure-Workspace",
+        "category": "LaTeX Workspace Security",
         "enablement": "!virtualWorkspace && isWorkspaceTrusted"
       },
       {
         "command": "latex-workshop.texdoc",
         "title": "%command.texdoc%",
-        "category": "LaTeX-Secure-Workspace",
+        "category": "LaTeX Workspace Security",
         "enablement": "!virtualWorkspace && isWorkspaceTrusted"
       },
       {
         "command": "latex-workshop.texdocUsepackages",
         "title": "%command.texdocUsepackages%",
-        "category": "LaTeX-Secure-Workspace",
+        "category": "LaTeX Workspace Security",
         "enablement": "!virtualWorkspace && isWorkspaceTrusted"
       },
       {
         "command": "latex-workshop.citation",
         "title": "%command.citation%",
-        "category": "LaTeX-Secure-Workspace"
+        "category": "LaTeX Workspace Security"
       },
       {
         "command": "latex-workshop.addtexroot",
         "title": "%command.addtexroot%",
-        "category": "LaTeX-Secure-Workspace"
+        "category": "LaTeX Workspace Security"
       },
       {
         "command": "latex-workshop.compilerlog",
         "title": "%command.compilerlog%",
-        "category": "LaTeX-Secure-Workspace",
+        "category": "LaTeX Workspace Security",
         "enablement": "!virtualWorkspace"
       },
       {
         "command": "latex-workshop.log",
         "title": "%command.log%",
-        "category": "LaTeX-Secure-Workspace"
+        "category": "LaTeX Workspace Security"
       },
       {
         "command": "latex-workshop.actions",
         "title": "%command.actions%",
-        "category": "LaTeX-Secure-Workspace"
+        "category": "LaTeX Workspace Security"
       },
       {
         "command": "latex-workshop-dev.parselog",
         "title": "%command-dev.parselog%",
-        "category": "LaTeX-Secure-Workspace DevTools"
+        "category": "LaTeX Workspace Security DevTools"
       },
       {
         "command": "latex-workshop-dev.parsetex",
         "title": "%command-dev.parsetex%",
-        "category": "LaTeX-Secure-Workspace DevTools"
+        "category": "LaTeX Workspace Security DevTools"
       },
       {
         "command": "latex-workshop-dev.parsebib",
         "title": "%command-dev.parsebib%",
-        "category": "LaTeX-Secure-Workspace DevTools"
+        "category": "LaTeX Workspace Security DevTools"
       },
       {
         "command": "latex-workshop-dev.striptext",
         "title": "%command-dev.striptext%",
-        "category": "LaTeX-Secure-Workspace DevTools"
+        "category": "LaTeX Workspace Security DevTools"
       },
       {
         "command": "latex-workshop.promote-sectioning",
         "title": "%command.promote-sectioning%",
-        "category": "LaTeX-Secure-Workspace"
+        "category": "LaTeX Workspace Security"
       },
       {
         "command": "latex-workshop.demote-sectioning",
         "title": "%command.demote-sectioning%",
-        "category": "LaTeX-Secure-Workspace"
+        "category": "LaTeX Workspace Security"
       },
       {
         "command": "latex-workshop.select-section",
         "title": "%command.select-section%",
-        "category": "LaTeX-Secure-Workspace"
+        "category": "LaTeX Workspace Security"
       },
       {
         "command": "latex-workshop.bibsort",
         "title": "%command.bibsort%",
-        "category": "LaTeX-Secure-Workspace"
+        "category": "LaTeX Workspace Security"
       },
       {
         "command": "latex-workshop.bibalign",
         "title": "%command.bibalign%",
-        "category": "LaTeX-Secure-Workspace"
+        "category": "LaTeX Workspace Security"
       },
       {
         "command": "latex-workshop.bibalignsort",
         "title": "%command.bibalignsort%",
-        "category": "LaTeX-Secure-Workspace"
+        "category": "LaTeX Workspace Security"
       },
       {
         "command": "latex-workshop.checkcitations",
         "title": "%command.checkcitations%",
-        "category": "LaTeX-Secure-Workspace"
+        "category": "LaTeX Workspace Security"
       }
     ],
     "keybindings": [
@@ -1018,6 +1018,7 @@
       "title": "LaTeX",
       "properties": {
         "latex-workshop.latex.recipes": {
+          "markdownDeprecationMessage": "Retained for compatibility; this setting does not control the supported workflow. Custom recipes are ignored in this secure build. **Build with recipe** exposes only the fixed `secure-latexmk` and `secure-lualatexmk` profiles. Both profiles use Docker isolation by default.",
           "scope": "resource",
           "type": "array",
           "items": {
@@ -1104,12 +1105,14 @@
           "markdownDescription": "Compatibility setting retained from upstream. Custom recipes are ignored in this secure build. **Build with recipe** exposes only the fixed `secure-latexmk` and `secure-lualatexmk` profiles. Both profiles use Docker isolation by default."
         },
         "latex-workshop.latex.recipe.default": {
+          "markdownDeprecationMessage": "Retained for compatibility; this setting does not control the supported workflow. The normal build command uses fixed `secure-latexmk`; use **Build with recipe** to explicitly select fixed `secure-lualatexmk`. Secure builds require Docker by default.",
           "scope": "resource",
           "type": "string",
           "default": "first",
           "markdownDescription": "Compatibility setting retained from upstream. The normal build command uses fixed `secure-latexmk`; use **Build with recipe** to explicitly select fixed `secure-lualatexmk`. Secure builds require Docker by default."
         },
         "latex-workshop.latex.tools": {
+          "markdownDeprecationMessage": "Retained for compatibility; this setting does not control the supported workflow. Custom tools are ignored in this secure build because manual builds always use the fixed internal toolchain.",
           "scope": "resource",
           "type": "array",
           "items": {
@@ -1294,12 +1297,14 @@
           "markdownDescription": "Define the arguments to be input to BIB magic command executable. This can be overridden by using \"% !BIB options\"."
         },
         "latex-workshop.latex.external.build.command": {
+          "markdownDeprecationMessage": "Retained for compatibility; this setting does not control the supported workflow. External build commands are ignored in this secure build.",
           "scope": "resource",
           "type": "string",
           "default": "",
           "markdownDescription": "Compatibility setting retained from upstream. External build commands are ignored in this secure build."
         },
         "latex-workshop.latex.external.build.args": {
+          "markdownDeprecationMessage": "Retained for compatibility; this setting does not control the supported workflow. External build commands are ignored in this secure build, so this setting has no effect.",
           "scope": "resource",
           "type": "array",
           "items": {
@@ -1322,6 +1327,7 @@
           "markdownDescription": "Compatibility setting retained from upstream. In this secure build, secure build and viewer flows ignore root-file and build-control magic comments entirely, including `% !TEX root`, `% !TEX program`, `% !TEX options`, `% !BIB program`, and `% !LW recipe`."
         },
         "latex-workshop.latex.build.fromWorkspaceFolder": {
+          "markdownDeprecationMessage": "Retained for compatibility; this setting does not control the supported workflow. Manual builds in this secure build always run from the directory containing the resolved root file.",
           "scope": "resource",
           "type": "boolean",
           "default": false,
@@ -1447,12 +1453,14 @@
           "markdownDescription": "Compatibility setting retained from upstream. Secure build commands ignore custom root search exclusions and use a fixed internal root detection policy."
         },
         "latex-workshop.latex.rootFile.useSubFile": {
+          "markdownDeprecationMessage": "Retained for compatibility; this setting does not control the supported workflow. This secure build always uses the resolved main root file for build and clean operations and does not switch execution to a subfile.",
           "scope": "resource",
           "type": "boolean",
           "default": true,
           "markdownDescription": "Compatibility setting retained from upstream. This secure build always uses the resolved main root file for build and clean operations and does not switch execution to a subfile."
         },
         "latex-workshop.latex.rootFile.doNotPrompt": {
+          "markdownDeprecationMessage": "Retained for compatibility; this setting does not control the supported workflow. This secure build does not prompt for subfile-vs-root execution and always uses the resolved main root file for build and clean commands.",
           "scope": "resource",
           "type": "boolean",
           "default": false,
@@ -1525,6 +1533,7 @@
           "markdownDescription": "Files to ignore from the watching mechanism, i.e., no intellisense or build-on-file-change. However, document structure/outline and build-on-save won't be affected (For build-on-save configuration, see #latex-workshop.autoBuild.onSave.files.ignore#). This property must be an array of glob patterns. The patterns are matched against the absolute file path. To ignore everything inside the `texmf` tree, `**/texmf/**` can be used. "
         },
         "latex-workshop.latex.autoBuild.run": {
+          "markdownDeprecationMessage": "Retained for compatibility; this setting does not control the supported workflow. Auto build is disabled in this secure build, so this setting has no effect.",
           "scope": "resource",
           "type": "string",
           "enum": [
@@ -1541,18 +1550,21 @@
           "markdownDescription": "Compatibility setting retained from upstream. Auto build is disabled in this secure build, so this setting has no effect."
         },
         "latex-workshop.latex.autoBuild.interval": {
+          "markdownDeprecationMessage": "Retained for compatibility; this setting does not control the supported workflow. Auto build is disabled in this secure build, so this setting has no effect.",
           "scope": "resource",
           "type": "integer",
           "default": 1000,
           "markdownDescription": "Compatibility setting retained from upstream. Auto build is disabled in this secure build, so this setting has no effect."
         },
         "latex-workshop.latex.autoBuild.cleanAndRetry.enabled": {
+          "markdownDeprecationMessage": "Retained for compatibility; this setting does not control the supported workflow. Automatic clean-and-retry is disabled in this secure build, so this setting has no effect.",
           "scope": "resource",
           "type": "boolean",
           "default": true,
           "markdownDescription": "Compatibility setting retained from upstream. Automatic clean-and-retry is disabled in this secure build, so this setting has no effect."
         },
         "latex-workshop.latex.autoBuild.onSave.files.ignore": {
+          "markdownDeprecationMessage": "Retained for compatibility; this setting does not control the supported workflow. Auto build is disabled in this secure build, so this setting has no effect.",
           "scope": "window",
           "type": "array",
           "items": {
@@ -1571,6 +1583,7 @@
           "markdownDescription": "Clear the LaTeX Compiler logs before every step of a recipe. Set this property to false to keep the logs of all tools in a recipe."
         },
         "latex-workshop.latex.autoClean.run": {
+          "markdownDeprecationMessage": "Retained for compatibility; this setting does not control the supported workflow. Automatic post-build cleaning is disabled in this secure build, so this setting has no effect.",
           "scope": "resource",
           "type": "string",
           "enum": [
@@ -1589,12 +1602,14 @@
           "markdownDescription": "Compatibility setting retained from upstream. Automatic post-build cleaning is disabled in this secure build, so this setting has no effect."
         },
         "latex-workshop.latex.clean.subfolder.enabled": {
+          "markdownDeprecationMessage": "Retained for compatibility; this setting does not control the supported workflow. Clean uses the fixed secure policy in this build, so this setting has no effect.",
           "scope": "resource",
           "type": "boolean",
           "default": false,
           "markdownDescription": "Compatibility setting retained from upstream. Clean uses the fixed secure policy in this build, so this setting has no effect."
         },
         "latex-workshop.latex.clean.fileTypes": {
+          "markdownDeprecationMessage": "Retained for compatibility; this setting does not control the supported workflow. Clean uses a fixed internal list of auxiliary file types in this secure build, so this setting has no effect.",
           "scope": "resource",
           "type": "array",
           "items": {
@@ -1628,12 +1643,14 @@
           "markdownDescription": "Compatibility setting retained from upstream. Clean uses a fixed internal list of auxiliary file types in this secure build, so this setting has no effect."
         },
         "latex-workshop.latex.clean.command": {
+          "markdownDeprecationMessage": "Retained for compatibility; this setting does not control the supported workflow. External clean commands are disabled in this secure build.",
           "scope": "resource",
           "type": "string",
           "default": "latexmk",
           "markdownDescription": "Compatibility setting retained from upstream. External clean commands are disabled in this secure build."
         },
         "latex-workshop.latex.clean.args": {
+          "markdownDeprecationMessage": "Retained for compatibility; this setting does not control the supported workflow. External clean commands are disabled in this secure build, so this setting has no effect.",
           "scope": "resource",
           "type": "array",
           "items": {
@@ -1648,6 +1665,7 @@
           "markdownDescription": "Compatibility setting retained from upstream. External clean commands are disabled in this secure build, so this setting has no effect."
         },
         "latex-workshop.latex.clean.method": {
+          "markdownDeprecationMessage": "Retained for compatibility; this setting does not control the supported workflow. Clean always uses the fixed secure policy in this build.",
           "scope": "resource",
           "type": "string",
           "default": "command",
@@ -1770,6 +1788,7 @@
           ]
         },
         "latex-workshop.view.pdf.ref.viewer": {
+          "markdownDeprecationMessage": "Retained for compatibility; this setting does not control the supported workflow. Reference-based viewer selection is not used in this secure build. The local tab viewer is used when PDF preview is opened.",
           "type": "string",
           "default": "auto",
           "enum": [
@@ -1780,6 +1799,7 @@
           "markdownDescription": "Compatibility setting retained from upstream. Reference-based viewer selection is not used in this secure build. The local tab viewer is used when PDF preview is opened."
         },
         "latex-workshop.view.pdf.internal.port": {
+          "markdownDeprecationMessage": "Retained for compatibility; this setting does not control the supported workflow. The minimal tab-only PDF viewer does not use an internal HTTP server, so this setting has no effect.",
           "scope": "window",
           "type": "number",
           "default": 0,
@@ -1796,6 +1816,7 @@
           "markdownDescription": "Select how the internal tab viewer sends reverse SyncTeX requests back to the extension host."
         },
         "latex-workshop.view.pdf.internal.keyboardEvent": {
+          "markdownDeprecationMessage": "Retained for compatibility; this setting does not control the supported workflow. Internal viewer keyboard rebroadcast is disabled in this secure build, so this setting has no effect.",
           "scope": "window",
           "type": "string",
           "default": "auto",
@@ -1807,12 +1828,14 @@
           "markdownDescription": "Compatibility setting retained from upstream. Internal viewer keyboard rebroadcast is disabled in this secure build, so this setting has no effect."
         },
         "latex-workshop.view.pdf.external.viewer.command": {
+          "markdownDeprecationMessage": "Retained for compatibility; this setting does not control the supported workflow. External PDF viewer execution is disabled in this secure build.",
           "scope": "window",
           "type": "string",
           "default": "",
           "markdownDescription": "Compatibility setting retained from upstream. External PDF viewer execution is disabled in this secure build."
         },
         "latex-workshop.view.pdf.external.viewer.args": {
+          "markdownDeprecationMessage": "Retained for compatibility; this setting does not control the supported workflow. External PDF viewer execution is disabled in this secure build, so this setting has no effect.",
           "scope": "window",
           "type": "array",
           "items": {
@@ -1824,12 +1847,14 @@
           "markdownDescription": "Compatibility setting retained from upstream. External PDF viewer execution is disabled in this secure build, so this setting has no effect."
         },
         "latex-workshop.view.pdf.external.synctex.command": {
+          "markdownDeprecationMessage": "Retained for compatibility; this setting does not control the supported workflow. External SyncTeX is disabled in this secure build.",
           "scope": "window",
           "type": "string",
           "default": "",
           "markdownDescription": "Compatibility setting retained from upstream. External SyncTeX is disabled in this secure build."
         },
         "latex-workshop.view.pdf.external.synctex.args": {
+          "markdownDeprecationMessage": "Retained for compatibility; this setting does not control the supported workflow. External SyncTeX is disabled in this secure build, so this setting has no effect.",
           "scope": "window",
           "type": "array",
           "items": {
@@ -2040,6 +2065,7 @@
           "markdownDescription": "Controls whether forward SyncTeX shows an indicator in the internal tab viewer."
         },
         "latex-workshop.synctex.afterBuild.enabled": {
+          "markdownDeprecationMessage": "Retained for compatibility; this setting does not control the supported workflow. Manual builds in this secure build always reveal the active source location in the secure PDF, so this setting has no effect.",
           "scope": "window",
           "type": "boolean",
           "default": false,
@@ -2886,12 +2912,14 @@
           "markdownDescription": "When `#latex-workshop.bibtex-fields.sort.enabled#` is true, sort fields according the order defined here and then alphabetically for non listed fields."
         },
         "latex-workshop.mathpreviewpanel.cursor.enabled": {
+          "markdownDeprecationMessage": "Retained for compatibility; this setting does not control the supported workflow. The math preview panel is disabled in this secure build, so this setting has no effect.",
           "scope": "window",
           "type": "boolean",
           "default": false,
           "markdownDescription": "Compatibility setting retained from upstream. The math preview panel is disabled in this secure build, so this setting has no effect."
         },
         "latex-workshop.mathpreviewpanel.editorGroup": {
+          "markdownDeprecationMessage": "Retained for compatibility; this setting does not control the supported workflow. The math preview panel is disabled in this secure build, so this setting has no effect.",
           "scope": "window",
           "type": "string",
           "default": "below",
@@ -2990,7 +3018,7 @@
     "test:docker": "node ./dev/testDockerBuild.mjs",
     "test:fuzz": "node --test ./test/fuzz/*.test.js",
     "test:integration": "node ./dev/runTestCi.mjs",
-    "test:node": "node --test ./test/node/fixture-selection.test.js ./test/node/test-command-boundaries.test.js ./test/fuzz/graphics-diagnostics-utils.test.js ./test/fuzz/parser.fast-check.test.js",
+    "test:node": "node --test ./test/node/fixture-selection.test.js ./test/node/test-command-boundaries.test.js ./test/node/product-surface.test.js ./test/fuzz/graphics-diagnostics-utils.test.js ./test/fuzz/parser.fast-check.test.js",
     "watch-src": "tsc -watch -p tsconfig.json",
     "update-grammar": "node ./dev/update-grammar.mjs"
   },

@@ -20,6 +20,29 @@ This repository has two release tracks: `stable` and `daily`.
 
 For a manual recovery release, create and publish the matching GitHub Release and dispatch `stable-release.yml` with that tag. The same environment approval and validation steps still apply.
 
+## Release notes for users
+
+Add an entry to `CHANGELOG.md` only when preparing an authorized release. Describe the shipped change, not the implementation plan. Use this template, omitting empty sections:
+
+```markdown
+## [VERSION] - YYYY-MM-DD
+
+### User impact
+- What changes in the user's workflow, and who benefits or is affected.
+
+### Required action
+- State any migration or setting change. Write "None" when no action is needed.
+
+### Known limitations
+- State relevant limits and environments that have not been verified.
+```
+
+For example, a settings-display change can say: "Settings for disabled workflows are marked deprecated. Existing setting keys and values remain accepted; build behavior is unchanged. No action is required."
+
+For a rebuild-only release, state the actual reason for rebuilding, whether runtime code or dependencies changed, and whether users need to update. Do not imply a feature or security fix when none shipped. For example: "Repackage the same implementation to correct the Marketplace documentation. Runtime code and dependency versions are unchanged. No settings migration is required." Use that explanation only if it matches the release.
+
+Do not rewrite historical entries, bump a version, or dispatch publication as part of documentation-only maintenance.
+
 ## Daily Release
 
 - `daily-release.yml` runs every day or on manual dispatch.

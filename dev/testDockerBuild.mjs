@@ -28,6 +28,12 @@ assert.match(
 
 const cases = [
     {
+        name: 'onboarding-sample',
+        engine: 'pdflatex',
+        enginePattern: /This is pdfTeX/u,
+        body: readFileSync(path.join(repositoryRoot, 'samples', 'sample', 't.tex'), 'utf8')
+    },
+    {
         name: 'pdflatex',
         enginePattern: /This is pdfTeX/u,
         body: [
@@ -79,7 +85,7 @@ try {
 
         const recipeArgs = [
             ...fixedRecipeArguments.commonArgsBeforeEngine,
-            ...fixedRecipeArguments.engineArgs[testCase.name],
+            ...fixedRecipeArguments.engineArgs[testCase.engine ?? testCase.name],
             ...fixedRecipeArguments.commonArgsAfterEngine
         ].map(arg => arg
             .replaceAll('%DOCFILE%', '/latex-workshop/out')

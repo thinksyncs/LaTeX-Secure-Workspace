@@ -2,6 +2,20 @@
 
 ## Unreleased
 
+## [11.4.5] - 2026-09-17
+
+### User impact
+- Add a first-build walkthrough with an explicit Docker image, User Settings, and an existing sample, plus troubleshooting guidance.
+- Mark 28 settings for disabled workflows as deprecated. Keep seven settings with active editor or file-lookup uses visible.
+- Align command, log, and diagnostic labels under LaTeX Workspace Security. Build behavior, security defaults, and dependency versions are unchanged.
+
+### Required action
+- None. Existing setting keys, values, command IDs, and extension identity remain compatible.
+
+### Known limitations
+- Automated checks cover sample compilation, PDF tab creation, and setting-value compatibility. A fresh-profile visual check of PDF rendering and deprecated-setting visibility remains outstanding.
+- Container build evidence is from Linux/amd64 Docker CI, not macOS, Windows, ARM, or Podman validation.
+
 ## [11.4.4] - 2026-09-14
 
 ### Maintenance
