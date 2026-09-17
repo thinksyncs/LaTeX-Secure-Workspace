@@ -4,6 +4,8 @@ LaTeX editing, manual builds, and a local PDF viewer for [Visual Studio Code](ht
 
 This is an independent fork, not the official `James-Yu.latex-workshop` extension. Settings and command IDs retain the `latex-workshop.*` prefix for compatibility.
 
+Use it when you want to edit locally and start fixed-recipe builds yourself. It is not a fit for workflows that depend on automatic builds, custom recipes, or arbitrary build commands.
+
 [Install from Marketplace](https://marketplace.visualstudio.com/items?itemName=ToppyMicroServices.tex-workspace-secure) · [User manual](./docs/manual/README.md) · [Releases](https://github.com/thinksyncs/LaTeX-Secure-Workspace/releases)
 
 ## What you can do
@@ -17,25 +19,45 @@ There is no telemetry or automatic build. Custom recipes, workspace-defined buil
 
 ## Get started
 
-1. Install the extension and open a LaTeX project in a trusted, local workspace.
-2. Choose a build mode below.
-3. Run **LaTeX-Secure-Workspace: Build LaTeX project** from the Command Palette or the editor build button.
+The example below uses Docker and the digest-pinned TeX Live image in our [Linux CI](./.github/workflows/docker-secure-builds.yml). The recorded [Linux/amd64 run](https://github.com/thinksyncs/LaTeX-Secure-Workspace/actions/runs/34818569833) passed both fixed engine profiles. This is not a claim of verification on macOS, Windows, ARM, or Podman. The image is large; allow time and disk space for the first download.
 
-**Docker or Podman — pdfLaTeX and LuaLaTeX**
+1. Install the extension and install/start Docker. Run `docker version` in a terminal; both the client and server must respond.
+2. Pull the image explicitly. Builds do not download it automatically:
 
-Install the container runtime and configure these settings in VS Code **User Settings**:
+   ```sh
+   docker pull texlive/texlive@sha256:bd551dda2195c6830bb714f731d74c4f71cda812178abae15a206fd68b5dbb7c
+   ```
 
-| Setting | Value |
-| --- | --- |
-| `latex-workshop.docker.enabled` | `true` |
-| `latex-workshop.docker.image.latex` | A trusted LaTeX image containing `latexmk` and the required TeX packages |
-| `latex-workshop.docker.path` | `docker` (default), or `podman` |
+3. Open **Preferences: Open User Settings (JSON)** and merge these keys into the existing object. Do not replace unrelated settings or put these keys in workspace settings:
+
+   ```json
+   {
+     "latex-workshop.docker.enabled": true,
+     "latex-workshop.docker.image.latex": "texlive/texlive@sha256:bd551dda2195c6830bb714f731d74c4f71cda812178abae15a206fd68b5dbb7c",
+     "latex-workshop.docker.path": "docker"
+   }
+   ```
+
+4. Open an empty local folder in VS Code, trust the folder you created, and save the following as `t.tex`. This is the existing [onboarding sample](./samples/sample/t.tex):
+
+   ```latex
+   \documentclass[12pt]{article}
+   \begin{document}
+     abcd
+   \end{document}
+   ```
+
+5. With `t.tex` active, run **LaTeX Workspace Security: Build LaTeX project**. A successful build creates `.lw-security/t.pdf` and opens it in a VS Code tab. Check that the page shows `abcd`. If the tab was closed, run **LaTeX Workspace Security: View PDF**.
+
+Command names above are the English UI labels; translated VS Code installations may show localized titles.
 
 The default recipe is `secure-latexmk` (pdfLaTeX). For LuaLaTeX, run **Build with recipe** and select `secure-lualatexmk`.
 
 Container builds disable networking, mount the workspace read-only, and write outputs to `.lw-security` beside the root document.
 
-**Without Docker — pdfLaTeX only**
+For Podman and the optional local mode, see the [manual](./docs/manual/README.md#other-build-modes). Neither is needed for the Docker walkthrough above.
+
+### Without Docker — pdfLaTeX only
 
 Install a local TeX distribution with `latexmk`. With Docker disabled, a build shows a security warning before TeX starts. Choose **Yes** to enable `latex-workshop.security.allowLocalPdfLaTeX` in User Settings and continue, or **No** to leave the build blocked.
 

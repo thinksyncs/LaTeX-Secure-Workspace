@@ -6,7 +6,7 @@ import { ensureMacTeXBinOnPath } from './utils/tex-path'
 
 ensureMacTeXBinOnPath()
 const logger = lw.log('Extension')
-logger.log('Initializing LaTeX-Secure-Workspace.')
+logger.log('Initializing LaTeX Workspace Security.')
 
 const { event } = require('./core/event') as typeof import('./core/event')
 lw.event = event
@@ -159,7 +159,7 @@ export function activate(extensionContext: vscode.ExtensionContext) {
     })
     conflictCheck()
 
-    logger.log('LaTeX-Secure-Workspace initialized.')
+    logger.log('LaTeX Workspace Security initialized.')
 }
 
 function registerLatexWorkshopCommands(extensionContext: vscode.ExtensionContext) {
@@ -324,7 +324,7 @@ function registerProviders(extensionContext: vscode.ExtensionContext) {
 function conflictCheck() {
     function check(ID: string, name: string, suggestion: string) {
         if (vscode.extensions.getExtension(ID) !== undefined) {
-            void vscode.window.showWarningMessage(`LaTeX-Secure-Workspace is incompatible with  "${name}". ${suggestion}`)
+            void vscode.window.showWarningMessage(`LaTeX Workspace Security is incompatible with  "${name}". ${suggestion}`)
         }
     }
     check('tomoki1207.pdf', 'vscode-pdf', 'We compete when opening a PDF file from the sidebar. Please consider disabling either extension.')

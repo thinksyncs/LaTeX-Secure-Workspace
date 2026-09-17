@@ -167,7 +167,7 @@ async function isBuildEnvironmentReady(scope: vscode.ConfigurationScope, recipeN
         } catch (error) {
             logger.logError('Could not enable local pdfLaTeX compatibility in User Settings.', error)
             logger.refreshStatus('x', 'errorForeground', undefined, 'error')
-            void logger.showErrorMessageWithExtensionLogButton('Could not enable latex-workshop.security.allowLocalPdfLaTeX in User Settings. Open the LaTeX-Secure-Workspace log for details.')
+            void logger.showErrorMessageWithExtensionLogButton('Could not enable latex-workshop.security.allowLocalPdfLaTeX in User Settings. Open the LaTeX Workspace Security log for details.')
             return false
         }
         logger.log('Enabled local pdfLaTeX compatibility in User Settings.')

@@ -1,11 +1,11 @@
 # Secure Build Manual
 
 This manual collects the local documentation that best matches the current
-LaTeX-Secure-Workspace fork.
+LaTeX Workspace Security fork.
 
 ## What This Build Supports
 
-LaTeX-Secure-Workspace keeps a deliberately small workflow surface:
+LaTeX Workspace Security keeps a deliberately small workflow surface:
 
 - Manual Docker-isolated pdfLaTeX and LuaLaTeX builds with fixed internal recipes
 - Root-file detection with the secure root-resolution policy
@@ -20,24 +20,41 @@ count, or the math preview panel.
 
 ## User Quick Start
 
-1. Install Docker or Podman, enable `latex-workshop.docker.enabled` in User settings, and configure a trusted LaTeX image in `latex-workshop.docker.image.latex`.
-2. Open the LaTeX project in a trusted local workspace.
-3. Open the main document and run **LaTeX-Secure-Workspace: Build LaTeX project** from the Command Palette or the editor build button.
-4. For LuaLaTeX, run **LaTeX-Secure-Workspace: Build with recipe** and select `secure-lualatexmk`.
-5. Use **LaTeX-Secure-Workspace: Show secure build status** when a tool, root file, output path, or PDF cannot be found.
-6. When working in an included fragment, use **Show build root inspector** to review the selected parent and dependency chain, or **Build with project root** to select a detected parent for one build.
-7. Run **Check project health** to find project-local missing inputs, graphics, citations, references, and label issues without launching external tools.
-8. After a successful build, use **Show build provenance** to review the fixed command, root, output digest, and timing.
+Follow the [first-build walkthrough](../../README.md#get-started) in order: start Docker, pull the pinned image, merge the User Settings, save the sample as `t.tex`, and run the manual build. The expected result is `.lw-security/t.pdf` containing `abcd` in a local VS Code tab. The README is the single source for the image digest and copyable settings, so the two guides cannot drift to different examples.
 
-On macOS, the extension restores the standard MacTeX path
-`/Library/TeX/texbin` for GUI-launched VS Code. On Windows, the TeX Live or
-MiKTeX binary directory must be present in the user or system `Path`. On Linux,
-the TeX Live binary directory must be present in `PATH`. These host paths are used only by the optional local pdfLaTeX compatibility mode.
+The container example has Linux/amd64 CI evidence linked in the walkthrough. Other host platforms and Podman are not covered by that evidence.
 
-Secure builds check the configured Docker runtime and image. The status report clearly labels Docker, blocked, and local pdfLaTeX compatibility modes. To use host pdfLaTeX for a fully trusted document, explicitly enable `latex-workshop.security.allowLocalPdfLaTeX` in User settings; workspace values are ignored, and this mode can read files available to your OS account.
-Missing `.sty`, `.cls`, and related TeX resources are reported directly with
-guidance to check project files or possible distribution packages. The compiler
-log remains available for details.
+After the first PDF:
+
+- For LuaLaTeX, run **LaTeX Workspace Security: Build with recipe** and select `secure-lualatexmk`.
+- When working in an included fragment, use **Show build root inspector** to review the parent and dependency chain, or **Build with project root** to select a detected parent for one build.
+- Run **Check project health** for missing inputs, graphics, citations, references, and label issues without launching external tools.
+- Use **Show build provenance** to review the fixed command, root, output digest, and timing.
+
+### Other build modes
+
+For Podman, pull the same image using `podman pull` and set `latex-workshop.docker.path` to `podman` in User Settings. Keep Docker mode enabled. This alternative needs validation on your host; the Docker CI result does not establish Podman compatibility.
+
+For local pdfLaTeX only, install a TeX distribution with `latexmk`, disable Docker mode in User Settings, and use only documents you fully trust. When you explicitly accept the build warning, the extension enables `latex-workshop.security.allowLocalPdfLaTeX` globally for trusted workspaces. Host TeX can read files available to your OS account. This is a weaker compatibility mode, not a filesystem sandbox; LuaLaTeX still requires a container. Do not enable it just to suppress a Docker error.
+
+On macOS, the extension restores `/Library/TeX/texbin` for GUI-launched VS Code. On Windows, the TeX Live or MiKTeX binary directory must be in the user or system `Path`; on Linux, the TeX binary directory must be in `PATH`. These host paths are used by the optional local compatibility mode.
+
+## When a build or preview fails
+
+| Symptom | First check | Next step |
+| --- | --- | --- |
+| Build stopped **before TeX started** | **LaTeX Workspace Security: Show secure build status** | Read the reported blocker. For the Docker path, check the server with `docker version`, then confirm the configured image is already pulled. Check User Settings, not workspace overrides. |
+| Wrong root document | **Show build root inspector** | Open the intended main document and build it, or use **Build with project root** to select a detected parent for this build. |
+| TeX started but compilation failed | **View LaTeX compiler logs** | Read the first TeX error. Use **Check project health** for project-local missing files; missing distribution packages require an image that contains them. Do not enable shell escape or arbitrary commands as a general workaround. |
+| Build succeeded but PDF is missing or blank | **Show secure build status** and the `.lw-security` output path | Run **View PDF**. If the viewer reports a render error, use its retry button. Inspect **View LaTeX Workspace Security messages** if the error persists. |
+
+The command titles above use the English UI. The output channels are **LaTeX Workspace Security** for extension messages and **LaTeX Compiler** for compiler output.
+
+## Settings retained for compatibility
+
+Settings for disabled workflows are marked deprecated rather than removed. VS Code hides these entries from Settings UI unless you have configured them; existing values remain readable and can be removed when no longer needed. Some upstream settings still affect editing or auxiliary-file lookup, so they remain visible. See the [35-setting inventory](../compatibility-settings.md) for the distinction.
+
+## Editing and navigation
 
 Use VS Code's **Rename Symbol** command (`F2`) on a supported label or reference
 to update exact project-local occurrences outside comments and verbatim content.

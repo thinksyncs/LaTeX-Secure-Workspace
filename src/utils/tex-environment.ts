@@ -116,7 +116,7 @@ export function getMissingBuildToolsMessage(
     const advice = statuses.some(status => status.purpose === 'container build runtime')
         ? 'Verify that Docker is installed and running and that the configured Docker command is available, then reload VS Code.'
         : getTexEnvironmentInstallAdvice(platform)
-    return `Cannot start secure build because required build tools are unavailable: ${missing.join(', ')}. ${advice} Run "LaTeX-Secure-Workspace: Show secure build status" for details.`
+    return `Cannot start secure build because required build tools are unavailable: ${missing.join(', ')}. ${advice} Run "LaTeX Workspace Security: Show secure build status" for details.`
 }
 
 export function getLatexBuildFailureMessage(output: string): string | undefined {

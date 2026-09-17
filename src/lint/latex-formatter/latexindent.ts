@@ -184,7 +184,7 @@ function format(document: vscode.TextDocument, range?: vscode.Range): Thenable<v
         })
         worker.on('error', err => {
             removeTemporaryFiles()
-            void logger.showErrorMessage('Formatting failed. Please refer to LaTeX-Secure-Workspace Output for details.')
+            void logger.showErrorMessage('Formatting failed. Please refer to LaTeX Workspace Security Output for details.')
             logger.log(`Formatting failed: ${err.message}`)
             logger.log(`stderr: ${Buffer.concat(stderrBuffer).toString()}`)
             resolve(undefined)
@@ -192,7 +192,7 @@ function format(document: vscode.TextDocument, range?: vscode.Range): Thenable<v
         worker.on('close', code => {
             if (code !== 0) {
                 removeTemporaryFiles()
-                void logger.showErrorMessage('Formatting failed. Please refer to LaTeX-Secure-Workspace Output for details.')
+                void logger.showErrorMessage('Formatting failed. Please refer to LaTeX Workspace Security Output for details.')
                 logger.log(`Formatting failed with exit code ${code}`)
                 logger.log(`stderr: ${Buffer.concat(stderrBuffer).toString()}`)
                 return resolve(undefined)
