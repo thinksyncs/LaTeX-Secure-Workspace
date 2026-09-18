@@ -1,21 +1,53 @@
 # LaTeX Workspace Security
 
-LaTeX editing, manual builds, and a local PDF viewer for [Visual Studio Code](https://code.visualstudio.com/), with a smaller execution surface than upstream LaTeX Workshop.
+**Your documents. Your toolchain. Your decision to build.**
 
-This is an independent fork, not the official `James-Yu.latex-workshop` extension. Settings and command IDs retain the `latex-workshop.*` prefix for compatibility.
+Write research papers, specifications, and technical reports in [Visual Studio Code](https://code.visualstudio.com/) without adopting a hosted document service. Keep the editing tools you need, preview PDFs in the editor, and compile through a deliberately constrained build workflow.
 
-Use it when you want to edit locally and start fixed-recipe builds yourself. It is not a fit for workflows that depend on automatic builds, custom recipes, or arbitrary build commands.
+No document-upload service. No extension telemetry. No build on save.
 
-[Install from Marketplace](https://marketplace.visualstudio.com/items?itemName=ToppyMicroServices.tex-workspace-secure) · [User manual](./docs/manual/README.md) · [Releases](https://github.com/thinksyncs/LaTeX-Secure-Workspace/releases)
+[Install from Marketplace](https://marketplace.visualstudio.com/items?itemName=ToppyMicroServices.tex-workspace-secure) · [Get started](#get-started) · [Enterprise use](#enterprise-use) · [User manual](./docs/manual/README.md)
 
-## What you can do
+## Why choose this LaTeX workflow?
 
-- Write with project-local completions, snippets, hover help, outlines, and diagnostics.
-- Build pdfLaTeX or LuaLaTeX manually with fixed recipes and shell escape disabled.
-- Read PDFs in a VS Code tab with refresh and forward/reverse SyncTeX.
-- Inspect the build root, check missing files and references, rename labels, and view build provenance.
+Choose it when your team needs to explain **what a document can run, what the build can access, and which artifact is being installed**. The focus is controlled execution, not the largest feature set.
 
-There is no telemetry or automatic build. Custom recipes, workspace-defined build commands, external PDF viewers, browser preview, and Live Share are disabled.
+| Your priority | Workflow to consider |
+| --- | --- |
+| Browser-based coauthoring, shared comments, and a hosted editor | [Overleaf's online service](https://www.overleaf.com/about/features-overview) |
+| Flexible VS Code toolchains, custom recipes, and automatic compilation | [Upstream LaTeX Workshop](https://github.com/James-Yu/LaTeX-Workshop/wiki/Compile) |
+| Local VS Code authoring, fixed recipes, and explicit build execution | **LaTeX Workspace Security** |
+
+This compares workflow choices, not security rankings. The Overleaf row refers to its online service, not self-hosted deployments. This extension is an independent fork of LaTeX Workshop, not the official `James-Yu.latex-workshop` extension. Settings and command IDs retain the `latex-workshop.*` prefix for compatibility.
+
+## From source to PDF, in one workspace
+
+- **Write and navigate:** project-local completions, snippets, hover help, outlines, and diagnostics.
+- **Build when ready:** manual pdfLaTeX and LuaLaTeX builds with fixed recipes and shell escape disabled.
+- **Review without switching apps:** a PDF tab with refresh and forward/reverse SyncTeX.
+- **Understand failures:** inspect the build root, find missing files and references, rename labels, and view build provenance.
+
+Automatic builds, custom recipes, workspace-defined build commands, external PDF viewers, browser preview, and Live Share are intentionally disabled. Projects that require those features are better served by a different workflow.
+
+## Enterprise use
+
+For teams handling internal reports or unpublished research, the question is often simpler than feature count: *Does this require another cloud service, and what will run on the workstation?*
+
+With a local VS Code workspace and a local container engine, the core editing, build, and preview workflow needs no document upload, cloud account, or hosted compiler. The recommended container build gives IT concrete controls to review:
+
+| Review question | Implemented control |
+| --- | --- |
+| Can opening or saving a document compile it? | No automatic builds. Build and cleanup require workspace trust; builds use fixed internal recipes with `-no-shell-escape`. Workspace settings and TeX magic comments cannot select arbitrary build commands. |
+| Which host files can the container build change? | The owning workspace is mounted read-only. Only `.lw-security` beside the root document is exposed as a writable host output mount. |
+| Can the container build contact the network? | The wrapper uses `--network=none` and `--pull=never`. Provision the approved image separately; a build does not pull it automatically. |
+| Does PDF preview need a listening server? | No extension preview server or external PDF viewer. The VS Code tab uses bundled viewer assets, with local-resource access limited to the extension directory and the selected PDF's directory. |
+| What can we inspect before deployment? | [Stable releases](https://github.com/thinksyncs/LaTeX-Secure-Workspace/releases) provide the VSIX and SPDX SBOM, with build-provenance and SBOM attestations through GitHub. See the [release process](./RELEASING.md). |
+
+**Local access is limited where described, not eliminated.** Editing still reads local files. In trusted workspaces, helpers such as `kpsewhich`, formatters, native SyncTeX, and Texdoc can run on the host; they are outside the container build boundary. Configured format-on-save can invoke a formatter. Optional local pdfLaTeX is also outside that boundary and can read files accessible to your OS account; leave `latex-workshop.security.allowLocalPdfLaTeX` disabled for a container-only build policy.
+
+**The build's network restriction is not a workstation-wide firewall.** Installing or updating VS Code, extensions, and container images may require network access. VS Code's own telemetry, other extensions, Git remotes, remote development, and remote Docker contexts are outside this extension's controls. Use a local workspace and local container engine when local-only document processing is required.
+
+For an IT review, start with the exact extension version, an approved digest-pinned TeX image, and the [security controls](./docs/security-hardening.md) ([Japanese summary](./docs/security-hardening.ja.md)). User Settings keep build policy separate from project-supplied settings, but are not an administrator-enforced policy lock. These controls support an approval decision; approval still depends on your organization's endpoint, container, and data-handling policies.
 
 ## Get started
 
@@ -71,7 +103,7 @@ Use **Show build root inspector** if the wrong document is selected, or **Check 
 
 ## Security
 
-Build and cleanup require workspace trust. Build recipes and output paths are fixed; workspace settings and TeX magic comments cannot choose arbitrary build commands. Restricted Mode keeps editor assistance and the local PDF viewer available.
+Restricted Mode keeps editor assistance and the local PDF viewer available while build and cleanup remain blocked. Container isolation applies to the TeX build, not the entire VS Code extension host; it does not make arbitrary toolchains or documents safe.
 
 Revision `a8cf9923` received a point-in-time static security review with OpenAI Daybreak Blue (`gpt-daybreak-blue-latest`) on 2026-08-25. It identified a medium-severity host pdfLaTeX file-read risk. Container isolation became the default secure build path; local pdfLaTeX remains an explicit, weaker compatibility option. That review is not a guarantee for later revisions or arbitrary TeX toolchains.
 
