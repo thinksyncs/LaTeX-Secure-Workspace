@@ -3,6 +3,7 @@ import * as vscode from 'vscode'
 import { lw } from './lw'
 import { log } from './utils/logger'
 import { ensureMacTeXBinOnPath } from './utils/tex-path'
+import { setupLocalBuild } from './compile/local-setup'
 
 ensureMacTeXBinOnPath()
 const logger = lw.log('Extension')
@@ -167,6 +168,7 @@ function registerLatexWorkshopCommands(extensionContext: vscode.ExtensionContext
         vscode.commands.registerCommand('latex-workshop.hostPort', () => lw.commands.hostPort()),
         vscode.commands.registerCommand('latex-workshop.saveWithoutBuilding', () => lw.commands.saveActive()),
         vscode.commands.registerCommand('latex-workshop.build', () => lw.commands.build()),
+        vscode.commands.registerCommand('latex-workshop.setup-local', () => setupLocalBuild()),
         vscode.commands.registerCommand('latex-workshop.build-recipe', () => lw.commands.buildRecipe()),
         vscode.commands.registerCommand('latex-workshop.view', (mode?: 'tab' | 'browser' | 'external' | vscode.Uri) => lw.commands.view(mode)),
         vscode.commands.registerCommand('latex-workshop.refresh-viewer', () => lw.commands.refresh()),

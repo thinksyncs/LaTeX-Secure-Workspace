@@ -19,6 +19,8 @@ The `Docker secure builds on Linux` workflow separately runs `npm run test:docke
 
 The Docker test also builds the unchanged `samples/sample/t.tex` onboarding sample with the fixed pdfLaTeX profile. This proves compilation through the wrapper, not a visible VS Code walkthrough.
 
+The product-surface suite also clears local-build consent and Docker settings, selects **Use Local TeX** in the first-run prompt, and invokes the registered build command. It verifies real PDF bytes, saved User Settings, a PDF tab, and no repeated consent on a second build. The resulting PDF is retained at `test/log/local-first-build.pdf`. The prompt response is automated; this is not a claim of human visual acceptance.
+
 The Docker test does not pull an implicit image. For a local run, first pull the digest-pinned image in the [first-build walkthrough](../README.md#get-started) and set `LATEXWORKSHOP_DOCKER_TEST_IMAGE` to the same `repository@sha256:...` value. This keeps the test input explicit and reproducible.
 
 `test/node/product-surface.test.js` checks the compatibility-setting inventory, command branding, and agreement between the README, sample and CI image. Settings UI visibility still needs a visual check in an isolated VS Code profile: an unset deprecated setting should be hidden, while an explicitly configured one should show its warning. Do not use your normal profile or treat a manifest assertion as visual verification.

@@ -14,6 +14,7 @@ import {
 } from '../utils/tex-environment'
 import { build as buildRecipe, getSecureBuildExecution, getSecureRecipeEngine } from './recipe'
 import { queue } from './queue'
+import { prepareLocalPdfLaTeX } from './local-setup'
 
 const logger = lw.log('Build')
 
@@ -134,48 +135,22 @@ async function buildWithResult(skipSelection: boolean = false, rootFile: string 
 async function isBuildEnvironmentReady(scope: vscode.ConfigurationScope, recipeName?: string): Promise<boolean> {
     const engine = getSecureRecipeEngine(recipeName)
     let execution = getSecureBuildExecution(scope, recipeName)
-    if (execution === 'blocked') {
-        const isLuaLaTeX = engine === 'lualatex'
-        logger.log(isLuaLaTeX
-            ? 'Build stopped by the security policy before LuaLaTeX started.'
-            : 'Build stopped by the security policy before pdfLaTeX started.')
-        logger.refreshStatus('shield', 'statusBar.foreground', undefined, 'warning')
-        if (isLuaLaTeX) {
-            void vscode.window.showWarningMessage(
-                'Build stopped by LaTeX Workspace Security before TeX started. This is not a TeX compilation error. Secure LuaLaTeX builds require Docker isolation because LuaLaTeX can execute document-supplied Lua. Enable latex-workshop.docker.enabled and configure latex-workshop.docker.image.latex in User Settings.'
-            )
+    if (execution !== 'docker' && engine === 'pdflatex') {
+        if (!await prepareLocalPdfLaTeX(scope)) {
             return false
         }
-
-        const selection = await vscode.window.showWarningMessage(
-            'Build stopped by LaTeX Workspace Security before TeX started. This is not a TeX compilation error. Docker isolation is disabled. Use host pdfLaTeX for this fully trusted document? Host TeX can read files available to your OS account. Yes enables latex-workshop.security.allowLocalPdfLaTeX in User Settings for all trusted workspaces.',
-            { modal: true },
-            'Yes',
-            'No'
-        )
-        if (selection !== 'Yes') {
-            logger.log('Local pdfLaTeX compatibility was not enabled.')
-            return false
-        }
-
-        try {
-            await vscode.workspace.getConfiguration('latex-workshop', scope).update(
-                'security.allowLocalPdfLaTeX',
-                true,
-                vscode.ConfigurationTarget.Global
-            )
-        } catch (error) {
-            logger.logError('Could not enable local pdfLaTeX compatibility in User Settings.', error)
-            logger.refreshStatus('x', 'errorForeground', undefined, 'error')
-            void logger.showErrorMessageWithExtensionLogButton('Could not enable latex-workshop.security.allowLocalPdfLaTeX in User Settings. Open the LaTeX Workspace Security log for details.')
-            return false
-        }
-        logger.log('Enabled local pdfLaTeX compatibility in User Settings.')
         execution = getSecureBuildExecution(scope, recipeName)
-        if (execution === 'blocked') {
-            logger.log('Local pdfLaTeX compatibility remains disabled after updating User Settings.')
-            return false
+        if (execution === 'local-pdflatex') {
+            return true
         }
+    }
+    if (execution === 'blocked') {
+        logger.log('Build stopped by the security policy before LuaLaTeX started.')
+        logger.refreshStatus('shield', 'statusBar.foreground', undefined, 'warning')
+        void vscode.window.showWarningMessage(
+            'Build stopped by LaTeX Workspace Security before TeX started. This is not a TeX compilation error. Secure LuaLaTeX builds require Docker isolation because LuaLaTeX can execute document-supplied Lua. Enable latex-workshop.docker.enabled and configure latex-workshop.docker.image.latex in User Settings.'
+        )
+        return false
     }
     if (execution === 'docker') {
         const dockerImage = getSecureConfigurationValueSync(scope, 'docker.image.latex', '').trim()

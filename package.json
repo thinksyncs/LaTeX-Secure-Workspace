@@ -623,6 +623,12 @@
         "enablement": "!virtualWorkspace && isWorkspaceTrusted"
       },
       {
+        "command": "latex-workshop.setup-local",
+        "title": "%command.setup-local%",
+        "category": "LaTeX Workspace Security",
+        "enablement": "!virtualWorkspace && isWorkspaceTrusted"
+      },
+      {
         "command": "latex-workshop.build-recipe",
         "title": "%command.buildRecipe%",
         "category": "LaTeX Workspace Security",
@@ -2591,7 +2597,7 @@
           "scope": "window",
           "type": "boolean",
           "default": false,
-          "markdownDescription": "Compatibility escape hatch. Allow the fixed `secure-latexmk` profile to run host `latexmk` when Docker is disabled. Host TeX is not a filesystem sandbox and may read files available to your OS account. Configure this only in User settings for documents you fully trust; workspace values are ignored."
+          "markdownDescription": "Use installed local TeX tools for the fixed pdfLaTeX recipe when Docker is disabled. Run Set up local LaTeX or start your first build to check the tools and enable this with your consent. Local TeX can read files available to your OS account; use trusted documents only. Saved in User Settings for all trusted workspaces; workspace values are ignored. LuaLaTeX still requires Docker."
         },
         "latex-workshop.docker.enabled": {
           "scope": "window",

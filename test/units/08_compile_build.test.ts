@@ -9,6 +9,7 @@ import { autoBuild, build, buildWithResult } from '../../src/compile/build'
 import { testFileSuiteName } from '../file-name'
 import * as commands from '../../src/core/commands'
 import * as projectInsight from '../../src/core/project-insight'
+import { setupLocalBuild } from '../../src/compile/local-setup'
 
 const buildWithRootCandidate = commands.buildWithRootCandidate
 
@@ -44,6 +45,7 @@ describe(testFileSuiteName(__filename), () => {
             stderr: Buffer.from('')
         }
         sinon.stub(lw.external, 'sync').returns(successfulProbe)
+        sinon.stub(vscode.window, 'showErrorMessage').resolves(undefined)
     })
 
     afterEach(() => {
@@ -155,50 +157,53 @@ describe(testFileSuiteName(__filename), () => {
             assert.hasLog(`Building root file: ${get.path('main.tex')}`)
         })
 
-        it('should reject host pdfLaTeX by default before probing or spawning', async () => {
+        it('should offer local setup before probing or spawning', async () => {
             set.config('security.allowLocalPdfLaTeX', false)
-            const warningStub = sinon.stub(vscode.window, 'showWarningMessage').resolves('No' as unknown as vscode.MessageItem)
+            const prompt = sinon.stub(vscode.window, 'showInformationMessage').resolves(undefined)
             const syncStub = lw.external.sync as sinon.SinonStub
             const spawnStub = lw.external.spawn as sinon.SinonStub
 
             const succeeded = await build()
 
             assert.strictEqual(succeeded, false)
-            assert.ok(syncStub.neverCalledWith('latexmk', ['--version']))
-            assert.ok(syncStub.neverCalledWith('pdflatex', ['--version']))
+            assert.ok(syncStub.notCalled)
             assert.ok(spawnStub.notCalled)
-            assert.ok(String(warningStub.firstCall.args[0]).includes('This is not a TeX compilation error.'))
-            assert.deepStrictEqual(warningStub.firstCall.args.slice(1), [{ modal: true }, 'Yes', 'No'])
-            assert.hasLog('Build stopped by the security policy before pdfLaTeX started.')
-            assert.hasLog('Local pdfLaTeX compatibility was not enabled.')
+            assert.strictEqual(prompt.firstCall.args[0], 'Set up your first LaTeX build')
+            assert.ok(String((prompt.firstCall.args[1] as vscode.MessageOptions).detail).includes('all trusted workspaces'))
+            assert.deepStrictEqual(prompt.firstCall.args.slice(2), ['Use Local TeX', 'Docker Settings'])
+            assert.hasLog('Local TeX setup cancelled; no tools started or settings changed.')
         })
 
-        it('should enable local pdfLaTeX in User Settings and continue after Yes', async () => {
+        it('should check local tools, save consent, and continue the first build', async () => {
             set.config('security.allowLocalPdfLaTeX', false)
             const updateHandler: vscode.WorkspaceConfiguration['update'] = (section, value, target) => {
                 assert.strictEqual(section, 'security.allowLocalPdfLaTeX')
                 assert.strictEqual(value, true)
                 assert.strictEqual(target, vscode.ConfigurationTarget.Global)
+                assert.ok((lw.external.sync as sinon.SinonStub).calledWith('latexmk', ['-version']))
+                assert.ok((lw.external.sync as sinon.SinonStub).calledWith('pdflatex', ['--version']))
+                assert.ok((lw.external.spawn as sinon.SinonStub).notCalled)
                 set.config('security.allowLocalPdfLaTeX', true)
                 return Promise.resolve()
             }
             const updateSpy = sinon.spy(updateHandler)
             set.configUpdate(updateSpy)
-            const warningStub = sinon.stub(vscode.window, 'showWarningMessage').resolves('Yes' as unknown as vscode.MessageItem)
+            const prompt = sinon.stub(vscode.window, 'showInformationMessage').resolves('Use Local TeX' as unknown as vscode.MessageItem)
 
             const succeeded = await build()
 
             assert.strictEqual(succeeded, true)
-            assert.ok(warningStub.calledOnce)
+            assert.ok(prompt.calledOnce)
             assert.ok(updateSpy.calledOnce)
-            assert.hasLog('Enabled local pdfLaTeX compatibility in User Settings.')
+            assert.ok((lw.external.sync as sinon.SinonStub).neverCalledWith('docker'))
+            assert.hasLog('Local pdfLaTeX setup saved in User Settings.')
             assert.hasLog(`Building root file: ${get.path('main.tex')}`)
         })
 
-        for (const selection of ['No', undefined]) {
+        for (const selection of ['Cancel', undefined]) {
             it(`should report no build started after ${selection ?? 'dismissing'} the security prompt`, async () => {
                 set.config('security.allowLocalPdfLaTeX', false)
-                sinon.stub(vscode.window, 'showWarningMessage').resolves(selection as unknown as vscode.MessageItem)
+                sinon.stub(vscode.window, 'showInformationMessage').resolves(selection as unknown as vscode.MessageItem)
                 const updateSpy = sinon.spy(() => Promise.resolve())
                 set.configUpdate(updateSpy)
 
@@ -210,6 +215,111 @@ describe(testFileSuiteName(__filename), () => {
                 assert.ok(updateSpy.notCalled)
             })
         }
+
+        it('should open Docker settings without probing or changing the build mode', async () => {
+            set.config('security.allowLocalPdfLaTeX', false)
+            sinon.stub(vscode.window, 'showInformationMessage').resolves('Docker Settings' as unknown as vscode.MessageItem)
+            const command = sinon.stub(vscode.commands, 'executeCommand').resolves()
+            const update = sinon.spy(() => Promise.resolve())
+            set.configUpdate(update)
+
+            assert.strictEqual(await buildWithResult(), 'not-started')
+            assert.ok(command.calledOnceWithExactly('workbench.action.openSettings', '@ext:ToppyMicroServices.tex-workspace-secure docker'))
+            assert.ok((lw.external.sync as sinon.SinonStub).notCalled)
+            assert.ok((lw.external.spawn as sinon.SinonStub).notCalled)
+            assert.ok(update.notCalled)
+        })
+
+        it('should leave consent unset and offer a bundled guide when local tools are missing', async () => {
+            set.config('security.allowLocalPdfLaTeX', false)
+            sinon.stub(vscode.window, 'showInformationMessage').resolves('Use Local TeX' as unknown as vscode.MessageItem)
+            ;(lw.external.sync as sinon.SinonStub).withArgs('latexmk').returns({status: 1, stderr: 'Perl is missing'})
+            ;(vscode.window.showErrorMessage as sinon.SinonStub).resolves('Installation Guide')
+            const command = sinon.stub(vscode.commands, 'executeCommand').resolves()
+            const update = sinon.spy(() => Promise.resolve())
+            set.configUpdate(update)
+
+            assert.strictEqual(await buildWithResult(), 'not-started')
+            assert.ok(command.calledOnce)
+            assert.strictEqual(command.firstCall.args[0], 'markdown.showPreview')
+            assert.pathStrictEqual((command.firstCall.args[1] as vscode.Uri).fsPath, path.join(lw.extensionRoot, 'resources', 'local-setup.md'))
+            assert.ok(update.notCalled)
+            assert.ok((lw.external.spawn as sinon.SinonStub).notCalled)
+        })
+
+        it('should retry detection and continue without another consent prompt', async () => {
+            set.config('security.allowLocalPdfLaTeX', false)
+            const prompt = sinon.stub(vscode.window, 'showInformationMessage').resolves('Use Local TeX' as unknown as vscode.MessageItem)
+            ;(lw.external.sync as sinon.SinonStub).withArgs('latexmk').onFirstCall().returns({status: 1, stderr: 'not ready'})
+            ;(vscode.window.showErrorMessage as sinon.SinonStub).resolves('Check Again')
+            set.configUpdate((section, value) => {
+                set.config(section, value)
+                return Promise.resolve()
+            })
+
+            assert.strictEqual(await buildWithResult(), 'succeeded')
+            assert.ok(prompt.calledOnce)
+            assert.strictEqual((lw.external.sync as sinon.SinonStub).getCalls().filter(call => call.args[0] === 'latexmk').length, 2)
+            assert.ok((lw.external.spawn as sinon.SinonStub).calledOnce)
+        })
+
+        it('should not launch a build if saving consent fails', async () => {
+            set.config('security.allowLocalPdfLaTeX', false)
+            sinon.stub(vscode.window, 'showInformationMessage').resolves('Use Local TeX' as unknown as vscode.MessageItem)
+            set.configUpdate(() => Promise.reject(new Error('Settings are read-only')))
+
+            assert.strictEqual(await buildWithResult(), 'not-started')
+            assert.ok((lw.external.spawn as sinon.SinonStub).notCalled)
+            assert.hasLog('Could not save local TeX setup.')
+        })
+
+        it('should not prompt or run local setup in Restricted Mode', async () => {
+            sinon.stub(vscode.workspace, 'isTrusted').value(false)
+            sinon.stub(vscode.window, 'showWarningMessage').resolves(undefined)
+            const prompt = sinon.stub(vscode.window, 'showInformationMessage')
+
+            await setupLocalBuild()
+
+            assert.ok(prompt.notCalled)
+            assert.ok((lw.external.sync as sinon.SinonStub).notCalled)
+            assert.ok((lw.external.spawn as sinon.SinonStub).notCalled)
+        })
+
+        it('should preserve an existing Docker setup', async () => {
+            set.config('docker.enabled', true)
+            const prompt = sinon.stub(vscode.window, 'showInformationMessage').resolves(undefined)
+            const update = sinon.spy(() => Promise.resolve())
+            set.configUpdate(update)
+
+            await setupLocalBuild()
+
+            assert.ok(String(prompt.firstCall.args[0]).includes('will not change your existing build mode'))
+            assert.ok(update.notCalled)
+            assert.ok((lw.external.sync as sinon.SinonStub).notCalled)
+        })
+
+        it('should not probe host tools for a virtual workspace', async () => {
+            sinon.stub(vscode.workspace, 'workspaceFolders').value([{uri: vscode.Uri.parse('memfs:/project'), name: 'virtual', index: 0}])
+            sinon.stub(vscode.window, 'showInformationMessage').resolves(undefined)
+
+            await setupLocalBuild()
+
+            assert.ok((lw.external.sync as sinon.SinonStub).notCalled)
+            assert.ok((lw.external.spawn as sinon.SinonStub).notCalled)
+        })
+
+        it('should check an existing local setup without starting a build or changing settings', async () => {
+            const prompt = sinon.stub(vscode.window, 'showInformationMessage').resolves(undefined)
+            const update = sinon.spy(() => Promise.resolve())
+            set.configUpdate(update)
+
+            await setupLocalBuild()
+
+            assert.ok(String(prompt.firstCall.args[0]).includes('Local pdfLaTeX is ready'))
+            assert.ok((lw.external.sync as sinon.SinonStub).calledWith('latexmk', ['-version']))
+            assert.ok((lw.external.spawn as sinon.SinonStub).notCalled)
+            assert.ok(update.notCalled)
+        })
 
         it('should distinguish failed execution from a request that did not start', async () => {
             const spawnStub = lw.external.spawn as sinon.SinonStub

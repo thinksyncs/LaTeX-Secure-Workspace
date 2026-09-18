@@ -88,8 +88,8 @@ async function renderReport(kind: ReportKind): Promise<string> {
     const executionLabel = execution === 'docker'
         ? 'Docker'
         : execution === 'local-pdflatex'
-            ? 'local pdfLaTeX compatibility mode (not filesystem-isolated)'
-            : 'Docker required (disabled)'
+            ? 'local pdfLaTeX (not filesystem-isolated)'
+            : 'Setup needed: run Build LaTeX project or Set up local LaTeX (Docker is optional for pdfLaTeX)'
     const title = kind === 'status' ? 'Secure Build Status' : 'Secure Mode Report'
     const lines = [
         `# ${title}`,

@@ -51,6 +51,10 @@ For an IT review, start with the exact extension version, an approved digest-pin
 
 ## Get started
 
+**For your first PDF, Docker is not needed.** With local `latexmk` and `pdflatex` installed, open your trusted project and run **LaTeX Workspace Security: Build LaTeX project**. Choose **Use Local TeX** once; setup checks your tools before saving the choice and continues the build. You can also run **Set up local LaTeX** first. See the [Docker-free first-PDF guide](./resources/local-setup.md) for installation and a sample document.
+
+### Optional: isolated builds with Docker
+
 The example below uses Docker and the digest-pinned TeX Live image in our [Linux CI](./.github/workflows/docker-secure-builds.yml). The recorded [Linux/amd64 run](https://github.com/thinksyncs/LaTeX-Secure-Workspace/actions/runs/34818569833) passed both fixed engine profiles. This is not a claim of verification on macOS, Windows, ARM, or Podman. The image is large; allow time and disk space for the first download.
 
 1. Install the extension and install/start Docker. Run `docker version` in a terminal; both the client and server must respond.
@@ -91,7 +95,7 @@ For Podman and the optional local mode, see the [manual](./docs/manual/README.md
 
 ### Without Docker — pdfLaTeX only
 
-Install a local TeX distribution with `latexmk`. With Docker disabled, a build shows a security warning before TeX starts. Choose **Yes** to enable `latex-workshop.security.allowLocalPdfLaTeX` in User Settings and continue, or **No** to leave the build blocked.
+Install a local TeX distribution with `latexmk` and `pdflatex`. With Docker disabled, the first build offers **Use Local TeX**. After consent and successful tool checks, setup enables `latex-workshop.security.allowLocalPdfLaTeX` in User Settings and continues that build. If tools are missing, **Installation Guide** opens the bundled guide and **Check Again** retries detection. Cancelling leaves the setting unchanged; no installer runs automatically.
 
 Use this mode only for documents you fully trust: host TeX can read files available to your OS account. The setting applies to all trusted workspaces, not just the current document, and can be turned off in User Settings. LuaLaTeX still requires container isolation.
 

@@ -62,3 +62,17 @@ test('visible command branding retains the extension and command identifiers', (
         assert.ok(JSON.parse(read(file))['command.log'].includes('LaTeX Workspace Security'), file)
     }
 })
+
+test('local setup is discoverable and its guide is included in the package inputs', () => {
+    const command = manifest.contributes.commands.find(item => item.command === 'latex-workshop.setup-local')
+    assert.ok(command)
+    assert.equal(command.enablement, '!virtualWorkspace && isWorkspaceTrusted')
+    assert.ok(read('src/app.ts').includes("registerCommand('latex-workshop.setup-local'"))
+    const guide = read('resources/local-setup.md')
+    const sample = guide.match(/```latex\n([\s\S]*?)```/)
+    assert.ok(sample)
+    assert.equal(sample[1].trim(), read('samples/sample/t.tex').trim())
+    assert.ok(guide.includes('Use Local TeX'))
+    assert.ok(guide.includes('Check Again'))
+    assert.ok(read('.vscodeignore').split(/\r?\n/).includes('artifacts/'), 'Local validation evidence must not ship in the VSIX')
+})

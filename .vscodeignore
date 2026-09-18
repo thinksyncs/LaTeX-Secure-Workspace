@@ -1,6 +1,7 @@
 .vscode/
 .vscode-test/
 coverage/
+artifacts/
 out/data/
 out/dev/
 out/resources/
