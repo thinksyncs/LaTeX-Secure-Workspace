@@ -2,6 +2,20 @@
 
 ## Unreleased
 
+## [11.4.6] - 2026-09-18
+
+### User impact
+- Reach the first local pdfLaTeX build without Docker or JSON editing. First-build setup asks for consent, checks the installed tools, and continues the build.
+- Add **Set up local LaTeX**, a bundled installation guide, and a retry action for missing tools. Keep existing Docker settings unchanged.
+- Shorten the README around the first PDF and move detailed Docker setup to the manual. Align diagnostic guidance with local setup.
+- Exclude local validation artifacts from the packaged extension.
+
+### Required action
+- Local builds need an installed TeX distribution with `latexmk` and `pdflatex`; the extension does not install them. Local execution remains opt-in and is not sandboxed. LuaLaTeX still requires Docker.
+
+### Known limitations
+- Automated tests verify first-build consent, real PDF output, and PDF tab creation in a fresh profile. Native setup-dialog and viewer visual acceptance remains outstanding.
+
 ## [11.4.5] - 2026-09-17
 
 ### User impact

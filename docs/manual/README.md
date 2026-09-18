@@ -7,7 +7,7 @@ LaTeX Workspace Security fork.
 
 LaTeX Workspace Security keeps a deliberately small workflow surface:
 
-- Manual Docker-isolated pdfLaTeX and LuaLaTeX builds with fixed internal recipes
+- Manual local pdfLaTeX or Docker-isolated pdfLaTeX and LuaLaTeX builds with fixed internal recipes
 - Root-file detection with the secure root-resolution policy
 - On-demand root inspection, project health, and build provenance reports
 - Local tab-based PDF viewing with bounded render recovery and forward/reverse SyncTeX
@@ -20,7 +20,9 @@ count, or the math preview panel.
 
 ## User Quick Start
 
-Follow the [first-build walkthrough](../../README.md#get-started) in order: start Docker, pull the pinned image, merge the User Settings, save the sample as `t.tex`, and run the manual build. The expected result is `.lw-security/t.pdf` containing `abcd` in a local VS Code tab. The README is the single source for the image digest and copyable settings, so the two guides cannot drift to different examples.
+For a first local pdfLaTeX build, follow the [Docker-free guide](../../resources/local-setup.md): check your installed TeX tools, run **Set up local LaTeX**, select **Use Local TeX**, and build the sample. The first **Build LaTeX project** command also offers setup. Missing tools have **Installation Guide** and **Check Again** actions. No JSON editing or Docker installation is needed. A successful build creates `.lw-security/t.pdf` containing `abcd` in a local VS Code tab.
+
+For container isolation or LuaLaTeX, use the [optional Docker setup](#optional-docker-setup) below. For the short introduction, see [Get started](../../README.md#get-started).
 
 The container example has Linux/amd64 CI evidence linked in the walkthrough. Other host platforms and Podman are not covered by that evidence.
 
@@ -31,11 +33,36 @@ After the first PDF:
 - Run **Check project health** for missing inputs, graphics, citations, references, and label issues without launching external tools.
 - Use **Show build provenance** to review the fixed command, root, output digest, and timing.
 
+### Optional Docker setup
+
+1. Install and start Docker. Run `docker version`; both client and server must respond.
+2. Pull the image explicitly. Builds do not download it automatically:
+
+   ```sh
+   docker pull texlive/texlive@sha256:bd551dda2195c6830bb714f731d74c4f71cda812178abae15a206fd68b5dbb7c
+   ```
+
+3. Open **Preferences: Open User Settings (JSON)** and merge these keys into the existing object. Preserve unrelated settings; workspace settings cannot enable this build mode.
+
+   ```json
+   {
+     "latex-workshop.docker.enabled": true,
+     "latex-workshop.docker.image.latex": "texlive/texlive@sha256:bd551dda2195c6830bb714f731d74c4f71cda812178abae15a206fd68b5dbb7c",
+     "latex-workshop.docker.path": "docker"
+   }
+   ```
+
+4. Build the [first-PDF sample](../../resources/local-setup.md#3-build-a-small-document). Docker mode does not require local `latexmk` or `pdflatex`. The default profile is `secure-latexmk`; choose `secure-lualatexmk` through **Build with recipe** for LuaLaTeX.
+
+This image is pinned in [Linux CI](../../.github/workflows/docker-secure-builds.yml). The recorded [Linux/amd64 run](https://github.com/thinksyncs/LaTeX-Secure-Workspace/actions/runs/34818569833) passed both profiles; it does not establish macOS, Windows, ARM, or Podman compatibility. The image is large, so allow time and disk space for its first download.
+
+Container builds disable networking, mount source files read-only, and write outputs to `.lw-security` beside the root document. Provision an approved image separately.
+
 ### Other build modes
 
 For Podman, pull the same image using `podman pull` and set `latex-workshop.docker.path` to `podman` in User Settings. Keep Docker mode enabled. This alternative needs validation on your host; the Docker CI result does not establish Podman compatibility.
 
-For local pdfLaTeX only, install a TeX distribution with `latexmk`, disable Docker mode in User Settings, and use only documents you fully trust. When you explicitly accept the build warning, the extension enables `latex-workshop.security.allowLocalPdfLaTeX` globally for trusted workspaces. Host TeX can read files available to your OS account. This is a weaker compatibility mode, not a filesystem sandbox; LuaLaTeX still requires a container. Do not enable it just to suppress a Docker error.
+For local pdfLaTeX, use the setup above with Docker disabled. Successful setup saves your explicit choice in `latex-workshop.security.allowLocalPdfLaTeX` globally for trusted workspaces. Host TeX can read files available to your OS account; it is not a filesystem sandbox. LuaLaTeX still requires a container. Local setup preserves an existing Docker configuration instead of silently switching it off.
 
 On macOS, the extension restores `/Library/TeX/texbin` for GUI-launched VS Code. On Windows, the TeX Live or MiKTeX binary directory must be in the user or system `Path`; on Linux, the TeX binary directory must be in `PATH`. These host paths are used by the optional local compatibility mode.
 

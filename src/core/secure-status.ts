@@ -69,7 +69,12 @@ async function renderReport(kind: ReportKind): Promise<string> {
     const outDir = rootFile ? resolveAgainstRoot(rootFile, lw.file.getSecurityOutDir(rootFile)) : undefined
     const ignoredSettings = collectOverriddenRestrictedSettings(rootFile ? lw.file.toUri(rootFile) : undefined)
     const configurationScope = rootFile ? lw.file.toUri(rootFile) : workspaceScope
-    const execution = getSecureBuildExecution(configurationScope, recipe?.name)
+    const workspaceBlocker = !vscode.workspace.isTrusted
+        ? 'Restricted Mode: review workspace trust before enabling builds.'
+        : !vscode.workspace.workspaceFolders?.length || isVirtualWorkspace()
+            ? 'Open a local filesystem project folder before setting up builds.'
+            : undefined
+    const execution = workspaceBlocker ? 'blocked' : getSecureBuildExecution(configurationScope, recipe?.name)
     const dockerImage = getSecureConfigurationValueSync(configurationScope, 'docker.image.latex', '').trim()
     const texTools = execution === 'local-pdflatex'
         ? inspectTexEnvironment(lw.external.sync as TexToolRunner, getRequiredBuildToolDefinitions('pdflatex'))
@@ -85,11 +90,11 @@ async function renderReport(kind: ReportKind): Promise<string> {
     const buildReady = execution === 'docker'
         ? Boolean(dockerImage && dockerTool?.available)
         : execution === 'local-pdflatex' && texTools.every(tool => tool.available)
-    const executionLabel = execution === 'docker'
+    const executionLabel = workspaceBlocker ?? (execution === 'docker'
         ? 'Docker'
         : execution === 'local-pdflatex'
-            ? 'local pdfLaTeX compatibility mode (not filesystem-isolated)'
-            : 'Docker required (disabled)'
+            ? 'local pdfLaTeX (not filesystem-isolated)'
+            : 'Setup needed: run Build LaTeX project or Set up local LaTeX (Docker is optional for pdfLaTeX)')
     const title = kind === 'status' ? 'Secure Build Status' : 'Secure Mode Report'
     const lines = [
         `# ${title}`,
@@ -113,13 +118,13 @@ async function renderReport(kind: ReportKind): Promise<string> {
         ...texTools.map(formatTexToolStatus),
         `- Process PATH: \`${escapeInlineCode(process.env.PATH ?? '(unset)')}\``,
         ...(!buildReady ? [
-            `- Guidance: ${execution === 'docker'
+            `- Guidance: ${workspaceBlocker ?? (execution === 'docker'
                 ? dockerImage
                     ? 'Verify that Docker is installed and running and that the configured Docker command is available, then reload VS Code.'
                     : 'Configure latex-workshop.docker.image.latex in User settings.'
                 : execution === 'local-pdflatex'
                     ? getTexEnvironmentInstallAdvice()
-                    : 'Enable latex-workshop.docker.enabled and configure latex-workshop.docker.image.latex in User settings.'}`
+                    : 'Run LaTeX Workspace Security: Build LaTeX project or Set up local LaTeX, then choose Use Local TeX. Docker is optional for pdfLaTeX.')}`
         ] : []),
         ''
     ]
@@ -129,7 +134,7 @@ async function renderReport(kind: ReportKind): Promise<string> {
             '## Secure Execution Policy',
             '',
             '- Manual build and clean require a trusted, non-virtual workspace.',
-            '- Secure pdfLaTeX and LuaLaTeX builds use the hardened Docker wrapper by default. Host pdfLaTeX is available only as an explicitly enabled, weaker compatibility mode.',
+            '- pdfLaTeX can use installed local TeX after explicit setup consent, or the hardened Docker wrapper. Local TeX is not filesystem-isolated. LuaLaTeX still requires Docker isolation.',
             '- Workspace-controlled recipes, tools, magic comments, output paths, and external viewer commands are ignored in secure execution paths.',
             '- PDF preview uses the local VS Code tab viewer.',
             '- External command paths can require explicit confirmation when they come from workspace-scoped settings.',

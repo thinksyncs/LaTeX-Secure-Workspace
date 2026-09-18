@@ -12,6 +12,7 @@
   "command.revealoutput": "Reveal output folder in OS",
   "command.saveWithoutBuilding": "Save without Building",
   "command.build": "Build LaTeX project",
+  "command.setup-local": "Set up local LaTeX",
   "command.buildRecipe": "Build with recipe",
   "command.recipes": "Build with recipe",
   "command.view": "View PDF",

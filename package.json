@@ -3,7 +3,7 @@
   "displayName": "LaTeX Workspace Security",
   "description": "Secure LaTeX tools for VS Code with project-local completions, manual build, diagnostics, and a local PDF tab viewer with SyncTeX.",
   "icon": "icons/icon.png",
-  "version": "11.4.5",
+  "version": "11.4.6",
   "publisher": "ToppyMicroServices",
   "license": "MIT",
   "homepage": "https://github.com/thinksyncs/LaTeX-Secure-Workspace",
@@ -620,6 +620,12 @@
         "title": "%command.build%",
         "category": "LaTeX Workspace Security",
         "icon": "$(debug-start)",
+        "enablement": "!virtualWorkspace && isWorkspaceTrusted"
+      },
+      {
+        "command": "latex-workshop.setup-local",
+        "title": "%command.setup-local%",
+        "category": "LaTeX Workspace Security",
         "enablement": "!virtualWorkspace && isWorkspaceTrusted"
       },
       {
@@ -2591,13 +2597,13 @@
           "scope": "window",
           "type": "boolean",
           "default": false,
-          "markdownDescription": "Compatibility escape hatch. Allow the fixed `secure-latexmk` profile to run host `latexmk` when Docker is disabled. Host TeX is not a filesystem sandbox and may read files available to your OS account. Configure this only in User settings for documents you fully trust; workspace values are ignored."
+          "markdownDescription": "Use installed local TeX tools for the fixed pdfLaTeX recipe when Docker is disabled. Run Set up local LaTeX or start your first build to check the tools and enable this with your consent. Local TeX can read files available to your OS account; use trusted documents only. Saved in User Settings for all trusted workspaces; workspace values are ignored. LuaLaTeX still requires Docker."
         },
         "latex-workshop.docker.enabled": {
           "scope": "window",
           "type": "boolean",
           "default": false,
-          "markdownDescription": "Enable the Docker or Podman build boundary. Secure pdfLaTeX and LuaLaTeX builds require this by default. The extension uses the image defined in `#latex-workshop.docker.image.latex#` for `latexmk`."
+          "markdownDescription": "Use Docker or Podman for isolated builds. Optional for pdfLaTeX after local setup; required for LuaLaTeX. The extension uses the image defined in `#latex-workshop.docker.image.latex#` for `latexmk`."
         },
         "latex-workshop.docker.image.latex": {
           "scope": "window",
