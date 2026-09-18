@@ -11,7 +11,7 @@ function canSetUpLocalTeX(): boolean {
     if (!requireTrustedWorkspace('Local TeX setup')) {
         return false
     }
-    if (vscode.workspace.workspaceFolders?.some(folder => folder.uri.scheme !== 'file')) {
+    if (!vscode.workspace.workspaceFolders?.length || vscode.workspace.workspaceFolders.some(folder => folder.uri.scheme !== 'file')) {
         void vscode.window.showInformationMessage('Local TeX setup requires a filesystem workspace. Open a local project folder first.')
         return false
     }

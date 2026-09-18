@@ -3,7 +3,7 @@
   "displayName": "LaTeX Workspace Security",
   "description": "Secure LaTeX tools for VS Code with project-local completions, manual build, diagnostics, and a local PDF tab viewer with SyncTeX.",
   "icon": "icons/icon.png",
-  "version": "11.4.5",
+  "version": "11.4.6",
   "publisher": "ToppyMicroServices",
   "license": "MIT",
   "homepage": "https://github.com/thinksyncs/LaTeX-Secure-Workspace",
@@ -2603,7 +2603,7 @@
           "scope": "window",
           "type": "boolean",
           "default": false,
-          "markdownDescription": "Enable the Docker or Podman build boundary. Secure pdfLaTeX and LuaLaTeX builds require this by default. The extension uses the image defined in `#latex-workshop.docker.image.latex#` for `latexmk`."
+          "markdownDescription": "Use Docker or Podman for isolated builds. Optional for pdfLaTeX after local setup; required for LuaLaTeX. The extension uses the image defined in `#latex-workshop.docker.image.latex#` for `latexmk`."
         },
         "latex-workshop.docker.image.latex": {
           "scope": "window",

@@ -10,6 +10,7 @@ import { testFileSuiteName } from '../file-name'
 import * as commands from '../../src/core/commands'
 import * as projectInsight from '../../src/core/project-insight'
 import { setupLocalBuild } from '../../src/compile/local-setup'
+import { showSecureBuildStatus, showSecureModeReport } from '../../src/core/secure-status'
 
 const buildWithRootCandidate = commands.buildWithRootCandidate
 
@@ -308,6 +309,23 @@ describe(testFileSuiteName(__filename), () => {
             assert.ok((lw.external.spawn as sinon.SinonStub).notCalled)
         })
 
+        for (const folders of [undefined, []]) {
+            it(`should not prompt for consent or probe tools with ${folders === undefined ? 'undefined' : 'empty'} workspace folders`, async () => {
+                set.config('security.allowLocalPdfLaTeX', false)
+                sinon.stub(vscode.workspace, 'workspaceFolders').value(folders)
+                const prompt = sinon.stub(vscode.window, 'showInformationMessage').resolves(undefined)
+                const update = sinon.spy(() => Promise.resolve())
+                set.configUpdate(update)
+
+                await setupLocalBuild()
+
+                assert.ok(String(prompt.firstCall.args[0]).includes('Open a local project folder first'))
+                assert.ok(update.notCalled)
+                assert.ok((lw.external.sync as sinon.SinonStub).notCalled)
+                assert.ok((lw.external.spawn as sinon.SinonStub).notCalled)
+            })
+        }
+
         it('should check an existing local setup without starting a build or changing settings', async () => {
             const prompt = sinon.stub(vscode.window, 'showInformationMessage').resolves(undefined)
             const update = sinon.spy(() => Promise.resolve())
@@ -320,6 +338,47 @@ describe(testFileSuiteName(__filename), () => {
             assert.ok((lw.external.spawn as sinon.SinonStub).notCalled)
             assert.ok(update.notCalled)
         })
+
+        for (const [name, showReport] of [['build status', showSecureBuildStatus], ['mode report', showSecureModeReport]] as const) {
+            for (const state of ['untrusted', 'virtual', 'empty']) {
+                it(`should report the ${state} workspace prerequisite in the ${name}`, async () => {
+                    if (state === 'untrusted') {
+                        sinon.stub(vscode.workspace, 'isTrusted').value(false)
+                    } else {
+                        sinon.stub(vscode.workspace, 'workspaceFolders').value(state === 'empty' ? undefined : [{uri: vscode.Uri.parse('memfs:/project'), name: 'virtual', index: 0}])
+                    }
+                    const document = new TextDocument(get.path('status.md'), '', {languageId: 'markdown'})
+                    const open = sinon.stub(vscode.workspace, 'openTextDocument').resolves(document)
+                    sinon.stub(vscode.window, 'showTextDocument').resolves(new TextEditor(get.path('status.md'), '', {languageId: 'markdown'}) as unknown as vscode.TextEditor)
+
+                    await showReport()
+
+                    const content = (open.firstCall.args[0] as {content: string}).content
+                    const guidance = state === 'untrusted' ? 'Restricted Mode: review workspace trust' : 'Open a local filesystem project folder'
+                    assert.ok(content.includes('Guidance: ' + guidance))
+                    assert.ok(!content.includes('Setup needed: run Build'))
+                    assert.ok(content.includes('Build toolchain ready: no'))
+                    assert.ok((lw.external.sync as sinon.SinonStub).notCalled)
+                })
+            }
+
+            it(`should consistently recommend local setup in the fresh-settings ${name}`, async () => {
+                set.config('security.allowLocalPdfLaTeX', false)
+                set.config('docker.enabled', false)
+                const document = new TextDocument(get.path('status.md'), '', {languageId: 'markdown'})
+                const open = sinon.stub(vscode.workspace, 'openTextDocument').resolves(document)
+                sinon.stub(vscode.window, 'showTextDocument').resolves(new TextEditor(get.path('status.md'), '', { languageId: 'markdown' }) as unknown as vscode.TextEditor)
+
+                await showReport()
+
+                const content = (open.firstCall.args[0] as {content: string}).content
+                assert.ok(content.includes('Setup needed: run Build LaTeX project or Set up local LaTeX'))
+                assert.ok(content.includes('Guidance: Run LaTeX Workspace Security: Build LaTeX project or Set up local LaTeX'))
+                assert.ok(!content.includes('Enable latex-workshop.docker.enabled'))
+                assert.ok(!content.includes('Docker wrapper by default'))
+                assert.ok((lw.external.sync as sinon.SinonStub).notCalled)
+            })
+        }
 
         it('should distinguish failed execution from a request that did not start', async () => {
             const spawnStub = lw.external.spawn as sinon.SinonStub

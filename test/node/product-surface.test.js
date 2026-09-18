@@ -32,19 +32,22 @@ test('compatibility inventory covers every setting and preserves active editor s
     assert.equal(properties['latex-workshop.security.allowLocalPdfLaTeX'].default, false)
 })
 
-test('first-build example matches the pinned CI image and the existing sample', () => {
+test('Docker manual matches the pinned CI image and README keeps the local sample', () => {
     const readme = read('README.md')
+    const manual = read('docs/manual/README.md')
     const workflow = read('.github/workflows/docker-secure-builds.yml')
     const imageMatch = workflow.match(/LATEXWORKSHOP_DOCKER_TEST_IMAGE: (\S+)/)
     assert.ok(imageMatch, 'Docker CI must declare LATEXWORKSHOP_DOCKER_TEST_IMAGE')
     const image = imageMatch[1]
-    const settingsMatch = readme.match(/```json\n([\s\S]*?)```/)
-    assert.ok(settingsMatch, 'README must include a JSON User Settings example')
+    const settingsMatch = manual.match(/```json\n([\s\S]*?)```/)
+    assert.ok(settingsMatch, 'Docker manual must include a JSON User Settings example')
     const settings = JSON.parse(settingsMatch[1])
     assert.equal(settings['latex-workshop.docker.image.latex'], image)
     assert.equal(settings['latex-workshop.docker.enabled'], true)
     assert.equal(settings['latex-workshop.docker.path'], 'docker')
-    assert.ok(readme.includes(`docker pull ${image}`))
+    assert.ok(manual.includes(`docker pull ${image}`))
+    assert.ok(readme.includes('./docs/manual/README.md#optional-docker-setup'))
+    assert.ok(readme.includes('Use Local TeX'))
     const sampleMatch = readme.match(/```latex\n([\s\S]*?)```/)
     assert.ok(sampleMatch, 'README must include a LaTeX onboarding sample')
     const sample = sampleMatch[1].replace(/^ {3}/gm, '').trim()
