@@ -141,9 +141,9 @@ describe('36_managed_tex:', () => {
     })
 
     it('should keep an existing recorded version usable across manifest updates', () => {
-        const asset = managed.getCurrentTinyTexAsset()!
+        const installedAsset = managed.getCurrentTinyTexAsset()!
         const install = path.join(temporary, 'tinytex')
-        const bin = path.join(install, 'bin', asset.bin)
+        const bin = path.join(install, 'bin', installedAsset.bin)
         fs.mkdirSync(bin, { recursive: true })
         for (const tool of ['latexmk', 'pdflatex']) {
             fs.writeFileSync(path.join(bin, tool + (process.platform === 'win32' ? '.exe' : '')), 'fixture')
