@@ -30,6 +30,8 @@ The setup checks the tools before saving your choice. If they are missing, choos
 
 To install or switch profiles later, run **Install or select TeX (Lightweight / Japanese)**. Each profile has its own directory; a completed installation is reused without another download. Disable `security.useManagedTeX` in User Settings to use existing system TeX instead.
 
+Installed copies remain usable across extension updates. SHA-256 is checked on download; the extension does not continuously verify local binaries for later modification.
+
 The installer downloads pinned [TinyTeX-1 v2026.09](https://github.com/rstudio/tinytex-releases/releases/tag/v2026.09) (about 51–71 MiB compressed, depending on OS) into this extension's VS Code global storage. It verifies SHA-256 before extraction, does not change OS PATH or remove another TeX installation, and never automatically updates or downloads missing LaTeX packages. The managed copy is used for this extension's builds, not installed as a system command. [TinyTeX licensing and distribution details](https://github.com/rstudio/tinytex-releases#license) apply.
 
 Japanese support is downloaded from the [CTAN TeX Live mirror](https://ctan.net/systems/texlive/tlnet/archive/), with each archive's size and SHA-256 pinned. If the mirror replaces an archive, installation stops until a reviewed extension update pins the new bytes. The supplied sample uses pdfLaTeX/CJK. Existing LuaLaTeX documents (such as `ltjsarticle`) still require the Docker workflow; selecting Japanese fonts does not change this execution boundary.

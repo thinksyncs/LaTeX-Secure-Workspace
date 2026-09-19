@@ -5,7 +5,7 @@ import { log } from './utils/logger'
 import { ensureMacTeXBinOnPath } from './utils/tex-path'
 import { setupLocalBuild } from './compile/local-setup'
 import { requestManagedTexInstall } from './compile/tex-install'
-import { configureManagedTexStorage } from './utils/managed-tex'
+import { configureManagedTexStorage, resolveManagedTexStorage } from './utils/managed-tex'
 
 ensureMacTeXBinOnPath()
 const logger = lw.log('Extension')
@@ -47,7 +47,7 @@ const commander = require('./core/commands') as typeof import('./core/commands')
 lw.commands = commander
 
 export function activate(extensionContext: vscode.ExtensionContext) {
-    configureManagedTexStorage(extensionContext.globalStorageUri.scheme === 'file' ? extensionContext.globalStorageUri.fsPath : undefined)
+    configureManagedTexStorage(resolveManagedTexStorage(extensionContext.globalStorageUri, vscode.env.remoteName))
     void vscode.commands.executeCommand('setContext', 'latex-workshop:enabled', true)
 
     logger.log(`Extension root: ${lw.extensionRoot}`)

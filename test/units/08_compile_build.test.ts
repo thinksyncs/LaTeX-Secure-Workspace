@@ -12,6 +12,8 @@ import * as projectInsight from '../../src/core/project-insight'
 import { setupLocalBuild } from '../../src/compile/local-setup'
 import { showSecureBuildStatus, showSecureModeReport } from '../../src/core/secure-status'
 import * as texInstall from '../../src/compile/tex-install'
+import * as managedTex from '../../src/utils/managed-tex'
+import * as recipe from '../../src/compile/recipe'
 
 const buildWithRootCandidate = commands.buildWithRootCandidate
 
@@ -276,6 +278,21 @@ describe(testFileSuiteName(__filename), () => {
             assert.strictEqual(await buildWithResult(), 'succeeded')
             assert.ok(install.calledOnce)
             assert.strictEqual((lw.external.sync as sinon.SinonStub).getCalls().filter(call => call.args[0] === 'latexmk').length, 2)
+        })
+
+        it('should re-detect MiKTeX after switching the managed toolchain in one session', async () => {
+            recipe.initialize()
+            set.config('latex.option.maxPrintLine.enabled', true)
+            const env = sinon.stub(managedTex, 'getManagedTexEnvironment').returns(undefined)
+            const probe = lw.external.sync as sinon.SinonStub
+            probe.withArgs('pdflatex').returns({ status: 0, stdout: Buffer.from('MiKTeX') })
+            assert.strictEqual(await buildWithResult(), 'succeeded')
+            const spawn = lw.external.spawn as sinon.SinonStub
+            assert.ok((spawn.lastCall.args[1] as string[]).some(arg => arg.startsWith('--max-print-line=')))
+            env.returns({ PATH: '/managed/bin' })
+            probe.withArgs('pdflatex').returns({ status: 0, stdout: Buffer.from('TeX Live') })
+            assert.strictEqual(await buildWithResult(), 'succeeded')
+            assert.ok(!(spawn.lastCall.args[1] as string[]).some(arg => arg.startsWith('--max-print-line=')))
         })
 
         it('should not save execution consent or build after an installation is cancelled or fails', async () => {

@@ -46,6 +46,16 @@ describe('36_managed_tex:', () => {
         assert.strictEqual(fs.existsSync(storage), false)
     })
 
+    it('should accept local user-data storage but reject remote and virtual providers', () => {
+        for (const scheme of ['file', 'vscode-userdata']) {
+            assert.strictEqual(managed.resolveManagedTexStorage({ scheme, authority: '', fsPath: temporary }), temporary)
+            assert.strictEqual(managed.resolveManagedTexStorage({ scheme, authority: '', fsPath: temporary }, 'ssh-remote'), undefined)
+        }
+        assert.strictEqual(managed.resolveManagedTexStorage({ scheme: 'vscode-userdata', authority: 'remote', fsPath: temporary }), undefined)
+        assert.strictEqual(managed.resolveManagedTexStorage({ scheme: 'memfs', authority: '', fsPath: temporary }), undefined)
+        assert.strictEqual(managed.resolveManagedTexStorage({ scheme: 'file', authority: '', fsPath: 'relative' }), undefined)
+    })
+
     it('should keep PATH changes inside the returned child-process environment', () => {
         const original = { PATH: '/usr/bin', KEEP: 'value' }
         assert.deepStrictEqual(managed.texEnvironment('/managed/bin', original, 'linux'), { PATH: '/managed/bin:/usr/bin', KEEP: 'value' })
@@ -121,6 +131,34 @@ describe('36_managed_tex:', () => {
         fs.mkdirSync(lock)
         await assert.rejects(managed.installManagedTex(temporary, { signal: new AbortController().signal, progress: () => {} }), /Another TeX installation/)
         assert.ok(fs.existsSync(lock))
+    })
+
+    it('should preserve a dangling installation link without downloading', async () => {
+        const target = path.join(temporary, 'tinytex')
+        fs.symlinkSync(path.join(temporary, 'missing'), target, process.platform === 'win32' ? 'junction' : 'dir')
+        await assert.rejects(managed.installManagedTex(temporary, { signal: new AbortController().signal, progress: () => {} }), /not overwritten/)
+        assert.ok(fs.lstatSync(target).isSymbolicLink())
+    })
+
+    it('should keep an existing recorded version usable across manifest updates', () => {
+        const asset = managed.getCurrentTinyTexAsset()!
+        const install = path.join(temporary, 'tinytex')
+        const bin = path.join(install, 'bin', asset.bin)
+        fs.mkdirSync(bin, { recursive: true })
+        for (const tool of ['latexmk', 'pdflatex']) {
+            fs.writeFileSync(path.join(bin, tool + (process.platform === 'win32' ? '.exe' : '')), 'fixture')
+        }
+        fs.writeFileSync(path.join(install, '.latex-workspace-install.json'), JSON.stringify({
+            platform: process.platform, arch: process.arch, version: 'v2026.08', sha256: 'a'.repeat(64)
+        }))
+        assert.strictEqual(managed.getManagedTexBin(temporary), bin)
+        assert.strictEqual(managed.getManagedTexBin(temporary, 'japanese'), undefined)
+    })
+
+    it('should resolve tar from fixed system directories including Alpine bin', () => {
+        assert.strictEqual(managed.getSystemTar('linux', candidate => candidate === '/bin/tar'), '/bin/tar')
+        assert.strictEqual(managed.getSystemTar('darwin', () => true), '/usr/bin/tar')
+        assert.throws(() => managed.getSystemTar('linux', () => false), /System tar/)
     })
 
     describe('installation consent', () => {

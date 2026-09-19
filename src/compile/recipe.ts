@@ -57,10 +57,12 @@ export function getSecureBuildExecution(scope: vscode.ConfigurationScope | undef
 }
 
 let isMikTeXCache: boolean | undefined
+let isMikTeXCachePath: string | undefined
 
 initialize()
 export function initialize() {
     isMikTeXCache = undefined
+    isMikTeXCachePath = undefined
 }
 
 void setDockerImage()
@@ -416,10 +418,13 @@ function populateTools(rootFile: string, buildTools: Tool[], secureBuildDir: str
  * otherwise, false.
  */
 function isMikTeX(): boolean {
-    if (isMikTeXCache === undefined) {
+    const managedEnv = getSecureConfigurationValueSync(undefined, 'security.useManagedTeX', true)
+        ? getManagedTexEnvironment(getSecureConfigurationValueSync<ManagedTexProfile>(undefined, 'security.managedTeXProfile', 'lightweight')) : undefined
+    const env = managedEnv ?? process.env
+    const toolPath = env.PATH ?? env.Path
+    if (isMikTeXCache === undefined || isMikTeXCachePath !== toolPath) {
+        isMikTeXCachePath = toolPath
         try {
-            const managedEnv = getSecureConfigurationValueSync(undefined, 'security.useManagedTeX', true)
-                ? getManagedTexEnvironment(getSecureConfigurationValueSync<ManagedTexProfile>(undefined, 'security.managedTeXProfile', 'lightweight')) : undefined
             const result = lw.external.sync('pdflatex', ['--version'], managedEnv ? { env: managedEnv } : undefined)
             if (result.error) {
                 throw result.error

@@ -10,6 +10,15 @@ const run = promisify(execFile)
 const markerName = '.latex-workspace-install.json'
 let storagePath: string | undefined
 
+export function resolveManagedTexStorage(
+    uri: { scheme: string, authority: string, fsPath: string }, remoteName?: string
+): string | undefined {
+    // Desktop VS Code can expose local user data with the vscode-userdata
+    // scheme. Only accept its absolute local path, never a remote authority.
+    return !remoteName && !uri.authority && ['file', 'vscode-userdata'].includes(uri.scheme) && path.isAbsolute(uri.fsPath)
+        ? uri.fsPath : undefined
+}
+
 export function configureManagedTexStorage(root: string | undefined): void {
     // Merely remember extension-owned storage. Activation performs no IO,
     // network requests, installation or executable probes.
@@ -41,6 +50,8 @@ export function getManagedTexBin(root = storagePath, profile: ManagedTexProfile 
         const marker = JSON.parse(fs.readFileSync(path.join(install, markerName), 'utf8')) as {
             platform?: string, arch?: string, version?: string, sha256?: string, profile?: string
         }
+        // An extension update must not invalidate an already installed version.
+        // Pins authenticate new downloads, not subsequent local filesystem state.
         if (marker.platform !== process.platform || marker.arch !== process.arch
             || !/^v\d{4}\.\d{2}(?:\.\d+)?$/.test(marker.version ?? '') || !/^[a-f0-9]{64}$/.test(marker.sha256 ?? '')) {
             return undefined
@@ -189,6 +200,29 @@ async function validateExtractedTree(root: string, directory = root): Promise<vo
     }
 }
 
+async function entryExists(target: string): Promise<boolean> {
+    try {
+        await fs.promises.lstat(target)
+        return true
+    } catch (error) {
+        if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+            return false
+        }
+        throw error
+    }
+}
+
+export function getSystemTar(platform: NodeJS.Platform = process.platform, exists = fs.existsSync): string {
+    if (platform === 'win32') {
+        return path.join(process.env.SystemRoot ?? 'C:\\Windows', 'System32', 'tar.exe')
+    }
+    const tar = ['/usr/bin/tar', '/bin/tar'].find(candidate => exists(candidate))
+    if (!tar) {
+        throw new Error('System tar is required for TeX installation. See the installation guide.')
+    }
+    return tar
+}
+
 export async function installManagedTex(
     root: string,
     options: { signal: AbortSignal, progress: (message: string) => void, profile?: ManagedTexProfile }
@@ -212,7 +246,7 @@ export async function installManagedTex(
         return existing
     }
     const destination = path.join(root, directory)
-    if (fs.existsSync(destination)) {
+    if (await entryExists(destination)) {
         throw new Error('A previous TinyTeX directory exists but is incomplete. It was not overwritten. See the installation guide.')
     }
     const lock = path.join(root, 'tinytex-install.lock')
@@ -238,9 +272,10 @@ export async function installManagedTex(
             // only the pinned, verified bytes in our private staging directory.
             await run(archive, ['-y'], { ...execOptions, cwd: staging })
         } else {
-            const { stdout } = await run('/usr/bin/tar', ['-tf', archive], { ...execOptions, cwd: staging })
+            const tar = getSystemTar()
+            const { stdout } = await run(tar, ['-tf', archive], { ...execOptions, cwd: staging })
             validateArchiveListing(stdout, asset.root)
-            await run('/usr/bin/tar', ['-xf', archive, '--no-same-owner', '-C', staging], { ...execOptions, cwd: staging })
+            await run(tar, ['-xf', archive, '--no-same-owner', '-C', staging], { ...execOptions, cwd: staging })
         }
         const extracted = path.join(staging, asset.root)
         if (!(await fs.promises.lstat(extracted)).isDirectory()) {
@@ -252,8 +287,7 @@ export async function installManagedTex(
             // Extend only our new staging copy. The existing profile is untouched.
             const local = path.join(extracted, 'texmf-local')
             await fs.promises.mkdir(local, { recursive: true })
-            const tar = process.platform === 'win32'
-                ? path.join(process.env.SystemRoot ?? 'C:\\Windows', 'System32', 'tar.exe') : '/usr/bin/tar'
+            const tar = getSystemTar()
             for (const pack of JAPANESE_TEX_PACKAGES) {
                 options.progress(`Downloading Japanese support: ${pack.name}`)
                 const file = path.join(staging, pack.name)
@@ -283,7 +317,7 @@ export async function installManagedTex(
         }) + '\n', { flag: 'wx', mode: 0o600 })
         // The lock prevents two extension windows from committing an install.
         // Never delete or overwrite an existing toolchain, including incomplete ones.
-        if (fs.existsSync(destination)) {
+        if (await entryExists(destination)) {
             throw new Error('TinyTeX destination appeared during installation; it was not overwritten.')
         }
         await fs.promises.rename(extracted, destination)
