@@ -13,6 +13,7 @@
   "command.saveWithoutBuilding": "ビルドせずに保存",
   "command.build": "LaTeXプロジェクトをビルド",
   "command.setup-local": "ローカルLaTeXをセットアップ",
+  "command.install-tex": "TeXを導入・選択（軽量版 / 日本語版）",
   "command.buildRecipe": "レシピを選択してビルド",
   "command.recipes": "レシピでビルド",
   "command.view": "LaTeX PDFファイルを表示",

@@ -16,7 +16,7 @@ This independent LaTeX Workshop fork trades custom toolchains and automatic comp
 
 ## Get started
 
-1. Install the extension and local TeX tools: `latexmk` and `pdflatex`. See the [platform setup guide](./resources/local-setup.md#1-check-your-tex-installation) if either is missing.
+1. Install the extension. Keep your existing TeX, or let setup install a lightweight copy after your approval.
 2. Open a local folder you trust and save this as `t.tex`:
 
    ```latex
@@ -28,7 +28,7 @@ This independent LaTeX Workshop fork trades custom toolchains and automatic comp
 
 3. Run **LaTeX Workspace Security: Build LaTeX project** and choose **Use Local TeX**. Setup checks the tools, then builds and opens `.lw-security/t.pdf`.
 
-No JSON editing is needed. Missing tools? Use **Installation Guide** and **Check Again**. Nothing is installed automatically. If a build stops, run **Show secure build status**.
+Missing tools? Choose **Install Lightweight TeX**, select the lightweight or Japanese-font profile, then approve the download. Setup installs TinyTeX and continues the build. No admin rights or OS PATH edits are requested. See the [setup guide](./resources/local-setup.md).
 
 Local TeX runs as your OS account, outside a sandbox. Use trusted documents; your consent applies to all trusted workspaces and can be revoked in User Settings. For isolation or LuaLaTeX, follow the [Docker setup](./docs/manual/README.md#optional-docker-setup).
 

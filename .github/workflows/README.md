@@ -8,6 +8,7 @@ The release automation uses one public registry channel and one preview artifact
 - `auto-stable-release.yml`: watches the required push CI workflows on `master`, creates the matching stable GitHub release when they have all passed for the current `package.json` version, and dispatches `stable-release.yml` for that tag.
 - `daily-release.yml`: builds, tests, packages a daily preview VSIX, refreshes the rolling GitHub `daily` prerelease, and attaches summaries of open pull requests, CodeQL alerts, and Dependabot alerts. It does not publish to extension registries.
 - `docker-secure-builds.yml`: runs the production Docker wrapper with the fixed pdfLaTeX and LuaLaTeX profiles against a digest-pinned TeX Live image.
+- `managed-tex-install.yml`: verifies lightweight and Japanese TinyTeX installations and first PDFs on Linux, macOS, and Windows. Checks Japanese text and embedded IPAex fonts, with no preinstalled TeX/third-party Perl on PATH, and saves PDF/JSON evidence. It gates automatic stable releases; no system TeX or OS PATH is changed.
 
 The canonical repository expects:
 

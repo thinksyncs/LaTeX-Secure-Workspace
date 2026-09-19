@@ -7,6 +7,8 @@ import { lw } from '../lw'
 import type { Recipe, Tool } from '../types'
 import { queue } from './queue'
 import fixedSecureRecipeArguments from './fixedSecureRecipeArguments.json'
+import { getManagedTexEnvironment, getManagedTexPathOverride } from '../utils/managed-tex'
+import type { ManagedTexProfile } from '../utils/japanese-tex-manifest'
 
 const logger = lw.log('Build', 'Recipe')
 const DOCKER_SECURE_SOURCE_DIR = '/latex-workshop/src'
@@ -381,6 +383,12 @@ function populateTools(rootFile: string, buildTools: Tool[], secureBuildDir: str
                 env[key] = value && replaceArgumentPlaceholders(rootFile, lw.file.tmpDirPath, docker)(value)
             }
         })
+        if (!docker && getSecureConfigurationValueSync(lw.file.toUri(rootFile), 'security.useManagedTeX', true)) {
+            // Add only PATH to the recipe, not the full process environment:
+            // recipe diagnostics log tool.env and must not expose other values.
+            const profile = getSecureConfigurationValueSync<ManagedTexProfile>(lw.file.toUri(rootFile), 'security.managedTeXProfile', 'lightweight')
+            tool.env = { ...env, ...getManagedTexPathOverride(profile) }
+        }
         if (configuration.get('latex.option.maxPrintLine.enabled')) {
             tool.args = tool.args ?? []
             const isLaTeXmk =
@@ -410,7 +418,9 @@ function populateTools(rootFile: string, buildTools: Tool[], secureBuildDir: str
 function isMikTeX(): boolean {
     if (isMikTeXCache === undefined) {
         try {
-            const result = lw.external.sync('pdflatex', ['--version'])
+            const managedEnv = getSecureConfigurationValueSync(undefined, 'security.useManagedTeX', true)
+                ? getManagedTexEnvironment(getSecureConfigurationValueSync<ManagedTexProfile>(undefined, 'security.managedTeXProfile', 'lightweight')) : undefined
+            const result = lw.external.sync('pdflatex', ['--version'], managedEnv ? { env: managedEnv } : undefined)
             if (result.error) {
                 throw result.error
             }

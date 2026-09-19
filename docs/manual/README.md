@@ -20,7 +20,7 @@ count, or the math preview panel.
 
 ## User Quick Start
 
-For a first local pdfLaTeX build, follow the [Docker-free guide](../../resources/local-setup.md): check your installed TeX tools, run **Set up local LaTeX**, select **Use Local TeX**, and build the sample. The first **Build LaTeX project** command also offers setup. Missing tools have **Installation Guide** and **Check Again** actions. No JSON editing or Docker installation is needed. A successful build creates `.lw-security/t.pdf` containing `abcd` in a local VS Code tab.
+For a first local pdfLaTeX build, follow the [Docker-free guide](../../resources/local-setup.md): run **Set up local LaTeX**, select **Use Local TeX**, and build the sample. The first **Build LaTeX project** command also offers setup. If tools are missing, **Install Lightweight TeX** offers a separate download confirmation and installs a pinned TinyTeX copy in extension storage. Manual installation and **Check Again** remain available. No JSON editing or Docker installation is needed. A successful build creates `.lw-security/t.pdf` containing `abcd` in a local VS Code tab.
 
 For container isolation or LuaLaTeX, use the [optional Docker setup](#optional-docker-setup) below. For the short introduction, see [Get started](../../README.md#get-started).
 
