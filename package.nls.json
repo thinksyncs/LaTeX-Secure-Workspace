@@ -13,6 +13,7 @@
   "command.saveWithoutBuilding": "Save without Building",
   "command.build": "Build LaTeX project",
   "command.setup-local": "Set up local LaTeX",
+  "command.install-tex": "Install or select TeX (Lightweight / Japanese)",
   "command.buildRecipe": "Build with recipe",
   "command.recipes": "Build with recipe",
   "command.view": "View PDF",

@@ -3,6 +3,8 @@ import * as vscode from 'vscode'
 import { getAvailableRecipes, getSecureBuildExecution } from '../compile/recipe'
 import { lw } from '../lw'
 import { getSecureConfigurationValueSync } from '../utils/security'
+import { getManagedTexEnvironment } from '../utils/managed-tex'
+import type { ManagedTexProfile } from '../utils/japanese-tex-manifest'
 import {
     getTexEnvironmentInstallAdvice,
     getRequiredBuildToolDefinitions,
@@ -27,6 +29,8 @@ const restrictedConfigurations = [
     'latex.clean.command',
     'latex.clean.args',
     'security.allowLocalPdfLaTeX',
+    'security.useManagedTeX',
+    'security.managedTeXProfile',
     'docker.enabled',
     'docker.image.latex',
     'docker.path',
@@ -77,7 +81,9 @@ async function renderReport(kind: ReportKind): Promise<string> {
     const execution = workspaceBlocker ? 'blocked' : getSecureBuildExecution(configurationScope, recipe?.name)
     const dockerImage = getSecureConfigurationValueSync(configurationScope, 'docker.image.latex', '').trim()
     const texTools = execution === 'local-pdflatex'
-        ? inspectTexEnvironment(lw.external.sync as TexToolRunner, getRequiredBuildToolDefinitions('pdflatex'))
+        ? inspectTexEnvironment(lw.external.sync as TexToolRunner, getRequiredBuildToolDefinitions('pdflatex'),
+            getSecureConfigurationValueSync(configurationScope, 'security.useManagedTeX', true)
+                ? getManagedTexEnvironment(getSecureConfigurationValueSync<ManagedTexProfile>(configurationScope, 'security.managedTeXProfile', 'lightweight')) : undefined)
         : []
     const dockerTool = execution === 'docker'
         ? inspectTexEnvironment(lw.external.sync as TexToolRunner, [{

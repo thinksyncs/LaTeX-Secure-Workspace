@@ -4,6 +4,9 @@ import { lw } from '../lw'
 import { getSecureConfigurationValueSync, requireTrustedWorkspace } from '../utils/security'
 import { getMissingBuildToolsMessage, getRequiredBuildToolDefinitions, inspectTexEnvironment, type TexToolRunner } from '../utils/tex-environment'
 import { ensureMacTeXBinOnPath } from '../utils/tex-path'
+import { getManagedTexEnvironment } from '../utils/managed-tex'
+import { requestManagedTexInstall } from './tex-install'
+import type { ManagedTexProfile } from '../utils/japanese-tex-manifest'
 
 const logger = lw.log('Local setup')
 
@@ -43,14 +46,16 @@ export async function prepareLocalPdfLaTeX(scope: vscode.ConfigurationScope | un
         }
     }
 
-    // Probe only after consent. A missing installation must not persist an
-    // execution permission or launch an installer on the user's behalf.
+    // Probe only after consent. Installation requires separate download consent;
+    // missing tools alone must not persist an execution permission.
     while (true) {
         if (!vscode.workspace.isTrusted) {
             return false
         }
         ensureMacTeXBinOnPath()
-        const statuses = inspectTexEnvironment(lw.external.sync as TexToolRunner, getRequiredBuildToolDefinitions('pdflatex'))
+        const profile = getSecureConfigurationValueSync<ManagedTexProfile>(scope, 'security.managedTeXProfile', 'lightweight')
+        const managedEnv = getSecureConfigurationValueSync(scope, 'security.useManagedTeX', true) ? getManagedTexEnvironment(profile) : undefined
+        const statuses = inspectTexEnvironment(lw.external.sync as TexToolRunner, getRequiredBuildToolDefinitions('pdflatex'), managedEnv)
         const missing = statuses.filter(status => !status.available)
         if (missing.length === 0) {
             break
@@ -59,9 +64,16 @@ export async function prepareLocalPdfLaTeX(scope: vscode.ConfigurationScope | un
         logger.refreshStatus('tools', 'statusBar.foreground', undefined, 'warning')
         const selection = await vscode.window.showErrorMessage(
             getMissingBuildToolsMessage(statuses),
+            'Install Lightweight TeX',
             'Installation Guide',
             'Check Again'
         )
+        if (selection === 'Install Lightweight TeX') {
+            if (await requestManagedTexInstall()) {
+                continue
+            }
+            return false
+        }
         if (selection === 'Installation Guide') {
             await vscode.commands.executeCommand('markdown.showPreview', vscode.Uri.file(path.join(lw.extensionRoot, 'resources', 'local-setup.md')))
             return false

@@ -11,6 +11,9 @@ import * as commands from '../../src/core/commands'
 import * as projectInsight from '../../src/core/project-insight'
 import { setupLocalBuild } from '../../src/compile/local-setup'
 import { showSecureBuildStatus, showSecureModeReport } from '../../src/core/secure-status'
+import * as texInstall from '../../src/compile/tex-install'
+import * as managedTex from '../../src/utils/managed-tex'
+import * as recipe from '../../src/compile/recipe'
 
 const buildWithRootCandidate = commands.buildWithRootCandidate
 
@@ -262,6 +265,48 @@ describe(testFileSuiteName(__filename), () => {
             assert.ok(prompt.calledOnce)
             assert.strictEqual((lw.external.sync as sinon.SinonStub).getCalls().filter(call => call.args[0] === 'latexmk').length, 2)
             assert.ok((lw.external.spawn as sinon.SinonStub).calledOnce)
+        })
+
+        it('should continue the requested build after approved TeX installation and re-detection', async () => {
+            set.config('security.allowLocalPdfLaTeX', false)
+            sinon.stub(vscode.window, 'showInformationMessage').resolves('Use Local TeX' as unknown as vscode.MessageItem)
+            ;(lw.external.sync as sinon.SinonStub).withArgs('latexmk').onFirstCall().returns({status: 1, stderr: 'missing'})
+            ;(vscode.window.showErrorMessage as sinon.SinonStub).resolves('Install Lightweight TeX')
+            const install = sinon.stub(texInstall, 'requestManagedTexInstall').resolves(true)
+            set.configUpdate((section, value) => { set.config(section, value); return Promise.resolve() })
+
+            assert.strictEqual(await buildWithResult(), 'succeeded')
+            assert.ok(install.calledOnce)
+            assert.strictEqual((lw.external.sync as sinon.SinonStub).getCalls().filter(call => call.args[0] === 'latexmk').length, 2)
+        })
+
+        it('should re-detect MiKTeX after switching the managed toolchain in one session', async () => {
+            recipe.initialize()
+            set.config('latex.option.maxPrintLine.enabled', true)
+            const env = sinon.stub(managedTex, 'getManagedTexEnvironment').returns(undefined)
+            const probe = lw.external.sync as sinon.SinonStub
+            probe.withArgs('pdflatex').returns({ status: 0, stdout: Buffer.from('MiKTeX') })
+            assert.strictEqual(await buildWithResult(), 'succeeded')
+            const spawn = lw.external.spawn as sinon.SinonStub
+            assert.ok((spawn.lastCall.args[1] as string[]).some(arg => arg.startsWith('--max-print-line=')))
+            env.returns({ PATH: '/managed/bin' })
+            probe.withArgs('pdflatex').returns({ status: 0, stdout: Buffer.from('TeX Live') })
+            assert.strictEqual(await buildWithResult(), 'succeeded')
+            assert.ok(!(spawn.lastCall.args[1] as string[]).some(arg => arg.startsWith('--max-print-line=')))
+        })
+
+        it('should not save execution consent or build after an installation is cancelled or fails', async () => {
+            set.config('security.allowLocalPdfLaTeX', false)
+            sinon.stub(vscode.window, 'showInformationMessage').resolves('Use Local TeX' as unknown as vscode.MessageItem)
+            ;(lw.external.sync as sinon.SinonStub).withArgs('latexmk').returns({status: 1, stderr: 'missing'})
+            ;(vscode.window.showErrorMessage as sinon.SinonStub).resolves('Install Lightweight TeX')
+            sinon.stub(texInstall, 'requestManagedTexInstall').resolves(false)
+            const update = sinon.spy(() => Promise.resolve())
+            set.configUpdate(update)
+
+            assert.strictEqual(await buildWithResult(), 'not-started')
+            assert.ok(update.notCalled)
+            assert.ok((lw.external.spawn as sinon.SinonStub).notCalled)
         })
 
         it('should not launch a build if saving consent fails', async () => {

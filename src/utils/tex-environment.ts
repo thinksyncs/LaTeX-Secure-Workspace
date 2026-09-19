@@ -23,7 +23,7 @@ type TexToolResult = {
 export type TexToolRunner = (
     command: string,
     args: readonly string[],
-    options: { encoding: 'utf8', timeout: number, windowsHide: boolean }
+    options: { encoding: 'utf8', timeout: number, windowsHide: boolean, env?: NodeJS.ProcessEnv }
 ) => TexToolResult
 
 export const TEX_TOOL_DEFINITIONS: readonly TexToolDefinition[] = [
@@ -70,7 +70,8 @@ const defaultRunner: TexToolRunner = (command, args, options) => cs.sync(command
 
 export function inspectTexEnvironment(
     runner: TexToolRunner = defaultRunner,
-    definitions: readonly TexToolDefinition[] = TEX_TOOL_DEFINITIONS
+    definitions: readonly TexToolDefinition[] = TEX_TOOL_DEFINITIONS,
+    env?: NodeJS.ProcessEnv
 ): TexToolStatus[] {
     return definitions.map(definition => {
         let result: TexToolResult
@@ -78,7 +79,8 @@ export function inspectTexEnvironment(
             result = runner(definition.command, definition.args, {
                 encoding: 'utf8',
                 timeout: 5000,
-                windowsHide: true
+                windowsHide: true,
+                ...(env ? { env } : {})
             })
         } catch (error) {
             return {

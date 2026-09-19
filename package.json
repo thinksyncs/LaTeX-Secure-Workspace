@@ -71,6 +71,8 @@
         "latex-workshop.latex.search.rootFiles.include",
         "latex-workshop.latex.search.rootFiles.exclude",
         "latex-workshop.security.allowLocalPdfLaTeX",
+        "latex-workshop.security.useManagedTeX",
+        "latex-workshop.security.managedTeXProfile",
         "latex-workshop.docker.enabled",
         "latex-workshop.docker.image.latex",
         "latex-workshop.docker.path",
@@ -625,6 +627,12 @@
       {
         "command": "latex-workshop.setup-local",
         "title": "%command.setup-local%",
+        "category": "LaTeX Workspace Security",
+        "enablement": "!virtualWorkspace && isWorkspaceTrusted"
+      },
+      {
+        "command": "latex-workshop.install-tex",
+        "title": "%command.install-tex%",
         "category": "LaTeX Workspace Security",
         "enablement": "!virtualWorkspace && isWorkspaceTrusted"
       },
@@ -2592,6 +2600,19 @@
           "type": "boolean",
           "default": false,
           "markdownDescription": "Enable automatic conversion of `$...$` to `\\(...\\)` and `$$...$$` to `\\[...\\]` during formatting."
+        },
+        "latex-workshop.security.useManagedTeX": {
+          "scope": "window",
+          "type": "boolean",
+          "default": true,
+          "markdownDescription": "Use the extension-managed TinyTeX for local builds if it has been installed with your consent. Disable in User Settings to use your existing TeX on PATH instead. This setting never downloads software or enables local execution by itself. Workspace values are ignored."
+        },
+        "latex-workshop.security.managedTeXProfile": {
+          "scope": "window",
+          "type": "string",
+          "enum": ["lightweight", "japanese"],
+          "default": "lightweight",
+          "markdownDescription": "Select an already installed managed TeX profile. Use Install or select TeX to install one with consent. Japanese includes CJK and IPAex Mincho/Gothic for pdfLaTeX. This setting never downloads software. Workspace values are ignored."
         },
         "latex-workshop.security.allowLocalPdfLaTeX": {
           "scope": "window",

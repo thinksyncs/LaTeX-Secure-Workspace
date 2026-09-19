@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+### Added
+- Offer a separately approved, pinned TinyTeX installation when local build tools are missing. Show download progress, support cancellation, verify SHA-256, and continue the requested build after tool checks.
+- Add lightweight and Japanese-font profiles, a profile-selection command, and a pdfLaTeX Japanese sample using IPAex Mincho/Gothic. Test both profiles and embedded fonts on Windows, macOS, and Linux.
+- Keep the managed toolchain in extension storage without administrator access or OS PATH edits. Existing TeX and Docker configurations are preserved; User Settings can switch local builds back to system TeX.
+- Exercise clean managed installation and first-PDF compilation on Linux, macOS, and Windows CI. Remote installation and native Windows ARM are not supported.
+
 ## [11.4.6] - 2026-09-18
 
 ### User impact
