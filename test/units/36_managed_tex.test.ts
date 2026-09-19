@@ -9,11 +9,12 @@ import { lw } from '../../src/lw'
 import * as managed from '../../src/utils/managed-tex'
 import { getTinyTexAsset, tinyTexDownloadUrl } from '../../src/utils/tinytex-manifest'
 import { requestManagedTexInstall } from '../../src/compile/tex-install'
+import { JAPANESE_TEX_SOURCE } from '../../src/utils/japanese-tex-manifest'
 
 describe('36_managed_tex:', () => {
     let temporary: string
     beforeEach(() => {
-        temporary = fs.mkdtempSync(path.join(os.tmpdir(), 'lw-managed-tex-unit-'))
+        temporary = fs.mkdtempSync(path.join(path.resolve(os.tmpdir()), 'lw-managed-tex-unit-'))
     })
     afterEach(() => {
         sinon.restore()
@@ -167,7 +168,9 @@ describe('36_managed_tex:', () => {
             assert.strictEqual(install.firstCall.args[1].profile, 'japanese')
             const detail = (prompt.firstCall.args[1] as vscode.MessageOptions).detail ?? ''
             assert.ok(detail.includes('IPAex'))
-            assert.ok(detail.includes('ctan.net'))
+            assert.deepStrictEqual(detail.split('\n').filter(line => line.startsWith('https://')), [
+                tinyTexDownloadUrl(getTinyTexAsset('darwin', 'x64')!), JAPANESE_TEX_SOURCE
+            ])
             assert.ok(detail.includes('tinytex-japanese'))
             assert.deepStrictEqual(updates, ['security.useManagedTeX', 'security.managedTeXProfile'])
         })

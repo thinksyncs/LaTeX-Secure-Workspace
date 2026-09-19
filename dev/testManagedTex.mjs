@@ -10,7 +10,9 @@ import managed from '../out/src/utils/managed-tex.js'
 const run = promisify(execFile)
 const profile = process.argv[2] ?? 'lightweight'
 assert.ok(['lightweight', 'japanese'].includes(profile))
-const root = await fs.mkdtemp(path.join(os.tmpdir(), 'lw-managed-tex-'))
+// Windows os.tmpdir() may use an 8.3 alias (RUNNER~1), which latexmk rejects.
+// Use the real long path, as VS Code's globalStorageUri does.
+const root = await fs.realpath(await fs.mkdtemp(path.join(os.tmpdir(), 'lw-managed-tex-')))
 const storage = path.join(root, 'profile storage')
 // Test with no existing TeX or third-party Perl on PATH. This changes only this
 // disposable test process, never the normal VS Code profile or OS environment.
