@@ -3045,7 +3045,7 @@
     "test:docker": "node ./dev/testDockerBuild.mjs",
     "test:fuzz": "node --test ./test/fuzz/*.test.js",
     "test:integration": "node ./dev/runTestCi.mjs",
-    "test:node": "node --test ./test/node/fixture-selection.test.js ./test/node/test-command-boundaries.test.js ./test/node/product-surface.test.js ./test/fuzz/graphics-diagnostics-utils.test.js ./test/fuzz/parser.fast-check.test.js",
+    "test:node": "node --test ./test/node/fixture-selection.test.js ./test/node/test-command-boundaries.test.js ./test/node/windows-build.test.js ./test/node/product-surface.test.js ./test/fuzz/graphics-diagnostics-utils.test.js ./test/fuzz/parser.fast-check.test.js",
     "watch-src": "tsc -watch -p tsconfig.json",
     "update-grammar": "node ./dev/update-grammar.mjs"
   },

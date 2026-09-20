@@ -125,5 +125,5 @@ test('Windows Docker wrapper forwards the isolated mounts and cache', {
   assert.ok(args.includes(`-v "${outputDir}:/latex-workshop/out"`))
   assert.match(args, /TEXMFVAR=\/latex-workshop\/out\/\.texlive-cache/u)
   assert.match(args, /TEXMFCACHE=\/latex-workshop\/out\/\.texlive-cache/u)
-  assert.match(args, /example\/texlive@sha256:test latexmk -pdf main/u)
+  assert.match(args, /"example\/texlive@sha256:test" latexmk -pdf main/u)
 })

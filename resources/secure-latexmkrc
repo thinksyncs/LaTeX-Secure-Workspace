@@ -1,0 +1,22 @@
+# Extension-owned Windows execution policy. Never load a project rc file.
+# Paths are selected by windows-build.ts, not by document settings.
+# latexmk's documented internal commands preserve its normal rerun logic.
+sub lw_secure_run {
+    my ($tool, @args) = @_;
+    my $program = $ENV{'LW_SECURE_' . uc($tool)};
+    die "Approved $tool is unavailable. Check your TeX installation.\n" unless $program;
+    # PROGRAM LIST avoids Perl's Windows shell fallback if a tool fails.
+    return system { $program } $program, @args;
+}
+sub lw_secure_pdflatex { return lw_secure_run('pdflatex', @_); }
+sub lw_secure_bibtex { return lw_secure_run('bibtex', @_); }
+sub lw_secure_biber { return lw_secure_run('biber', @_); }
+sub lw_secure_makeindex { return lw_secure_run('makeindex', @_); }
+
+$pdflatex = 'internal lw_secure_pdflatex %O %S';
+$bibtex = 'internal lw_secure_bibtex %O %S';
+$biber = 'internal lw_secure_biber %O %S';
+$makeindex = 'internal lw_secure_makeindex %O -o %D %S';
+die "Approved kpsewhich is unavailable.\n" unless $ENV{'LW_SECURE_KPSEWHICH'};
+# Unlike build commands, latexmk opens kpsewhich as a pipe. Bind its name too.
+$kpsewhich = '"' . $ENV{'LW_SECURE_KPSEWHICH'} . '" %S';

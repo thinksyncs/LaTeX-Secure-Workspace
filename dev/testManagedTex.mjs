@@ -6,6 +6,8 @@ import { promisify } from 'node:util'
 import { execFile } from 'node:child_process'
 import { createHash } from 'node:crypto'
 import managed from '../out/src/utils/managed-tex.js'
+import windowsBuild from '../out/src/utils/windows-build.js'
+import { checkWindowsBuild } from './testWindowsBuild.mjs'
 
 const run = promisify(execFile)
 const profile = process.argv[2] ?? 'lightweight'
@@ -55,7 +57,11 @@ const args = [...recipe.commonArgsBeforeEngine, ...recipe.engineArgs.pdflatex,
     ...recipe.commonArgsAfterEngine.map(arg => arg.replace('%DOCFILE%', output).replace('%DOC%', path.join(project, 't.tex')))]
 const env = managed.texEnvironment(bin)
 const executable = path.join(bin, process.platform === 'win32' ? 'latexmk.exe' : 'latexmk')
-const result = await run(executable, args, { cwd: project, env, timeout: 120000, maxBuffer: 4 * 1024 * 1024 })
+const invocation = process.platform === 'win32'
+    ? windowsBuild.prepareWindowsBuild(executable, args, env, [project], path.resolve('resources/secure-latexmkrc'))
+    : { command: executable, args, env }
+const result = await run(invocation.command, invocation.args, { cwd: project, env: invocation.env,
+    windowsVerbatimArguments: invocation.windowsVerbatimArguments, timeout: 120000, maxBuffer: 4 * 1024 * 1024 })
 assert.ok(result.stdout.includes('Latexmk'))
 const pdf = await fs.readFile(path.join(output, 't.pdf'))
 assert.equal(pdf.subarray(0, 5).toString(), '%PDF-')
@@ -81,9 +87,10 @@ if (profile === 'japanese') {
     assert.ok(text.includes('abcd'))
 }
 await document.destroy()
+const executableBoundary = process.platform === 'win32' ? await checkWindowsBuild(bin, root) : undefined
 const evidence = { status: 'passed', root, profile, platform: process.platform, arch: process.arch,
     bin, pdfSha256: createHash('sha256').update(pdf).digest('hex'),
-    text, fonts,
+    text, fonts, executableBoundary,
     installReusedWithoutDownload: true, processPathUnchanged: true,
     scope: 'Disposable extension-style storage; no normal VS Code profile or system TeX installation changed.' }
 await fs.writeFile(path.join(root, 'qa-report.json'), JSON.stringify(evidence, null, 2) + '\n')

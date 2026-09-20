@@ -9,6 +9,7 @@ import { queue } from './queue'
 import fixedSecureRecipeArguments from './fixedSecureRecipeArguments.json'
 import { getManagedTexEnvironment, getManagedTexPathOverride } from '../utils/managed-tex'
 import type { ManagedTexProfile } from '../utils/japanese-tex-manifest'
+import { runBuildTool } from './tool-runner'
 
 const logger = lw.log('Build', 'Recipe')
 const DOCKER_SECURE_SOURCE_DIR = '/latex-workshop/src'
@@ -425,7 +426,7 @@ function isMikTeX(): boolean {
     if (isMikTeXCache === undefined || isMikTeXCachePath !== toolPath) {
         isMikTeXCachePath = toolPath
         try {
-            const result = lw.external.sync('pdflatex', ['--version'], managedEnv ? { env: managedEnv } : undefined)
+            const result = runBuildTool('pdflatex', ['--version'], managedEnv ? { env: managedEnv } : undefined)
             if (result.error) {
                 throw result.error
             }

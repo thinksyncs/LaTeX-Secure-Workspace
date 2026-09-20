@@ -137,6 +137,8 @@ jobs:
         npm run compile
     - name: Run tests
       run: npm run test:ci
+    - name: Test executable boundary with real TeX and project decoys
+      run: node dev/testWindowsBuild.mjs D:\texlive\bin\windows
     - name: Package VSIX
       shell: pwsh
       run: |

@@ -14,6 +14,8 @@ import { showSecureBuildStatus, showSecureModeReport } from '../../src/core/secu
 import * as texInstall from '../../src/compile/tex-install'
 import * as managedTex from '../../src/utils/managed-tex'
 import * as recipe from '../../src/compile/recipe'
+import * as toolRunner from '../../src/compile/tool-runner'
+import * as windowsBuild from '../../src/utils/windows-build'
 
 const buildWithRootCandidate = commands.buildWithRootCandidate
 
@@ -23,6 +25,10 @@ describe(testFileSuiteName(__filename), () => {
 
     beforeEach(() => {
         mock.init(lw)
+        // These tests exercise orchestration with mocked processes. Real Windows
+        // resolution and execution are covered by node and managed-TeX tests.
+        sinon.stub(toolRunner, 'runBuildTool').callsFake((command, args, options) => lw.external.sync(command, args, options))
+        sinon.stub(windowsBuild, 'prepareWindowsBuild').callsFake((command, args, env) => ({ command, args: [...args], env, windowsVerbatimArguments: false }))
         set.config('security.allowLocalPdfLaTeX', true)
         ;(lw.cache.getIncludedTeX as sinon.SinonStub).returns([get.path('main.tex')])
         ;(lw.extra.clean as sinon.SinonStub).resolves(Promise.resolve())
