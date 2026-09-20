@@ -320,15 +320,19 @@ export async function installManagedTex(
         if (await entryExists(destination)) {
             throw new Error('TinyTeX destination appeared during installation; it was not overwritten.')
         }
+        options.signal.throwIfAborted()
         await fs.promises.rename(extracted, destination)
         return path.join(destination, 'bin', asset.bin)
     } finally {
         // Only this invocation's private, randomly named staging directory and
         // empty lock are removed. Existing installations are never removed.
-        if (staging) {
-            await fs.promises.rm(staging, { recursive: true, force: true })
+        try {
+            if (staging) {
+                await fs.promises.rm(staging, { recursive: true, force: true })
+            }
+        } finally {
+            await fs.promises.rmdir(lock)
         }
-        await fs.promises.rmdir(lock)
     }
 }
 

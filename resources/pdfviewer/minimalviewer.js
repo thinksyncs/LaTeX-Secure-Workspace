@@ -43,6 +43,7 @@ let stateTimer = undefined
 let synctexIndicatorTimer = undefined
 let documentCleanupTimer = undefined
 let pendingSyncTeX = undefined
+let pendingSyncTeXRequestId = undefined
 let searchIndexPromise = undefined
 let searchMatches = []
 let selectedSearchMatch = -1
@@ -56,6 +57,7 @@ window.addEventListener('message', (event) => {
         return
     }
     if (message?.type === 'synctex') {
+        pendingSyncTeXRequestId = message.requestId
         pendingSyncTeX = normalizeSyncTeXData(message.data)
         applyPendingSyncTeX()
     }
@@ -767,6 +769,7 @@ function applyPendingSyncTeX() {
     vscode.setState(nextState)
     vscode.postMessage({
         type: 'synctex-applied',
+        requestId: pendingSyncTeXRequestId,
         state: nextState
     })
     queueStatePost()

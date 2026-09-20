@@ -83,7 +83,7 @@ describe(testFileSuiteName(__filename), () => {
             lw.watcher.src.add(vscode.Uri.file(texPath))
             assert.ok(getWatchers()[rootDir].files.has('main.tex'))
             lw.watcher.src.remove(vscode.Uri.file(texPath))
-            assert.ok(!getWatchers()[rootDir].files.has('main.tex'))
+            assert.strictEqual(getWatchers()[rootDir], undefined)
         })
 
         it('should not throw an error if the file is not being watched', () => {

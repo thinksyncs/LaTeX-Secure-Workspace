@@ -28,6 +28,8 @@ const caches: Map<string, FileCache> = new Map()
  * caching processes.
  */
 const promises: Map<string, Promise<void>> = new Map()
+const refreshTokens = new Map<string, object>()
+let cacheGeneration = 0
 
 export const cache = {
     add,
@@ -54,6 +56,8 @@ lw.watcher.src.onChange(uri => {
 
 // Listener for file deletions: removes the file from the cache if it exists.
 lw.watcher.src.onDelete(uri => {
+    refreshTokens.delete(uri.fsPath)
+    promises.delete(uri.fsPath)
     if (get(uri.fsPath) !== undefined) {
         caches.delete(uri.fsPath)
         logger.log(`Removed ${uri.fsPath} .`)
@@ -170,10 +174,14 @@ function paths(): string[] {
  * is cached, or undefined if the cache is not refreshed.
  */
 async function wait(filePath: string, seconds: number = 2): Promise<Promise<void> | undefined> {
+    const generation = cacheGeneration
     let waited = 0
     while (promises.get(filePath) === undefined && get(filePath) === undefined) {
         // Just open vscode, has not cached, wait for a bit?
         await new Promise(resolve => setTimeout(resolve, 100))
+        if (generation !== cacheGeneration) {
+            return
+        }
         waited++
         if (waited >= seconds * 10) {
             // Waited for two seconds before starting cache. Really?
@@ -182,7 +190,16 @@ async function wait(filePath: string, seconds: number = 2): Promise<Promise<void
             break
         }
     }
-    return promises.get(filePath)
+    while (generation === cacheGeneration) {
+        const pending = promises.get(filePath)
+        if (!pending) {
+            return
+        }
+        await pending
+        if (promises.get(filePath) === pending) {
+            return
+        }
+    }
 }
 
 /**
@@ -194,34 +211,29 @@ async function wait(filePath: string, seconds: number = 2): Promise<Promise<void
  * them from the cache, effectively clearing all stored file data.
  */
 function reset() {
+    cacheGeneration++
+    refreshTokens.clear()
+    promises.clear()
+    clearTimeout(updateCompleter)
     lw.watcher.src.reset()
     lw.watcher.bib.reset()
     lw.watcher.glossary.reset()
     // lw.watcher.pdf.reset()
-    paths().forEach(filePath => caches.delete(filePath))
+    caches.clear()
 }
-
-/**
- * A counter to keep track of the number of files currently being cached.
- *
- * This variable is incremented each time a file starts the caching process and
- * decremented upon completion. It helps manage the state of caching and ensures
- * that the system knows when all files have been cached.
- */
-let cachingFilesCount: number = 0
 /**
  * Refreshes the cache for a given file, optionally considering a root path.
  *
  * This function is responsible for updating the cache of a file specified by
  * its path. It first checks if the file should be excluded or can be cached
  * based on predefined conditions. If the file is valid for caching, it logs the
- * caching action, increases the count of files being cached, and reads the
+ * caching action, tracks the pending operation, and reads the
  * content of the file. The content is then processed to remove comments and
  * verbatim sections, and a `FileCache` object is created to store this
  * processed content along with other metadata. The function then updates the
  * children elements of the file cache and initiates the AST update. Once the
  * AST is updated, the elements of the file cache are also updated. Finally, it
- * performs lint checks, decreases the caching file count, removes the promise
+ * performs lint checks, removes its own pending promise
  * from the active promises, fires a file parsed event, and reconstructs the
  * outline if no other files are being cached.
  *
@@ -241,47 +253,68 @@ async function refreshCache(filePath: string, rootPath?: string): Promise<Promis
         return
     }
     logger.log(`Caching ${filePath} .`)
-    cachingFilesCount++
-    const openEditor: vscode.TextDocument | undefined = vscode.workspace.textDocuments.find(
-        document => document.fileName === path.normalize(filePath))
-    const content = openEditor?.isDirty ? openEditor.getText() : (await lw.file.read(filePath) ?? '')
-    const fileCache: FileCache = {
-        filePath,
-        content,
-        contentTrimmed: utils.stripCommentsAndVerbatim(content),
-        elements: {},
-        children: [],
-        bibfiles: new Set(),
-        glossarybibfiles: new Set(),
-        external: {}}
-    caches.set(filePath, fileCache)
-    rootPath = rootPath || lw.root.file.path
-    await updateChildren(fileCache, rootPath)
-
-    promises.set(
-        filePath,
-        updateAST(fileCache)
-        .then(() => updateElements(fileCache))
-        .finally(() => {
+    const generation = cacheGeneration
+    const token = {}
+    refreshTokens.set(filePath, token)
+    const isCurrent = () => generation === cacheGeneration && refreshTokens.get(filePath) === token
+    const resolvedRoot = rootPath || lw.root.file.path
+    // Register the whole operation before its first read, not just the AST parse.
+    const pending = Promise.resolve().then(async () => {
+        if (!isCurrent()) {
+            return
+        }
+        const openEditor: vscode.TextDocument | undefined = vscode.workspace.textDocuments.find(
+            document => document.fileName === path.normalize(filePath))
+        const content = openEditor?.isDirty ? openEditor.getText() : (await lw.file.read(filePath) ?? '')
+        if (!isCurrent()) {
+            return
+        }
+        const fileCache: FileCache = {
+            filePath,
+            content,
+            contentTrimmed: utils.stripCommentsAndVerbatim(content),
+            elements: {},
+            children: [],
+            bibfiles: new Set(),
+            glossarybibfiles: new Set(),
+            external: {}}
+        caches.set(filePath, fileCache)
+        await updateChildren(fileCache, resolvedRoot, isCurrent)
+        if (!isCurrent()) {
+            return
+        }
+        await updateAST(fileCache)
+        if (!isCurrent()) {
+            return
+        }
+        await updateElements(fileCache, isCurrent)
+        if (isCurrent()) {
             lw.lint.label.check()
-            cachingFilesCount--
-            promises.delete(filePath)
             lw.event.fire(lw.event.FileParsed, filePath)
-
-            if (cachingFilesCount === 0) {
-                void lw.outline.reconstruct()
-            }
-        })
-    )
-
-    return promises.get(filePath)
+        }
+    }).catch(error => {
+        logger.logError(`Failed caching ${filePath}.`, error)
+    }).finally(() => {
+        if (!isCurrent()) {
+            return
+        }
+        refreshTokens.delete(filePath)
+        if (promises.get(filePath) === pending) {
+            promises.delete(filePath)
+        }
+        if (promises.size === 0) {
+            void lw.outline.reconstruct()
+        }
+    })
+    promises.set(filePath, pending)
+    return pending
 }
 
 /**
  * A timeout identifier used for scheduling the aggressive cache refresh
  * operation.
  */
-let updateCompleter: NodeJS.Timeout
+let updateCompleter: NodeJS.Timeout | undefined
 /**
  * Refreshes the cache for a file aggressively based on the user's configuration
  * settings.
@@ -308,12 +341,16 @@ function refreshCacheAggressive(filePath: string) {
         if (updateCompleter) {
             clearTimeout(updateCompleter)
         }
-        updateCompleter = setTimeout(async () => {
-            await refreshCache(filePath, lw.root.file.path)
-            // After refreshing the cache, children from .fls file only is
-            // discarded. We need to re-parse the .fls file to build the
-            // complete children dependency.
-            await loadFlsFile(lw.root.file.path || filePath)
+        const generation = cacheGeneration
+        const rootPath = lw.root.file.path
+        updateCompleter = setTimeout(() => {
+            updateCompleter = undefined
+            void refreshCache(filePath, rootPath).then(async () => {
+                // Rebuild dependencies that appear only in the .fls file.
+                if (generation === cacheGeneration) {
+                    await loadFlsFile(rootPath || filePath)
+                }
+            }).catch(error => logger.logError('Failed to refresh dependencies.', error))
         }, configuration.get('intellisense.update.delay', 1000))
     }
 }
@@ -352,10 +389,13 @@ async function updateAST(fileCache: FileCache): Promise<void> {
  * @param {string | undefined} rootPath - The root path to be used for updating
  * children elements.
  */
-async function updateChildren(fileCache: FileCache, rootPath: string | undefined): Promise<void> {
+async function updateChildren(fileCache: FileCache, rootPath: string | undefined, isCurrent: () => boolean): Promise<void> {
     rootPath = rootPath || fileCache.filePath
-    await updateChildrenInput(fileCache, rootPath)
-    await updateChildrenXr(fileCache, rootPath)
+    await updateChildrenInput(fileCache, rootPath, isCurrent)
+    if (!isCurrent()) {
+        return
+    }
+    await updateChildrenXr(fileCache, rootPath, isCurrent)
     logger.log(`Updated inputs of ${fileCache.filePath} .`)
 }
 
@@ -375,16 +415,19 @@ async function updateChildren(fileCache: FileCache, rootPath: string | undefined
  * @param {string} rootPath - The root path used for resolving relative input
  * file paths.
  */
-async function updateChildrenInput(fileCache: FileCache, rootPath: string) {
+async function updateChildrenInput(fileCache: FileCache, rootPath: string, isCurrent: () => boolean) {
     const inputFileRegExp = new InputFileRegExp()
     while (true) {
         const result = await inputFileRegExp.exec(fileCache.contentTrimmed, fileCache.filePath, rootPath)
-        if (!result) {
+        if (!isCurrent() || !result) {
             break
         }
 
         if (!await lw.file.exists(result.path) || path.relative(result.path, rootPath) === '') {
             continue
+        }
+        if (!isCurrent()) {
+            return
         }
 
         if (fileCache.children.some(child => child.filePath === result.path)) {
@@ -422,7 +465,7 @@ async function updateChildrenInput(fileCache: FileCache, rootPath: string) {
  * @param {string} rootPath - The root path to be used for resolving external
  * document paths.
  */
-async function updateChildrenXr(fileCache: FileCache, rootPath: string) {
+async function updateChildrenXr(fileCache: FileCache, rootPath: string, isCurrent: () => boolean) {
     const externalDocRegExp = /\\externaldocument(?:\[(.*?)\])?\{(.*?)\}/g
     while (true) {
         const result = externalDocRegExp.exec(fileCache.contentTrimmed)
@@ -438,6 +481,9 @@ async function updateChildrenXr(fileCache: FileCache, rootPath: string) {
             continue
         }
 
+        if (!isCurrent()) {
+            return
+        }
         const rootCache = get(rootPath)
         if (rootCache !== undefined) {
             rootCache.external[externalPath] = result[1] || ''
@@ -465,19 +511,25 @@ async function updateChildrenXr(fileCache: FileCache, rootPath: string) {
  * @param {FileCache} fileCache - The cache object containing the file data and
  * metadata to be updated.
  */
-async function updateElements(fileCache: FileCache): Promise<void> {
+async function updateElements(fileCache: FileCache, isCurrent: () => boolean): Promise<void> {
     const start = performance.now()
     lw.completion.citation.parse(fileCache)
     // Package parsing must be before command and environment.
     await lw.completion.usepackage.parse(fileCache)
+    if (!isCurrent()) {
+        return
+    }
     lw.completion.reference.parse(fileCache)
     lw.completion.glossary.parse(fileCache)
     lw.completion.environment.parse(fileCache)
     lw.completion.macro.parse(fileCache)
     lw.completion.subsuperscript.parse(fileCache)
     lw.completion.input.parseGraphicsPath(fileCache)
-    await updateBibfiles(fileCache)
-    await updateGlossaryBibFiles(fileCache)
+    await updateBibfiles(fileCache, isCurrent)
+    if (!isCurrent()) {
+        return
+    }
+    await updateGlossaryBibFiles(fileCache, isCurrent)
     const elapsed = performance.now() - start
     logger.log(`Updated elements in ${elapsed.toFixed(2)} ms: ${fileCache.filePath} .`)
 }
@@ -496,7 +548,7 @@ async function updateElements(fileCache: FileCache): Promise<void> {
  * @param {FileCache} fileCache - The file cache object to update with
  * bibliography files.
  */
-async function updateBibfiles(fileCache: FileCache) {
+async function updateBibfiles(fileCache: FileCache, isCurrent: () => boolean) {
     const bibReg = /(?:\\(?:bibliography|addbibresource)(?:\[[^[\]{}]*\])?){(?:\\subfix{)?([\s\S]+?)(?:\})?}|(?:\\putbib)\[(?:\\subfix{)?([\s\S]+?)(?:\})?\]/gm
 
     let result: RegExpExecArray | null
@@ -505,6 +557,9 @@ async function updateBibfiles(fileCache: FileCache) {
 
         for (const bib of bibs) {
             const bibPaths = await lw.file.getBibPath(bib, path.dirname(fileCache.filePath))
+            if (!isCurrent()) {
+                return
+            }
             for (const bibPath of bibPaths) {
                 if (isExcluded(bibPath)) {
                     continue
@@ -533,7 +588,7 @@ async function updateBibfiles(fileCache: FileCache) {
  * @param {FileCache} fileCache - The file cache object to update with
  * bibliography files.
  */
-async function updateGlossaryBibFiles(fileCache: FileCache) {
+async function updateGlossaryBibFiles(fileCache: FileCache, isCurrent: () => boolean) {
     const glossaryReg = /(?:\\GlsXtrLoadResources\s*\[.*?src=\{([^}]+)\}.*?\])|(?:\\glsbibdata(?:\[[^\]]*\])?\{([^}]*)\})/gs
 
     let result: RegExpExecArray | null
@@ -542,6 +597,9 @@ async function updateGlossaryBibFiles(fileCache: FileCache) {
 
         for (const bib of bibs) {
             const bibPaths = await lw.file.getBibPath(bib, path.dirname(fileCache.filePath))
+            if (!isCurrent()) {
+                return
+            }
             for (const bibPath of bibPaths) {
                 if (!bibPath || isExcluded(bibPath)) {
                     continue
@@ -577,14 +635,20 @@ async function updateGlossaryBibFiles(fileCache: FileCache) {
  * processed.
  */
 async function loadFlsFile(filePath: string): Promise<void> {
+    const generation = cacheGeneration
+    const isCurrent = () => generation === cacheGeneration
+    const rootPath = lw.root.file.path
     const flsPath = await lw.file.getFlsPath(filePath)
-    if (flsPath === undefined) {
+    if (!isCurrent() || flsPath === undefined) {
         return
     }
     logger.log(`Parsing .fls ${flsPath} .`)
     const rootDir = path.dirname(filePath)
     const auxDir = lw.file.getAuxDir(filePath)
     const ioFiles = parseFlsContent(await lw.file.read(flsPath) ?? '', rootDir)
+    if (!isCurrent()) {
+        return
+    }
 
     for (const inputFile of ioFiles.input) {
         const inputUri = lw.file.toUri(inputFile)
@@ -593,6 +657,9 @@ async function loadFlsFile(filePath: string): Promise<void> {
             isExcluded(inputFile) ||
             !await lw.file.exists(inputFile)) {
             continue
+        }
+        if (!isCurrent()) {
+            return
         }
         if (inputFile === filePath || lw.watcher.src.has(inputUri)) {
             // Drop the current rootFile often listed as INPUT
@@ -605,6 +672,9 @@ async function loadFlsFile(filePath: string): Promise<void> {
             if (get(filePath) === undefined) {
                 logger.log(`Cache not finished on ${filePath} when parsing fls, try re-cache.`)
                 await refreshCache(filePath)
+            }
+            if (!isCurrent()) {
+                return
             }
             // It might be possible that `filePath` is excluded from caching.
             const fileCache = get(filePath)
@@ -627,8 +697,11 @@ async function loadFlsFile(filePath: string): Promise<void> {
 
     for (const outputFile of ioFiles.output) {
         if (path.extname(outputFile) === '.aux' && await lw.file.exists(outputFile)) {
+            if (!isCurrent()) {
+                return
+            }
             logger.log(`Found .aux ${outputFile} from .fls ${flsPath} , parsing.`)
-            await parseAuxFile(outputFile, path.dirname(outputFile).replace(auxDir, rootDir))
+            await parseAuxFile(outputFile, path.dirname(outputFile).replace(auxDir, rootDir), rootPath, isCurrent)
             logger.log(`Parsed .aux ${outputFile} .`)
         }
     }
@@ -696,8 +769,11 @@ function parseFlsContent(content: string, rootDir: string): {input: string[], ou
  * @param {string} srcDir - The source directory used to resolve bibliography
  * file paths.
  */
-async function parseAuxFile(filePath: string, srcDir: string) {
+async function parseAuxFile(filePath: string, srcDir: string, rootPath: string | undefined, isCurrent: () => boolean) {
     const content = await lw.file.read(filePath) ?? ''
+    if (!isCurrent()) {
+        return
+    }
     const regex = /^\\bibdata\{([^}]*)\}/gm
     let result: RegExpExecArray | null
     while ((result = regex.exec(content)) !== null) {
@@ -708,12 +784,15 @@ async function parseAuxFile(filePath: string, srcDir: string) {
         }
         for (const bib of bibs) {
             const bibPaths = await lw.file.getBibPath(bib, srcDir)
+            if (!isCurrent()) {
+                return
+            }
             for (const bibPath of bibPaths) {
                 if (isExcluded(bibPath)) {
                     continue
                 }
-                if (lw.root.file.path && !get(lw.root.file.path)?.bibfiles.has(bibPath)) {
-                    get(lw.root.file.path)?.bibfiles.add(bibPath)
+                if (rootPath && !get(rootPath)?.bibfiles.has(bibPath)) {
+                    get(rootPath)?.bibfiles.add(bibPath)
                     logger.log(`Found .bib ${bibPath} from .aux ${filePath} .`)
                 }
                 const bibUri = lw.file.toUri(bibPath)
@@ -811,11 +890,13 @@ function getIncludedGlossaryBib(filePath?: string): string[] {
  * root file path.
  * @returns {string[]} - An array of paths to included TeX files.
  */
-function getIncludedTeX(filePath?: string): Set<string> {
-    const includedTeX = new Set<string>()
+function getIncludedTeX(filePath?: string, includedTeX = new Set<string>()): Set<string> {
     filePath = filePath ?? lw.root.file.path
     if (filePath === undefined) {
-        return new Set()
+        return includedTeX
+    }
+    if (includedTeX.has(filePath)) {
+        return includedTeX
     }
     const fileCache = get(filePath)
     if (fileCache === undefined) {
@@ -827,7 +908,7 @@ function getIncludedTeX(filePath?: string): Set<string> {
             // Already included
             continue
         }
-        getIncludedTeX(child.filePath).forEach(texFile => includedTeX.add(texFile))
+        getIncludedTeX(child.filePath, includedTeX)
     }
     return includedTeX
 }

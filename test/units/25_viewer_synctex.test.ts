@@ -45,7 +45,8 @@ describe(testFileSuiteName(__filename), () => {
         assert.ok(reveal.calledOnce)
         assert.ok(postMessage.calledOnceWithExactly({
             type: 'synctex',
-            data: record
+            data: record,
+            requestId: 1
         }))
     })
 
@@ -69,7 +70,8 @@ describe(testFileSuiteName(__filename), () => {
         assert.strictEqual(delivered, true)
         assert.ok(postMessage.calledOnceWithExactly({
             type: 'synctex',
-            data: record
+            data: record,
+            requestId: 1
         }))
     })
 
@@ -92,6 +94,7 @@ describe(testFileSuiteName(__filename), () => {
 
         await customEditor.handleCustomEditorMessageForTest(pdfUri, panel, {}, {
             type: 'synctex-applied',
+            requestId: 1,
             state: { page: 3 }
         })
         await customEditor.handleCustomEditorMessageForTest(pdfUri, panel, {}, { type: 'initialized' })
@@ -99,7 +102,8 @@ describe(testFileSuiteName(__filename), () => {
         assert.strictEqual(postMessage.callCount, 2)
         assert.ok(postMessage.alwaysCalledWithExactly({
             type: 'synctex',
-            data: record
+            data: record,
+            requestId: 1
         }))
     })
 

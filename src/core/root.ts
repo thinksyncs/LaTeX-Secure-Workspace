@@ -8,6 +8,7 @@ import * as utils from '../utils/utils'
 
 const logger = lw.log('Root')
 let rootSearchGeneration = 0
+let rootRevision = 0
 
 export const root = {
     file: {
@@ -41,7 +42,7 @@ lw.watcher.src.onDelete(uri => {
     if (uri.fsPath !== root.file.path) {
         return
     }
-    root.file = { path: undefined, langId: undefined }
+    clearResolvedRoot()
     void find()
 })
 
@@ -61,18 +62,17 @@ async function find(): Promise<undefined> {
     root.subfiles = { path: undefined, langId: undefined }
     const findMethods = [
         () => findFromMagic(),
-        () => findFromActive(),
+        () => findFromActive(generation),
         () => findFromRoot(),
         () => findInWorkspace()
     ]
     for (const method of findMethods) {
         const rootFilePath = await method()
+        if (generation !== rootSearchGeneration) {
+            return
+        }
         if (rootFilePath === undefined) {
             continue
-        }
-        if (generation !== rootSearchGeneration) {
-            logger.log(`Discard stale root search result: ${rootFilePath}`)
-            return
         }
         applyResolvedRoot(rootFilePath)
         lw.event.fire(lw.event.RootFileSearched)
@@ -94,20 +94,23 @@ async function resolveSecurityRoot(): Promise<string | undefined> {
     logger.log(`Current workspace folders for secure root resolution: ${JSON.stringify(wsfolders)}`)
     root.subfiles = { path: undefined, langId: undefined }
     const findMethods = [
-        () => findSecurityFromActive(),
+        () => findSecurityFromActive(generation),
         () => findFromRoot(),
         () => findSecurityInWorkspace()
     ]
     for (const method of findMethods) {
         const rootFilePath = await method()
+        if (generation !== rootSearchGeneration) {
+            return
+        }
         if (rootFilePath === undefined) {
             continue
         }
+        const inWorkspace = await isSecurityRootInWorkspace(rootFilePath)
         if (generation !== rootSearchGeneration) {
-            logger.log(`Discard stale secure root search result: ${rootFilePath}`)
             return
         }
-        if (!await isSecurityRootInWorkspace(rootFilePath)) {
+        if (!inWorkspace) {
             logger.log(`Reject secure root outside the active workspace: ${rootFilePath}`)
             clearResolvedRoot()
             void lw.outline.refresh()
@@ -148,6 +151,7 @@ async function isSecurityRootInWorkspace(rootFilePath: string): Promise<boolean>
 }
 
 function clearResolvedRoot(): void {
+    rootRevision++
     root.file = { path: undefined, langId: undefined }
     root.dir = { path: undefined }
     root.subfiles = { path: undefined, langId: undefined }
@@ -160,6 +164,7 @@ function applyResolvedRoot(rootFilePath: string) {
         return
     }
     const previousRoot = root.file.path
+    const revision = ++rootRevision
     root.file.path = rootFilePath
     root.file.langId = lw.file.getLangId(rootFilePath)
     root.dir.path = path.dirname(rootFilePath)
@@ -171,7 +176,11 @@ function applyResolvedRoot(rootFilePath: string) {
     lw.cache.reset()
     lw.cache.add(rootFilePath)
     void lw.cache.refreshCache(rootFilePath).then(async () => {
-        await lw.cache.loadFlsFile(rootFilePath)
+        if (revision === rootRevision && root.file.path === rootFilePath) {
+            await lw.cache.loadFlsFile(rootFilePath)
+        }
+    }).catch(error => {
+        logger.logError('Failed to refresh root dependencies.', error)
     })
 }
 
@@ -323,7 +332,7 @@ function findFromRoot(): string | undefined {
  *
  * @returns {string | undefined} The root file path, or undefined if not found.
  */
-async function findFromActive(): Promise<string | undefined> {
+async function findFromActive(generation = rootSearchGeneration): Promise<string | undefined> {
     if (!vscode.window.activeTextEditor) {
         return
     }
@@ -340,7 +349,10 @@ async function findFromActive(): Promise<string | undefined> {
     const content = utils.stripCommentsAndVerbatim(vscode.window.activeTextEditor.document.getText())
     const result = content.match(getIndicator())
     if (result) {
-        const rootFilePath = await findSubfiles(content)
+        const rootFilePath = await findSubfiles(content, activeFilePath)
+        if (generation !== rootSearchGeneration) {
+            return
+        }
         if (rootFilePath) {
             root.subfiles.path = activeFilePath
             root.subfiles.langId = lw.file.getLangId(activeFilePath)
@@ -353,7 +365,7 @@ async function findFromActive(): Promise<string | undefined> {
     return
 }
 
-async function findSecurityFromActive(): Promise<string | undefined> {
+async function findSecurityFromActive(generation = rootSearchGeneration): Promise<string | undefined> {
     const editor = getEditorForRootDetection()
     if (!editor) {
         return
@@ -370,7 +382,10 @@ async function findSecurityFromActive(): Promise<string | undefined> {
     }
     const content = utils.stripCommentsAndVerbatim(editor.document.getText())
     if (content.match(FIXED_ROOT_INDICATOR)) {
-        const rootFilePath = await findSubfiles(content)
+        const rootFilePath = await findSubfiles(content, activeFilePath)
+        if (generation !== rootSearchGeneration) {
+            return
+        }
         if (rootFilePath) {
             root.subfiles.path = activeFilePath
             root.subfiles.langId = lw.file.getLangId(activeFilePath)
@@ -392,17 +407,16 @@ async function findSecurityFromActive(): Promise<string | undefined> {
  * @returns {string | undefined} The root file path for subfiles, or undefined
  * if not found.
  */
-async function findSubfiles(content: string): Promise<string | undefined> {
+async function findSubfiles(content: string, activeFilePath = getEditorForRootDetection()?.document.fileName): Promise<string | undefined> {
     const regex = /(?:\\documentclass\[(.*)\]{subfiles})/s
     const result = content.match(regex)
     if (!result) {
         return
     }
-    const editor = getEditorForRootDetection()
-    if (!editor) {
+    if (!activeFilePath) {
         return
     }
-    const filePath = await utils.resolveFile([path.dirname(editor.document.fileName)], result[1])
+    const filePath = await utils.resolveFile([path.dirname(activeFilePath)], result[1])
     if (filePath) {
         logger.log(`Found subfile root ${filePath} from active.`)
     }

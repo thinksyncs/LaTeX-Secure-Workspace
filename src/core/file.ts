@@ -561,8 +561,17 @@ async function getFlsPath(texPath: string): Promise<string | undefined> {
  * avoiding redundant executions of the `kpsewhich` command by returning
  * previously computed results quickly.
  */
-const kpsecache: { [query: string]: string } = {}
-const kpsewhichPromises: Partial<Record<string, Promise<string | undefined>>> = {}
+const kpsecache = new Map<string, string>()
+const kpsewhichPromises = new Map<string, Promise<string | undefined>>()
+const kpsewhichCancellations = new Set<() => void>()
+const KPSEWHICH_TIMEOUT_MS = 15000
+const KPSEWHICH_MAX_OUTPUT = 1024 * 1024
+let kpsewhichDisposed = false
+lw.onDispose({dispose: () => {
+    kpsewhichDisposed = true
+    kpsewhichCancellations.forEach(cancel => cancel())
+    kpsecache.clear()
+}})
 /**
  * Resolves the path to a given LaTeX target using the `kpsewhich` command.
  *
@@ -583,27 +592,32 @@ const kpsewhichPromises: Partial<Record<string, Promise<string | undefined>>> = 
  */
 async function kpsewhich(target: string, isBib: boolean = false): Promise<string | undefined> {
     const query = (isBib ? '-format=.bib ' : '') + target
-    if (kpsecache[query]) {
-        logger.log(`kpsewhich cache hit on ${query}: ${kpsecache[query]} .`)
-        return kpsecache[query]
-    }
-    if (kpsewhichPromises[query]) {
-        logger.log(`kpsewhich promise cache hit on ${query} .`)
-        return kpsewhichPromises[query]
-    }
-    if (!vscode.workspace.isTrusted) {
-        logger.log(`Skipping kpsewhich lookup for ${query} in restricted mode.`)
+    if (!vscode.workspace.isTrusted || kpsewhichDisposed) {
+        logger.log(`Skipping kpsewhich lookup for ${query}.`)
         return undefined
     }
     const scope = lw.root.file.path ? toUri(lw.root.file.path) : vscode.workspace.workspaceFolders?.[0]?.uri
     const command = getSecureConfigurationValueSync(scope, 'kpsewhich.path', 'kpsewhich')
+    const cwd = lw.root.dir.path || vscode.workspace.workspaceFolders?.[0]?.uri.fsPath
+    const key = JSON.stringify([query, command, cwd, process.env.PATH ?? process.env.Path])
+    const cached = kpsecache.get(key)
+    if (cached) {
+        logger.log(`kpsewhich cache hit on ${query}: ${cached} .`)
+        return cached
+    }
+    if (kpsewhichPromises.has(key)) {
+        logger.log(`kpsewhich promise cache hit on ${query} .`)
+        return kpsewhichPromises.get(key)
+    }
     logger.log(`Calling ${command} to resolve ${query} .`)
 
     const request = (async () => {
         try {
             const args = isBib ? ['-format=.bib', target] : [target]
-            const cwd = lw.root.dir.path || vscode.workspace.workspaceFolders?.[0]?.uri.fsPath
             if (!await confirmWorkspaceCommandExecution(scope, 'kpsewhich.path', command)) {
+                return undefined
+            }
+            if (kpsewhichDisposed || !vscode.workspace.isTrusted) {
                 return undefined
             }
 
@@ -614,18 +628,57 @@ async function kpsewhich(target: string, isBib: boolean = false): Promise<string
             return await new Promise<string | undefined>((resolve) => {
                 let stdout = ''
                 let stderr = ''
+                let settled = false
+                let outputSize = 0
+                const finish = (value?: string) => {
+                    if (settled) {
+                        return
+                    }
+                    settled = true
+                    clearTimeout(timeout)
+                    kpsewhichCancellations.delete(cancel)
+                    resolve(value)
+                }
+                const cancel = () => {
+                    finish()
+                    proc.kill('SIGKILL')
+                }
+                const timeout = setTimeout(() => {
+                    logger.log(`kpsewhich timed out resolving ${query}.`)
+                    cancel()
+                }, KPSEWHICH_TIMEOUT_MS)
+                kpsewhichCancellations.add(cancel)
+                const collect = (data: Buffer | string, isError: boolean) => {
+                    if (settled) {
+                        return
+                    }
+                    outputSize += Buffer.byteLength(data)
+                    if (outputSize > KPSEWHICH_MAX_OUTPUT) {
+                        logger.log('kpsewhich exceeded the output limit.')
+                        cancel()
+                        return
+                    }
+                    if (isError) {
+                        stderr += data.toString()
+                    } else {
+                        stdout += data.toString()
+                    }
+                }
 
                 proc.stdout?.on('data', (data: Buffer | string) => {
-                    stdout += typeof data === 'string' ? data : data.toString()
+                    collect(data, false)
                 })
                 proc.stderr?.on('data', (data: Buffer | string) => {
-                    stderr += typeof data === 'string' ? data : data.toString()
+                    collect(data, true)
                 })
                 proc.on('error', error => {
                     logger.logError(`Calling ${command} on ${query} failed.`, error)
-                    resolve(undefined)
+                    finish()
                 })
                 proc.on('close', code => {
+                    if (settled) {
+                        return
+                    }
                     if (code === 0) {
                         let output = stdout.replace(/\r?\n/, '')
                         logger.log(`kpsewhich returned with '${output}'.`)
@@ -634,13 +687,16 @@ async function kpsewhich(target: string, isBib: boolean = false): Promise<string
                                 output = path.resolve(cwd, output)
                                 logger.log(`kpsewhich resolved to '${output}'.`)
                             }
-                            kpsecache[query] = output
+                            if (kpsecache.size >= 1024) {
+                                kpsecache.delete(kpsecache.keys().next().value!)
+                            }
+                            kpsecache.set(key, output)
                         }
-                        resolve(output)
+                        finish(output)
                         return
                     }
                     logger.log(`kpsewhich returned with non-zero code ${code}.${stderr ? ` STDERR: ${stderr}` : ''}`)
-                    resolve(undefined)
+                    finish()
                 })
             })
         } catch (e) {
@@ -649,11 +705,13 @@ async function kpsewhich(target: string, isBib: boolean = false): Promise<string
         }
     })()
 
-    kpsewhichPromises[query] = request
+    kpsewhichPromises.set(key, request)
     try {
         return await request
     } finally {
-        delete kpsewhichPromises[query]
+        if (kpsewhichPromises.get(key) === request) {
+            kpsewhichPromises.delete(key)
+        }
     }
 }
 

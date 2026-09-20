@@ -6,6 +6,7 @@ const Module = require('node:module')
 const path = require('node:path')
 const test = require('node:test')
 const ts = require('typescript')
+const os = require('node:os')
 
 function loadTypescriptModule(relativePath) {
   const filename = path.resolve(__dirname, relativePath)
@@ -41,4 +42,16 @@ test('keeps both requested groups without unrelated fixtures', () => {
     selectTestFixtures({ LATEXWORKSHOP_UNIT: '08_compile_build', LATEXWORKSHOP_SUITE: '99_multiroot' }),
     ['unittest', 'multiroot']
   )
+})
+
+test('background completion requires a positive result from the test host', async t => {
+  const { reportTestResult, verifyTestResult } = loadTypescriptModule('../result.ts')
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'lw-test-result-'))
+  t.after(() => fs.rmSync(directory, { recursive: true, force: true }))
+  const resultFile = path.join(directory, 'result.json')
+  assert.throws(() => verifyTestResult(resultFile), /without reporting/)
+  await assert.rejects(reportTestResult(Promise.reject(new Error('controlled failure')), resultFile), /controlled failure/)
+  assert.throws(() => verifyTestResult(resultFile), /failing tests/)
+  await reportTestResult(Promise.resolve(), resultFile)
+  assert.doesNotThrow(() => verifyTestResult(resultFile))
 })

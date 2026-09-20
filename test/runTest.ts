@@ -4,6 +4,7 @@ import * as cp from 'child_process'
 import * as tmpFile from 'tmp'
 import { downloadAndUnzipVSCode, TestRunFailedError, runTests } from '@vscode/test-electron'
 import { selectTestFixtures, TestFixture } from './fixture-selection'
+import { verifyTestResult } from './result'
 
 type TempDir = ReturnType<typeof tmpFile.dirSync>
 type VSCodeTestHost = {
@@ -103,7 +104,8 @@ async function runMacOsTestsInBackground(options: {
     extensionDevelopmentPath: string,
     extensionTestsPath: string,
     launchArgs: string[],
-    extensionTestsEnv: NodeJS.ProcessEnv
+    extensionTestsEnv: NodeJS.ProcessEnv,
+    resultFile: string
 }) {
     const testHost = resolveVSCodeTestHost()
     const vscodeExecutablePath = testHost.vscodeExecutablePath ?? await downloadAndUnzipVSCode({ version: testHost.version })
@@ -119,6 +121,12 @@ async function runMacOsTestsInBackground(options: {
         '-W',
         '-a',
         appPath,
+        ...Object.entries({
+            LATEXWORKSHOP_UNIT: process.env.LATEXWORKSHOP_UNIT,
+            LATEXWORKSHOP_SUITE: process.env.LATEXWORKSHOP_SUITE,
+            ...options.extensionTestsEnv
+        }).filter((entry): entry is [string, string] => entry[1] !== undefined)
+            .flatMap(([key, value]) => ['--env', `${key}=${value}`]),
         '--args',
         ...options.launchArgs,
         '--no-sandbox',
@@ -147,6 +155,7 @@ async function runMacOsTestsInBackground(options: {
             resolve(code ?? 0)
         })
     })
+    verifyTestResult(options.resultFile)
 }
 
 function makeTempDir(): TempDir {
@@ -167,8 +176,10 @@ async function runTestSuites(fixture: TestFixture) {
             '--disable-gpu',
             '--use-inmemory-secretstorage'
         ]
+        const resultFile = path.join(userDataDir.name, 'integration-result.json')
         const extensionTestsEnv = {
-            LATEXWORKSHOP_CITEST: '1'
+            LATEXWORKSHOP_CITEST: '1',
+            LATEXWORKSHOP_TEST_RESULT_FILE: resultFile
         }
 
         if (shouldBackgroundMacOsTestHost()) {
@@ -176,7 +187,8 @@ async function runTestSuites(fixture: TestFixture) {
                 extensionDevelopmentPath,
                 extensionTestsPath,
                 launchArgs,
-                extensionTestsEnv
+                extensionTestsEnv,
+                resultFile
             })
         } else {
             await runTests({

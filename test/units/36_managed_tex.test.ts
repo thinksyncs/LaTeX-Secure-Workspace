@@ -133,6 +133,19 @@ describe('36_managed_tex:', () => {
         assert.ok(fs.existsSync(lock))
     })
 
+    it('should release its install lock even if staging cleanup fails', async () => {
+        // Unix stops at the first progress callback; Windows stops at the mocked
+        // download. Neither path downloads an archive or starts an installer.
+        sinon.stub(globalThis, 'fetch').resolves(new Response(null, { status: 503 }))
+        sinon.stub(fs.promises, 'rm').rejects(new Error('controlled cleanup failure'))
+        await assert.rejects(managed.installManagedTex(temporary, {
+            signal: new AbortController().signal,
+            progress: () => { throw new Error('controlled installation failure') }
+        }), /controlled cleanup failure/)
+        assert.strictEqual(fs.existsSync(path.join(temporary, 'tinytex-install.lock')), false)
+        assert.strictEqual(fs.existsSync(path.join(temporary, 'tinytex')), false)
+    })
+
     it('should preserve a dangling installation link without downloading', async () => {
         const target = path.join(temporary, 'tinytex')
         fs.symlinkSync(path.join(temporary, 'missing'), target, process.platform === 'win32' ? 'junction' : 'dir')
