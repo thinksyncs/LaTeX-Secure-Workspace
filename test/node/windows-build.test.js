@@ -53,7 +53,7 @@ test('Windows fixed recipe binds downstream tools and clears missing optional re
     const { project, approved } = fixture(t)
     for (const tool of ['latexmk', 'pdflatex', 'kpsewhich']) fs.writeFileSync(path.join(approved, tool + '.exe'), '')
     const invocation = prepareWindowsBuild('latexmk', ['-pdf', 'main.tex'], {
-        PATH: approved, LW_SECURE_BIBER: path.join(project, 'biber.exe')
+        PATH: approved, LW_SECURE_BIBER: path.join(project, 'biber.exe'), LATEXWORKSHOP_DOCKER_PATH: 'inherited-docker-default'
     }, [project], 'extension-owned-policy')
     assert.equal(invocation.command, path.join(approved, 'latexmk.exe'))
     assert.deepEqual(invocation.args, ['-norc', '-r', 'extension-owned-policy', '-pdf', 'main.tex'])
@@ -112,7 +112,7 @@ test('Windows Docker launch selects an absolute runtime and preserves wrapper ar
         ...process.env, PATH: approved, NODE_OPTIONS: `--require ${JSON.stringify(canary)}`,
         LATEXWORKSHOP_DOCKER_PATH: 'docker', LATEXWORKSHOP_DOCKER_LATEX: 'example/texlive@sha256:test',
         LATEXWORKSHOP_DOCKER_SOURCE_DIR_HOST: project, LATEXWORKSHOP_DOCKER_OUTPUT_DIR_HOST: path.join(project, '.lw-security')
-    }, [project], 'unused')
+    }, [project], 'unused', 'docker')
     const result = spawnSync(invocation.command, invocation.args, {
         cwd: project, env: invocation.env, windowsVerbatimArguments: invocation.windowsVerbatimArguments
     })

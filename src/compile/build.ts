@@ -315,7 +315,8 @@ function spawnProcess(step: Step): ProcessEnv {
         logger.log(`cwd: ${cwd}`)
         if (process.platform === 'win32') {
             const roots = vscode.workspace.workspaceFolders?.filter(folder => folder.uri.scheme === 'file').map(folder => folder.uri.fsPath) ?? []
-            const invocation = prepareWindowsBuild(step.command, step.args ?? [], env, roots, path.join(lw.extensionRoot, 'resources', 'secure-latexmkrc'))
+            const invocation = prepareWindowsBuild(step.command, step.args ?? [], env, roots,
+                path.join(lw.extensionRoot, 'resources', 'secure-latexmkrc'), step.env?.LATEXWORKSHOP_DOCKER_PATH)
             lw.compile.process = lw.external.spawn(invocation.command, invocation.args, {
                 cwd, env: invocation.env, windowsVerbatimArguments: invocation.windowsVerbatimArguments
             })

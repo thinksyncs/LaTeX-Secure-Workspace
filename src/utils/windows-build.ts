@@ -77,11 +77,14 @@ export function windowsToolInvocation(command: string, args: readonly string[], 
 
 /** Bind both the host launcher and the fixed local recipe's child tools. */
 export function prepareWindowsBuild(
-    command: string, args: readonly string[], base: NodeJS.ProcessEnv, roots: readonly string[], policyFile: string
+    command: string, args: readonly string[], base: NodeJS.ProcessEnv, roots: readonly string[], policyFile: string,
+    dockerRuntime?: string
 ) {
     const env = windowsBuildEnvironment(base, roots)
-    if (env.LATEXWORKSHOP_DOCKER_PATH !== undefined) {
-        env.LATEXWORKSHOP_DOCKER_PATH = resolveWindowsBuildTool(env.LATEXWORKSHOP_DOCKER_PATH, env, roots)
+    // Extension startup also exports Docker defaults globally. Only the
+    // selected recipe's own runtime value selects the Docker launch path.
+    if (dockerRuntime !== undefined) {
+        env.LATEXWORKSHOP_DOCKER_PATH = resolveWindowsBuildTool(dockerRuntime, env, roots)
         return windowsToolInvocation(command, args, env, roots)
     }
     const driver = resolveWindowsBuildTool(command, env, roots)

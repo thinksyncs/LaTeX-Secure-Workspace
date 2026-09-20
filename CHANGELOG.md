@@ -1,5 +1,11 @@
 # Change Log
 
+## [Unreleased]
+
+### Security
+- Resolve Windows build and diagnostic tools outside project directories. Bind the local recipe's engine, bibliography, index, and lookup tools to installed executable paths, and quote the selected Docker runtime.
+- Reject project-local, relative, and empty executable search paths. Keep local execution opt-in; this does not sandbox TeX or attest installed tools.
+
 ## [11.5.0] - 2026-09-20
 
 ### User impact
