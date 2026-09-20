@@ -763,11 +763,12 @@ describe(testFileSuiteName(__filename), () => {
     })
 
     describe('kpsewhich', () => {
+        const lookupStubs = sinon.createSandbox()
         beforeEach(() => {
             // Process/caching unit tests; native lookup is exercised separately.
-            sinon.stub(toolRunner, 'spawnBuildTool').callsFake((command, args, options) => lw.external.spawn(command, args, options ?? {}))
+            lookupStubs.stub(toolRunner, 'spawnBuildTool').callsFake((command, args, options) => lw.external.spawn(command, args, options ?? {}))
         })
-        afterEach(() => sinon.restore())
+        afterEach(() => lookupStubs.restore())
 
         it('should not run kpsewhich in restricted mode', async () => {
             const trustStub = sinon.stub(vscode.workspace, 'isTrusted').value(false)
