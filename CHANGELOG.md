@@ -1,10 +1,17 @@
 # Change Log
 
-## [Unreleased]
+## [11.5.1] - 2026-09-20
 
-### Security
-- Resolve Windows build and diagnostic tools outside project directories. Bind the local recipe's engine, bibliography, index, and lookup tools to installed executable paths, and quote the selected Docker runtime.
-- Reject project-local, relative, and empty executable search paths. Keep local execution opt-in; this does not sandbox TeX or attest installed tools.
+### User impact
+- Windows builds, diagnostics, and bibliography/class lookup select installed tools outside the project. Project-local executables cannot replace those tools through the working directory. The local recipe also binds its engine, bibliography, index, and file-search tools.
+- Keep Docker-free local pdfLaTeX and optional Docker builds. Quote the selected Docker runtime and reject empty, relative, and drive-root-relative executable search paths.
+
+### Required action
+- Update the extension. If your TeX tools are inside the workspace or use a relative PATH entry, choose an approved installation outside the workspace with a fully qualified path. Existing standard system and managed installations need no setting change.
+
+### Known limitations
+- Local TeX is still not a filesystem or network sandbox. These checks do not establish that installed TeX binaries or packages are harmless.
+- Japanese Windows user-profile installation, offline installation, and native first-run visual acceptance remain separate follow-up work.
 
 ## [11.5.0] - 2026-09-20
 
