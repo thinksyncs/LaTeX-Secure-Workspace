@@ -14,13 +14,29 @@ function fullyQualified(file: string): boolean {
     return process.platform !== 'win32' || /^[a-z]:[\\/]/i.test(file) || /^[\\/]{2}[^\\/]+[\\/][^\\/]+(?:[\\/]|$)/.test(file)
 }
 
+function workspaceRoots(roots: readonly string[]): string[] {
+    return roots.flatMap(root => {
+        const absolute = path.resolve(root)
+        try {
+            return [absolute, fs.realpathSync(root)]
+        } catch (error) {
+            if (['ENOENT', 'ENOTDIR'].includes((error as NodeJS.ErrnoException).code ?? '')) {
+                // A stale multi-root entry must not disable another folder.
+                // Keep its lexical boundary even while the folder is absent.
+                return [absolute]
+            }
+            throw error
+        }
+    })
+}
+
 /** Resolve search directories before entering a document-controlled cwd. */
 export function windowsBuildEnvironment(base: NodeJS.ProcessEnv, roots: readonly string[]): NodeJS.ProcessEnv {
     const env = { ...base }
     const keys = Object.keys(env).filter(key => key.toLowerCase() === 'path').sort()
     const search = env[keys[0] ?? 'PATH'] ?? ''
     keys.forEach(key => { delete env[key] })
-    const realRoots = roots.map(root => fs.realpathSync(root))
+    const realRoots = workspaceRoots(roots)
     env.PATH = search.split(';').map(entry => entry.replace(/^"(.*)"$/, '$1')).filter(entry => {
         if (!fullyQualified(entry)) {
             return false
@@ -38,7 +54,7 @@ export function windowsBuildEnvironment(base: NodeJS.ProcessEnv, roots: readonly
 }
 
 export function resolveWindowsBuildTool(command: string, env: NodeJS.ProcessEnv, roots: readonly string[]): string {
-    const realRoots = roots.map(root => fs.realpathSync(root))
+    const realRoots = workspaceRoots(roots)
     const directories = fullyQualified(command) ? [''] : (env.PATH ?? '').split(';').filter(fullyQualified)
     if (!fullyQualified(command) && /[\\/:]/.test(command)) {
         throw new Error(`Use a fully qualified absolute installed tool path, not a relative command: ${command}`)
@@ -77,6 +93,11 @@ export function windowsToolInvocation(command: string, args: readonly string[], 
     }
     if (!/\.(cmd|bat)$/i.test(command)) {
         throw new Error('Windows builds require an installed executable or batch wrapper.')
+    }
+    // Carets do not prevent percent expansion by cmd.exe. Do not reinterpret
+    // document-controlled arguments; native executable arguments need no shell.
+    if ([command, ...args].some(value => /[%\r\n]/.test(value))) {
+        throw new Error('Percent signs and line breaks are unsupported in Windows batch command paths or arguments. Use a native executable or a path without these characters.')
     }
     const shell = resolveWindowsBuildTool(path.join(process.env.SystemRoot ?? 'C:\\Windows', 'System32', 'cmd.exe'), env, roots)
     const line = [escapeCmd(command, false), ...args.map(arg => escapeCmd(arg, true))].join(' ')
