@@ -11,7 +11,6 @@
 
 ### Known limitations
 - Local TeX is still not a filesystem or network sandbox. These checks do not establish that installed TeX binaries or packages are harmless.
-- Windows batch-wrapper paths and arguments containing percent signs or line breaks are rejected rather than expanded by the shell. Native executable arguments are not subject to this batch restriction.
 - Japanese Windows user-profile installation, offline installation, and native first-run visual acceptance remain separate follow-up work.
 
 ## [11.5.0] - 2026-09-20

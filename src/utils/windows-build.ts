@@ -94,10 +94,10 @@ export function windowsToolInvocation(command: string, args: readonly string[], 
     if (!/\.(cmd|bat)$/i.test(command)) {
         throw new Error('Windows builds require an installed executable or batch wrapper.')
     }
-    // Carets do not prevent percent expansion by cmd.exe. Do not reinterpret
-    // document-controlled arguments; native executable arguments need no shell.
-    if ([command, ...args].some(value => /[%\r\n]/.test(value))) {
-        throw new Error('Percent signs and line breaks are unsupported in Windows batch command paths or arguments. Use a native executable or a path without these characters.')
+    // Line breaks cannot be part of a Windows file name and must not create
+    // another shell command. Percent-containing paths retain their escaping.
+    if ([command, ...args].some(value => /[\r\n]/.test(value))) {
+        throw new Error('Line breaks are unsupported in Windows batch command paths or arguments.')
     }
     const shell = resolveWindowsBuildTool(path.join(process.env.SystemRoot ?? 'C:\\Windows', 'System32', 'cmd.exe'), env, roots)
     const line = [escapeCmd(command, false), ...args.map(arg => escapeCmd(arg, true))].join(' ')

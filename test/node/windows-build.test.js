@@ -71,12 +71,12 @@ test('a missing workspace folder does not disable tools for an existing folder',
     assert.equal(resolveWindowsBuildTool('latexmk', env, roots), path.join(approved, 'latexmk.exe'))
 })
 
-test('batch invocation rejects percent expansion and line breaks without reinterpreting native arguments', t => {
+test('batch invocation rejects line breaks without reinterpreting native arguments', t => {
     const { project, approved } = fixture(t)
     const env = { PATH: approved }
-    for (const value of ['100%SOURCE%', 'first\rsecond', 'first\nsecond']) {
-        assert.throws(() => windowsToolInvocation(path.join(approved, 'tool.cmd'), [value], env, [project]), /Percent signs/)
-        assert.throws(() => windowsToolInvocation(path.join(approved, value + '.bat'), [], env, [project]), /Percent signs/)
+    for (const value of ['first\rsecond', 'first\nsecond']) {
+        assert.throws(() => windowsToolInvocation(path.join(approved, 'tool.cmd'), [value], env, [project]), /Line breaks/)
+        assert.throws(() => windowsToolInvocation(path.join(approved, value + '.bat'), [], env, [project]), /Line breaks/)
         assert.deepEqual(windowsToolInvocation(path.join(approved, 'tool.exe'), [value], env, [project]).args, [value])
     }
 })
@@ -94,19 +94,25 @@ test('Windows rejects drive-root-relative paths before changing cwd', { skip: pr
     assert.throws(() => resolveWindowsBuildTool('latexmk', { PATH: driveRelative }, [project]), /Cannot find/)
 })
 
-test('Windows legacy batch invocation expands percent arguments and the fixed boundary refuses them', { skip: process.platform !== 'win32' }, t => {
+test('Windows batch invocation preserves percent-containing paths and arguments', { skip: process.platform !== 'win32' }, t => {
     const { root, project, approved } = fixture(t)
     const capture = path.join(root, 'expanded.txt')
-    const wrapper = path.join(approved, 'echo-argument.cmd')
+    const directory = path.join(approved, '100%LW_TEST_VALUE%')
+    fs.mkdirSync(directory)
+    const wrapper = path.join(directory, 'echo-argument.cmd')
     fs.writeFileSync(wrapper, '@echo off\r\n> "%LW_CAPTURE%" echo %~1\r\n')
     const env = { ...process.env, LW_CAPTURE: capture, LW_TEST_VALUE: 'expanded' }
     const argument = '100%LW_TEST_VALUE%'
     const legacy = cs.sync(wrapper, [argument], { cwd: project, env })
     assert.equal(legacy.status, 0, String(legacy.stderr))
-    assert.notEqual(fs.readFileSync(capture, 'utf8').trim(), argument, 'The old shell path reinterprets percent variables')
+    assert.equal(fs.readFileSync(capture, 'utf8').trim(), argument, 'Keep the existing literal-argument behavior')
     fs.unlinkSync(capture)
-    assert.throws(() => windowsToolInvocation(wrapper, [argument], env, [project]), /Percent signs/)
-    assert.equal(fs.existsSync(capture), false, 'Rejected arguments must not start a wrapper')
+    const invocation = windowsToolInvocation(wrapper, [argument], env, [project])
+    const result = spawnSync(invocation.command, invocation.args, {
+        cwd: project, env: invocation.env, windowsVerbatimArguments: invocation.windowsVerbatimArguments
+    })
+    assert.equal(result.status, 0, String(result.stderr))
+    assert.equal(fs.readFileSync(capture, 'utf8').trim(), argument)
 })
 
 test('Windows native execution pins the approved executable despite a project decoy', { skip: process.platform !== 'win32' }, t => {
