@@ -109,7 +109,7 @@ test('Windows Docker launch selects an absolute runtime and preserves wrapper ar
     const canary = path.join(root, 'capture.cjs')
     fs.writeFileSync(canary, `require('fs').writeFileSync(${JSON.stringify(capture)}, JSON.stringify({executable:process.execPath,args:process.argv.slice(1)})); process.exit(0);`)
     const invocation = prepareWindowsBuild(path.resolve(__dirname, '../../scripts/latexmk.bat'), ['-pdf', 'main file.tex'], {
-        ...process.env, PATH: approved, NODE_OPTIONS: `--require "${canary}"`,
+        ...process.env, PATH: approved, NODE_OPTIONS: `--require ${JSON.stringify(canary)}`,
         LATEXWORKSHOP_DOCKER_PATH: 'docker', LATEXWORKSHOP_DOCKER_LATEX: 'example/texlive@sha256:test',
         LATEXWORKSHOP_DOCKER_SOURCE_DIR_HOST: project, LATEXWORKSHOP_DOCKER_OUTPUT_DIR_HOST: path.join(project, '.lw-security')
     }, [project], 'unused')

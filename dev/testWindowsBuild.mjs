@@ -17,14 +17,16 @@ export async function checkWindowsBuild(bin, storage) {
     const project = path.join(storage, 'boundary project with spaces')
     const output = path.join(project, '.lw-security')
     await fs.mkdir(output, { recursive: true })
+    // TinyTeX's minimal pinned bundle does not include makeindex. Exercise it
+    // on the system-TeX job where it is installed, without downloading extras.
+    const hasMakeindex = await fs.stat(path.join(bin, process.platform === 'win32' ? 'makeindex.exe' : 'makeindex')).then(() => true, () => false)
     const source = String.raw`\documentclass{article}
-\usepackage{makeidx}
-\makeindex
+${hasMakeindex ? String.raw`\usepackage{makeidx}\makeindex` : ''}
 \begin{document}
-Safe build\index{safe} with a reference~\cite{example}.
+Safe build${hasMakeindex ? String.raw`\index{safe}` : ''} with a reference~\cite{example}.
 \bibliographystyle{plain}
 \bibliography{references}
-\printindex
+${hasMakeindex ? String.raw`\printindex` : ''}
 \end{document}
 `
     await fs.writeFile(path.join(project, 't.tex'), source)
@@ -34,7 +36,7 @@ Safe build\index{safe} with a reference~\cite{example}.
     if (process.platform === 'win32') {
         const canary = path.join(storage, 'canary.cjs')
         await fs.writeFile(canary, `require('fs').writeFileSync(${JSON.stringify(marker)}, process.execPath); process.exit(97);\n`)
-        env.NODE_OPTIONS = `--require "${canary}"`
+        env.NODE_OPTIONS = `--require ${JSON.stringify(canary)}`
         const decoy = path.join(storage, 'decoy.exe')
         await fs.copyFile(process.execPath, decoy)
         for (const directory of [project, output]) {
@@ -68,8 +70,8 @@ Safe build\index{safe} with a reference~\cite{example}.
     assert.ok(result.stdout.includes('Latexmk'))
     assert.equal((await fs.readFile(path.join(output, 't.pdf'))).subarray(0, 5).toString(), '%PDF-')
     assert.match(await fs.readFile(path.join(output, 't.bbl'), 'utf8'), /A Reference/)
-    assert.match(await fs.readFile(path.join(output, 't.ind'), 'utf8'), /safe/)
-    return { platform: process.platform, realPdf: true, realBibtex: true, realMakeindex: true,
+    if (hasMakeindex) assert.match(await fs.readFile(path.join(output, 't.ind'), 'utf8'), /safe/)
+    return { platform: process.platform, realPdf: true, realBibtex: true, realMakeindex: hasMakeindex,
         projectDecoys: process.platform === 'win32', untrustedToolRan: false }
 }
 
