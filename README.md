@@ -42,6 +42,8 @@ These controls do not isolate the whole extension or guarantee IT approval: loca
 
 ## Project
 
+We want LaTeX to be easier to use at work, with less setup and less need to justify a choice of tool. Clear mathematics and careful typesetting matter to us, alongside Word, Markdown, and AI-assisted workflows—and respect for your organization's policies.
+
 [Contributing](./CONTRIBUTING.md) · [Tests](./test/README.md) · [Releases](./RELEASING.md) · [Report a vulnerability](./SECURITY.md)
 
 [MIT](./LICENSE.txt). Upstream and third-party attribution: [NOTICE](./NOTICE).

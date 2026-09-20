@@ -8,6 +8,7 @@ import * as sinon from 'sinon'
 import { assert, get, mock, set } from './utils'
 import { lw } from '../../src/lw'
 import { initialize } from '../../src/core/file'
+import * as toolRunner from '../../src/compile/tool-runner'
 import { testFileStem, testFileSuiteName } from '../file-name'
 
 describe(testFileSuiteName(__filename), () => {
@@ -762,6 +763,13 @@ describe(testFileSuiteName(__filename), () => {
     })
 
     describe('kpsewhich', () => {
+        const lookupStubs = sinon.createSandbox()
+        beforeEach(() => {
+            // Process/caching unit tests; native lookup is exercised separately.
+            lookupStubs.stub(toolRunner, 'spawnBuildTool').callsFake((command, args, options) => lw.external.spawn(command, args, options ?? {}))
+        })
+        afterEach(() => lookupStubs.restore())
+
         it('should not run kpsewhich in restricted mode', async () => {
             const trustStub = sinon.stub(vscode.workspace, 'isTrusted').value(false)
             const originalSpawn = lw.external.spawn

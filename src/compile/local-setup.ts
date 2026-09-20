@@ -7,6 +7,7 @@ import { ensureMacTeXBinOnPath } from '../utils/tex-path'
 import { getManagedTexEnvironment } from '../utils/managed-tex'
 import { requestManagedTexInstall } from './tex-install'
 import type { ManagedTexProfile } from '../utils/japanese-tex-manifest'
+import { runBuildTool } from './tool-runner'
 
 const logger = lw.log('Local setup')
 
@@ -55,7 +56,7 @@ export async function prepareLocalPdfLaTeX(scope: vscode.ConfigurationScope | un
         ensureMacTeXBinOnPath()
         const profile = getSecureConfigurationValueSync<ManagedTexProfile>(scope, 'security.managedTeXProfile', 'lightweight')
         const managedEnv = getSecureConfigurationValueSync(scope, 'security.useManagedTeX', true) ? getManagedTexEnvironment(profile) : undefined
-        const statuses = inspectTexEnvironment(lw.external.sync as TexToolRunner, getRequiredBuildToolDefinitions('pdflatex'), managedEnv)
+        const statuses = inspectTexEnvironment(runBuildTool as TexToolRunner, getRequiredBuildToolDefinitions('pdflatex'), managedEnv)
         const missing = statuses.filter(status => !status.available)
         if (missing.length === 0) {
             break

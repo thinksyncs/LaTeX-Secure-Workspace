@@ -1,5 +1,6 @@
 import * as path from 'path'
 import * as vscode from 'vscode'
+import { runBuildTool } from '../compile/tool-runner'
 import { getAvailableRecipes, getSecureBuildExecution } from '../compile/recipe'
 import { lw } from '../lw'
 import { getSecureConfigurationValueSync } from '../utils/security'
@@ -81,12 +82,12 @@ async function renderReport(kind: ReportKind): Promise<string> {
     const execution = workspaceBlocker ? 'blocked' : getSecureBuildExecution(configurationScope, recipe?.name)
     const dockerImage = getSecureConfigurationValueSync(configurationScope, 'docker.image.latex', '').trim()
     const texTools = execution === 'local-pdflatex'
-        ? inspectTexEnvironment(lw.external.sync as TexToolRunner, getRequiredBuildToolDefinitions('pdflatex'),
+        ? inspectTexEnvironment(runBuildTool as TexToolRunner, getRequiredBuildToolDefinitions('pdflatex'),
             getSecureConfigurationValueSync(configurationScope, 'security.useManagedTeX', true)
                 ? getManagedTexEnvironment(getSecureConfigurationValueSync<ManagedTexProfile>(configurationScope, 'security.managedTeXProfile', 'lightweight')) : undefined)
         : []
     const dockerTool = execution === 'docker'
-        ? inspectTexEnvironment(lw.external.sync as TexToolRunner, [{
+        ? inspectTexEnvironment(runBuildTool as TexToolRunner, [{
             command: getSecureConfigurationValueSync(configurationScope, 'docker.path', 'docker') || 'docker',
             args: ['--version'],
             purpose: 'container build runtime',

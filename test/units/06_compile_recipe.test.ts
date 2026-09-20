@@ -6,6 +6,7 @@ import { lw } from '../../src/lw'
 import { build, getAvailableRecipes, initialize } from '../../src/compile/recipe'
 import { queue } from '../../src/compile/queue'
 import { testFileSuiteName } from '../file-name'
+import * as toolRunner from '../../src/compile/tool-runner'
 
 describe(testFileSuiteName(__filename), () => {
     let getAuxDirStub: sinon.SinonStub
@@ -14,6 +15,7 @@ describe(testFileSuiteName(__filename), () => {
 
     before(() => {
         mock.init(lw)
+        sinon.stub(toolRunner, 'runBuildTool').callsFake((command, args, options) => lw.external.sync(command, args, options))
         getAuxDirStub = sinon.stub(lw.file, 'getAuxDir').returns('.')
         getIncludedTeXStub = lw.cache.getIncludedTeX as sinon.SinonStub
         secureBuildDirStub = sinon.stub(lw.file, 'getValidatedSecurityBuildDir')

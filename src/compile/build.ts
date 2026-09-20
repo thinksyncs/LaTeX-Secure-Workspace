@@ -15,6 +15,8 @@ import {
 import { build as buildRecipe, getSecureBuildExecution, getSecureRecipeEngine } from './recipe'
 import { queue } from './queue'
 import { prepareLocalPdfLaTeX } from './local-setup'
+import { prepareWindowsBuild } from '../utils/windows-build'
+import { runBuildTool } from './tool-runner'
 
 const logger = lw.log('Build')
 
@@ -169,7 +171,7 @@ async function isBuildEnvironmentReady(scope: vscode.ConfigurationScope, recipeN
             requiredForBuild: true
         }]
         : getRequiredBuildToolDefinitions(engine)
-    const statuses = inspectTexEnvironment(lw.external.sync as TexToolRunner, definitions)
+    const statuses = inspectTexEnvironment(runBuildTool as TexToolRunner, definitions)
     const missing = statuses.filter(status => !status.available)
     if (missing.length === 0) {
         return true
@@ -311,7 +313,16 @@ function spawnProcess(step: Step): ProcessEnv {
             step.args[step.args.length - 1] = normalizeArgForCwd(step.args[step.args.length - 1], cwd, cwd)
         }
         logger.log(`cwd: ${cwd}`)
-        lw.compile.process = lw.external.spawn(step.command, step.args ?? [], {cwd, env})
+        if (process.platform === 'win32') {
+            const roots = vscode.workspace.workspaceFolders?.filter(folder => folder.uri.scheme === 'file').map(folder => folder.uri.fsPath) ?? []
+            const invocation = prepareWindowsBuild(step.command, step.args ?? [], env, roots,
+                path.join(lw.extensionRoot, 'resources', 'secure-latexmkrc'), step.env?.LATEXWORKSHOP_DOCKER_PATH)
+            lw.compile.process = lw.external.spawn(invocation.command, invocation.args, {
+                cwd, env: invocation.env, windowsVerbatimArguments: invocation.windowsVerbatimArguments
+            })
+        } else {
+            lw.compile.process = lw.external.spawn(step.command, step.args ?? [], {cwd, env})
+        }
     } else {
         logger.log(`cwd: ${step.cwd}`)
         lw.compile.process = lw.external.spawn(step.command, step.args ?? [], {cwd: step.cwd})
