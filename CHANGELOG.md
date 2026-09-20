@@ -1,12 +1,20 @@
 # Change Log
 
-## Unreleased
+## [11.5.0] - 2026-09-20
 
-### Added
-- Offer a separately approved, pinned TinyTeX installation when local build tools are missing. Show download progress, support cancellation, verify SHA-256, and continue the requested build after tool checks.
-- Add lightweight and Japanese-font profiles, a profile-selection command, and a pdfLaTeX Japanese sample using IPAex Mincho/Gothic. Test both profiles and embedded fonts on Windows, macOS, and Linux.
-- Keep the managed toolchain in extension storage without administrator access or OS PATH edits. Existing TeX and Docker configurations are preserved; User Settings can switch local builds back to system TeX.
-- Exercise clean managed installation and first-PDF compilation on Linux, macOS, and Windows CI. Remote installation and native Windows ARM are not supported.
+### User impact
+- When local TeX tools are missing, choose a lightweight or Japanese-font TinyTeX profile, review the download, and approve installation. Setup shows progress, supports cancellation, checks SHA-256, and continues the requested build after tool checks.
+- The Japanese profile includes CJK and IPAex Mincho/Gothic fonts with licenses and a pdfLaTeX sample. Both profiles are tested from installation to the first PDF on Windows x64, macOS, and Linux.
+- Managed TeX stays in extension storage. Installation does not request administrator access, change OS PATH, register OS fonts, or replace existing TeX. Downloads and package updates do not run automatically.
+
+### Required action
+- None for existing users. Installation and local execution require separate consent. To use system TeX again, turn off `security.useManagedTeX` in User Settings. Local builds are not sandboxed.
+
+### Known limitations
+- Windows installation paths containing non-ASCII characters, native Windows ARM, and remote-host installation are not supported. Use an approved existing TeX installation in those environments.
+- Japanese support uses pdfLaTeX/CJK; it does not make LuaLaTeX documents such as `ltjsarticle` compatible with local builds. LuaLaTeX still requires Docker.
+- Missing packages are not downloaded automatically. Pinned Japanese-package downloads stop if the mirror replaces the archive; a reviewed extension update is then needed.
+- Native first-run UI visual acceptance remains outstanding. Automated command tests and generated-PDF checks do not replace that check.
 
 ## [11.4.6] - 2026-09-18
 
