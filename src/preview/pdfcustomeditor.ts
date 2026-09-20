@@ -9,8 +9,10 @@ const logger = lw.log('Viewer', 'CustomEditor')
 
 const VIEW_TYPE = 'tex-workspace-secure.pdf-preview'
 const viewerStates = new Map<string, Map<vscode.WebviewPanel, PdfViewerState>>()
-const pendingSyncTeX = new Map<string, SyncTeXRecordToPDF | SyncTeXRecordToPDFAll[]>()
+const pendingSyncTeX = new Map<string, {record: SyncTeXRecordToPDF | SyncTeXRecordToPDFAll[], requestId: number}>()
+let nextSyncTeXRequestId = 0
 const pendingDeleteDisposals = new Map<vscode.WebviewPanel, NodeJS.Timeout>()
+const htmlRequests = new WeakMap<vscode.WebviewPanel, object>()
 const DELETE_DISPOSE_DELAY_MS = 300
 
 export class SecurePdfCustomEditorProvider implements vscode.CustomReadonlyEditorProvider {
@@ -33,31 +35,57 @@ export class SecurePdfCustomEditorProvider implements vscode.CustomReadonlyEdito
         }
         configureSecurePdfViewerWebview(webviewPanel.webview, pdfUri)
         updateViewerState(pdfUri, webviewPanel, baseState)
-
-        webviewPanel.webview.onDidReceiveMessage((msg: unknown) => {
-            void handleCustomEditorMessage(pdfUri, webviewPanel, baseState, msg)
-        })
-        webviewPanel.webview.html = await getPdfViewerCustomEditorHtml(pdfUri, webviewPanel.webview)
-
-        const watcher = vscode.workspace.createFileSystemWatcher(pdfUri.fsPath)
-        const reload = async () => {
-            cancelPendingDeleteDisposal(webviewPanel)
-            await webviewPanel.webview.postMessage({type: 'reload'})
-        }
-        const d1 = watcher.onDidChange(reload)
-        const d2 = watcher.onDidCreate(reload)
-        const d3 = watcher.onDidDelete(() => {
-            void schedulePanelDisposeAfterDelete(pdfUri, webviewPanel)
-        })
-        webviewPanel.onDidDispose(() => {
+        let disposed = false
+        const resources: vscode.Disposable[] = []
+        const cleanup = () => {
+            disposed = true
+            htmlRequests.delete(webviewPanel)
             cancelPendingDeleteDisposal(webviewPanel)
             deleteViewerState(pdfUri, webviewPanel)
-            d1.dispose()
-            d2.dispose()
-            d3.dispose()
-            watcher.dispose()
-        })
+            resources.splice(0).forEach(resource => { resource.dispose() })
+        }
+        resources.push(webviewPanel.onDidDispose(cleanup))
+        resources.push(webviewPanel.webview.onDidReceiveMessage((msg: unknown) => {
+            if (!disposed) {
+                void handleCustomEditorMessage(pdfUri, webviewPanel, baseState, msg)
+                    .catch(error => logger.logError('Failed to handle PDF viewer message.', error))
+            }
+        }))
+        try {
+            await renderPanelHtml(pdfUri, webviewPanel)
+        } catch (error) {
+            cleanup()
+            throw error
+        }
+        if (disposed) {
+            return
+        }
+
+        const watcher = vscode.workspace.createFileSystemWatcher(pdfUri.fsPath)
+        resources.push(watcher)
+        const reload = () => {
+            if (disposed) {
+                return
+            }
+            cancelPendingDeleteDisposal(webviewPanel)
+            void webviewPanel.webview.postMessage({type: 'reload'}).then(undefined,
+                error => logger.logError('Failed to reload PDF viewer.', error))
+        }
+        resources.push(watcher.onDidChange(reload), watcher.onDidCreate(reload), watcher.onDidDelete(() => {
+            if (!disposed) {
+                void schedulePanelDisposeAfterDelete(pdfUri, webviewPanel)
+            }
+        }))
         logger.log(`Custom PDF editor resolved for ${pdfUri.toString(true)}`)
+    }
+}
+
+async function renderPanelHtml(pdfUri: vscode.Uri, panel: vscode.WebviewPanel): Promise<void> {
+    const request = {}
+    htmlRequests.set(panel, request)
+    const html = await getPdfViewerCustomEditorHtml(pdfUri, panel.webview)
+    if (htmlRequests.get(panel) === request && getPanelViewerState(pdfUri, panel)) {
+        panel.webview.html = html
     }
 }
 
@@ -67,7 +95,7 @@ export function getCustomEditorStates(pdfUri: vscode.Uri): PdfViewerState[] {
 }
 
 export async function revealLocationInCustomEditor(pdfUri: vscode.Uri, record: SyncTeXRecordToPDF | SyncTeXRecordToPDFAll[]): Promise<boolean> {
-    pendingSyncTeX.set(toKey(pdfUri), record)
+    pendingSyncTeX.set(toKey(pdfUri), {record, requestId: ++nextSyncTeXRequestId})
     const panels = viewerStates.get(toKey(pdfUri))
     if (!panels || panels.size === 0) {
         return false
@@ -86,9 +114,7 @@ export async function reloadCustomEditorPanels(pdfUri?: vscode.Uri): Promise<voi
         if (!panelStates) {
             continue
         }
-        await Promise.all(Array.from(panelStates.keys()).map(async panel => {
-            panel.webview.html = await getPdfViewerCustomEditorHtml(targetPdfUri, panel.webview)
-        }))
+        await Promise.all(Array.from(panelStates.keys()).map(panel => renderPanelHtml(targetPdfUri, panel)))
     }
 }
 
@@ -112,6 +138,7 @@ async function handleCustomEditorMessage(pdfUri: vscode.Uri, webviewPanel: vscod
     }
     const payload = msg as {
         type?: string,
+        requestId?: unknown,
         message?: unknown,
         state?: PdfViewerState,
         pos?: [number, number],
@@ -123,6 +150,9 @@ async function handleCustomEditorMessage(pdfUri: vscode.Uri, webviewPanel: vscod
         logger.log(payload.message)
     }
     if ((payload.type === 'state' || payload.type === 'synctex-applied') && payload.state && typeof payload.state === 'object') {
+        if (payload.type === 'synctex-applied' && payload.requestId !== pendingSyncTeX.get(toKey(pdfUri))?.requestId) {
+            return
+        }
         const nextState = {
             ...baseState,
             ...payload.state
@@ -159,8 +189,8 @@ async function handleCustomEditorMessage(pdfUri: vscode.Uri, webviewPanel: vscod
 }
 
 async function deliverPendingSyncTeX(pdfUri: vscode.Uri, panel?: vscode.WebviewPanel): Promise<boolean> {
-    const record = pendingSyncTeX.get(toKey(pdfUri))
-    if (!record) {
+    const pending = pendingSyncTeX.get(toKey(pdfUri))
+    if (!pending) {
         return false
     }
     const targets = panel
@@ -172,7 +202,8 @@ async function deliverPendingSyncTeX(pdfUri: vscode.Uri, panel?: vscode.WebviewP
     const delivered = await Promise.all(targets.map(async target => {
         return target.webview.postMessage({
             type: 'synctex',
-            data: record
+            data: pending.record,
+            requestId: pending.requestId
         })
     }))
     return delivered.some(result => result)
@@ -205,8 +236,7 @@ function getPanelViewerState(pdfUri: vscode.Uri, panel: vscode.WebviewPanel): Pd
 async function schedulePanelDisposeAfterDelete(pdfUri: vscode.Uri, panel: vscode.WebviewPanel): Promise<void> {
     cancelPendingDeleteDisposal(panel)
     const timeout = setTimeout(() => {
-        pendingDeleteDisposals.delete(panel)
-        void confirmDeleteAndDispose(pdfUri, panel)
+        void confirmDeleteAndDispose(pdfUri, panel, timeout)
     }, DELETE_DISPOSE_DELAY_MS)
     pendingDeleteDisposals.set(panel, timeout)
 }
@@ -220,13 +250,25 @@ function cancelPendingDeleteDisposal(panel: vscode.WebviewPanel): void {
     pendingDeleteDisposals.delete(panel)
 }
 
-async function confirmDeleteAndDispose(pdfUri: vscode.Uri, panel: vscode.WebviewPanel): Promise<void> {
+async function confirmDeleteAndDispose(pdfUri: vscode.Uri, panel: vscode.WebviewPanel, timeout: NodeJS.Timeout): Promise<void> {
+    let missing = false
     try {
         await lw.external.stat(pdfUri)
-        await panel.webview.postMessage({type: 'reload'})
-        return
     } catch {
+        missing = true
+    }
+    if (pendingDeleteDisposals.get(panel) !== timeout) {
+        return
+    }
+    pendingDeleteDisposals.delete(panel)
+    if (missing) {
         panel.dispose()
+    } else {
+        try {
+            await panel.webview.postMessage({type: 'reload'})
+        } catch (error) {
+            logger.logError('Failed to reload recreated PDF.', error)
+        }
     }
 }
 
@@ -249,6 +291,7 @@ function deleteViewerState(pdfUri: vscode.Uri, panel: vscode.WebviewPanel): void
 export function resetCustomEditorStateForTest(): void {
     viewerStates.clear()
     pendingSyncTeX.clear()
+    nextSyncTeXRequestId = 0
     pendingDeleteDisposals.forEach(timeout => clearTimeout(timeout))
     pendingDeleteDisposals.clear()
 }

@@ -3,6 +3,8 @@ import * as path from 'path'
 import { lw } from '../lw'
 
 const logger = lw.log('Cacher', 'Watcher')
+type PollingInfo = {time: number, size: number, busy: boolean, interval?: NodeJS.Timeout}
+type PendingDelete = {timeout: NodeJS.Timeout, resolve: () => void}
 
 class Watcher {
     /**
@@ -40,7 +42,9 @@ class Watcher {
      * when large binary files are progressively write to disk, and multiple
      * 'change' events are therefore emitted in a short period of time.
      */
-    private readonly polling: {[uriString: string]: {time: number, size: number}} = {}
+    private readonly polling: {[uriString: string]: PollingInfo} = {}
+    private readonly pendingDeletes = new Map<string, PendingDelete>()
+    private generation = 0
 
     /**
      * Creates a new Watcher instance.
@@ -85,9 +89,10 @@ class Watcher {
      */
     private createWatcher(globPattern: vscode.GlobPattern): vscode.FileSystemWatcher {
         const watcher = vscode.workspace.createFileSystemWatcher(globPattern)
-        watcher.onDidCreate((uri: vscode.Uri) => this.onDidChange('create', uri))
-        watcher.onDidChange((uri: vscode.Uri) => this.onDidChange('change', uri))
-        watcher.onDidDelete((uri: vscode.Uri) => this.onDidDelete(uri))
+        const generation = this.generation
+        watcher.onDidCreate((uri: vscode.Uri) => generation === this.generation && this.onDidChange('create', uri))
+        watcher.onDidChange((uri: vscode.Uri) => generation === this.generation && this.onDidChange('change', uri))
+        watcher.onDidDelete((uri: vscode.Uri) => generation === this.generation && this.onDidDelete(uri))
         return watcher
     }
 
@@ -105,6 +110,7 @@ class Watcher {
         if (!watcherInfo?.files.has(fileName)) {
             return
         }
+        this.cancelDelete(uri.toString(true))
 
         if (!lw.file.hasBinaryExt(path.extname(uri.fsPath))) {
             this.handleNonBinaryFileChange(event, uri)
@@ -140,18 +146,20 @@ class Watcher {
     private async initiatePolling(uri: vscode.Uri): Promise<void> {
         const uriString = uri.toString(true)
         const firstChangeTime = Date.now()
-        let size: number
+        // Reserve the slot before stat: another change can arrive while it waits.
+        const info: PollingInfo = {size: 0, time: firstChangeTime, busy: false}
+        this.polling[uriString] = info
         try {
-            size = (await lw.external.stat(uri)).size
+            info.size = (await lw.external.stat(uri)).size
         } catch {
-            // The file can disappear between change notification and stat.
+            this.stopPolling(uriString, info)
             return
         }
-
-        this.polling[uriString] = { size, time: firstChangeTime }
-
-        const pollingInterval = setInterval(() => {
-            void this.handlePolling(uri, firstChangeTime, pollingInterval)
+        if (this.polling[uriString] !== info) {
+            return
+        }
+        info.interval = setInterval(() => {
+            void this.handlePolling(uri, firstChangeTime, info)
         }, vscode.workspace.getConfiguration('latex-workshop').get('latex.watch.pdf.delay') as number)
     }
 
@@ -167,51 +175,53 @@ class Watcher {
      *
      * @param {vscode.Uri} uri - The uri of the changed file.
      * @param {number} firstChangeTime - The timestamp of the first change.
-     * @param {NodeJS.Timeout} interval - The polling interval.
+     * @param {PollingInfo} info - The identity and state of this polling request.
      */
-    private async handlePolling(uri: vscode.Uri, firstChangeTime: number, interval: NodeJS.Timeout): Promise<void> {
+    private async handlePolling(uri: vscode.Uri, firstChangeTime: number, info: PollingInfo): Promise<void> {
         const uriString = uri.toString(true)
-        if (!await lw.file.exists(uri)) {
-            clearInterval(interval)
-            delete this.polling[uriString]
+        if (this.polling[uriString] !== info || info.busy) {
             return
         }
-
-        const pollingInfo = this.polling[uriString]
-        // Resume vscode may cause accidental "change", do nothing.
-        // Another timer tick may also have already finalized and removed polling info.
-        if (!pollingInfo) {
-            clearInterval(interval)
-            return
-        }
-
-        let currentSize: number
+        info.busy = true
         try {
-            currentSize = (await lw.external.stat(uri)).size
+            const currentSize = (await lw.external.stat(uri)).size
+            if (this.polling[uriString] !== info) {
+                return
+            }
+            if (currentSize !== info.size) {
+                info.size = currentSize
+                info.time = Date.now()
+                return
+            }
+            if (Date.now() - info.time >= 200) {
+                logger.log(`"change" emitted on ${uriString} after polling for ${Date.now() - firstChangeTime} ms.`)
+                this.stopPolling(uriString, info)
+                this.onChangeHandlers.forEach(handler => handler(uri))
+                lw.event.fire(lw.event.FileChanged, uriString)
+            }
         } catch {
-            clearInterval(interval)
+            this.stopPolling(uriString, info)
+        } finally {
+            info.busy = false
+        }
+    }
+
+    private stopPolling(uriString: string, info = this.polling[uriString]): void {
+        if (!info) {
+            return
+        }
+        clearInterval(info.interval)
+        if (this.polling[uriString] === info) {
             delete this.polling[uriString]
-            return
         }
+    }
 
-        const latestPollingInfo = this.polling[uriString]
-        if (!latestPollingInfo) {
-            clearInterval(interval)
-            return
-        }
-
-        if (currentSize !== latestPollingInfo.size) {
-            latestPollingInfo.size = currentSize
-            latestPollingInfo.time = Date.now()
-            return
-        }
-
-        if (Date.now() - latestPollingInfo.time >= 200) {
-            logger.log(`"change" emitted on ${uriString} after polling for ${Date.now() - firstChangeTime} ms.`)
-            clearInterval(interval)
-            delete this.polling[uriString]
-            this.onChangeHandlers.forEach(handler => handler(uri))
-            lw.event.fire(lw.event.FileChanged, uriString)
+    private cancelDelete(uriString: string): void {
+        const pending = this.pendingDeletes.get(uriString)
+        if (pending) {
+            clearTimeout(pending.timeout)
+            this.pendingDeletes.delete(uriString)
+            pending.resolve()
         }
     }
 
@@ -230,25 +240,34 @@ class Watcher {
         }
 
         const uriString = uri.toString(true)
+        this.stopPolling(uriString)
+        this.cancelDelete(uriString)
         logger.log(`"delete" emitted on ${uriString}.`)
         return new Promise(resolve => {
-            setTimeout(async () => {
-                if (await lw.file.exists(uri)) {
-                    logger.log(`File deleted and re-created: ${uriString} .`)
+            const pending: PendingDelete = {resolve, timeout: setTimeout(() => {
+                void (async () => {
+                    const exists = await lw.file.exists(uri)
+                    if (this.pendingDeletes.get(uriString) !== pending || this.watchers[folder] !== watcherInfo) {
+                        return
+                    }
+                    if (exists) {
+                        logger.log(`File deleted and re-created: ${uriString} .`)
+                        return
+                    }
+                    logger.log(`File deletion confirmed: ${uriString} .`)
+                    // Remove the old watch before callbacks can reset or add a new one.
+                    this.remove(uri)
+                    this.onDeleteHandlers.forEach(handler => handler(uri))
+                    lw.event.fire(lw.event.FileRemoved, uriString)
+                })().catch(error => logger.logError('Failed to confirm file deletion.', error)).finally(() => {
+                    if (this.pendingDeletes.get(uriString) === pending) {
+                        this.pendingDeletes.delete(uriString)
+                    }
                     resolve()
-                    return
-                }
-                logger.log(`File deletion confirmed: ${uriString} .`)
-                this.onDeleteHandlers.forEach(handler => handler(uri))
-                watcherInfo.files.delete(fileName)
-
-                if (watcherInfo.files.size === 0) {
-                    this.disposeWatcher(folder)
-                }
-
-                lw.event.fire(lw.event.FileRemoved, uriString)
-                resolve()
+                })
             }, vscode.workspace.getConfiguration('latex-workshop').get('latex.watch.delay') as number)
+            }
+            this.pendingDeletes.set(uriString, pending)
         })
     }
 
@@ -279,6 +298,7 @@ class Watcher {
      * @param {vscode.Uri} uri - The uri of the file to watch.
      */
     add(uri: vscode.Uri) {
+        this.cancelDelete(uri.toString(true))
         const fileName = path.basename(uri.fsPath)
         const folder = path.dirname(uri.fsPath)
         if (!this.watchers[folder]) {
@@ -302,7 +322,14 @@ class Watcher {
      * @param {vscode.Uri} uri - The uri of the file to stop watching.
      */
     remove(uri: vscode.Uri) {
-        this.watchers[path.dirname(uri.fsPath)]?.files.delete(path.basename(uri.fsPath))
+        this.stopPolling(uri.toString(true))
+        this.cancelDelete(uri.toString(true))
+        const folder = path.dirname(uri.fsPath)
+        const watcherInfo = this.watchers[folder]
+        watcherInfo?.files.delete(path.basename(uri.fsPath))
+        if (watcherInfo?.files.size === 0) {
+            this.disposeWatcher(folder)
+        }
     }
 
     /**
@@ -319,6 +346,9 @@ class Watcher {
      * Resets all watchers.
      */
     reset() {
+        this.generation++
+        Object.keys(this.polling).forEach(uri => this.stopPolling(uri))
+        this.pendingDeletes.forEach((_pending, uri) => this.cancelDelete(uri))
         Object.entries(this.watchers).forEach(([folder, watcher]) => {
             watcher.watcher.dispose()
             delete this.watchers[folder]
@@ -333,3 +363,5 @@ export const watcher = {
     bib: new Watcher('.bib'),
     glossary: new Watcher('.bib')
 }
+
+lw.onDispose({dispose: () => Object.values(watcher).forEach(item => item.reset())})

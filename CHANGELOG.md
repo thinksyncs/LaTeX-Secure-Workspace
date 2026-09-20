@@ -1,5 +1,20 @@
 # Change Log
 
+## [11.5.2] - 2026-09-21
+
+### User impact
+- Prevent older root searches and file parses from overwriting newer state or reviving dependencies after a project reset. Handle cyclic file dependencies without recursive overflow.
+- Stop duplicate or abandoned file polling, and discard stale deletion checks. Closing or reloading a PDF tab no longer leaves late setup work behind; old SyncTeX acknowledgements cannot cancel a newer jump.
+- Wait for the final build output before reporting completion. Keep file-search results separate across projects and tool commands; stop stuck `kpsewhich` lookups after 15 seconds or 1 MiB of output, and cancel them when the extension shuts down.
+- Release the managed-TeX installation lock even when temporary-file cleanup fails. Require an explicit test result from macOS background test hosts.
+
+### Required action
+- None. Existing settings and manual execution/install consent remain unchanged. A lookup exceeding the new limits is logged and skipped; it can be retried.
+
+### Known limitations
+- This release fixes reproduced state and lifecycle failures; it is not proof that every leak or concurrency bug is absent. Local TeX remains outside a filesystem/network sandbox.
+- Windows non-ASCII managed-install paths and native first-run visual acceptance remain separate follow-up work.
+
 ## [11.5.1] - 2026-09-20
 
 ### User impact

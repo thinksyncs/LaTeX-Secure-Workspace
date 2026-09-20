@@ -345,32 +345,45 @@ function spawnProcess(step: Step): ProcessEnv {
  * successfully executed.
  */
 async function monitorProcess(step: Step, env: ProcessEnv): Promise<boolean> {
-    if (lw.compile.process === undefined) {
+    const proc = lw.compile.process
+    if (proc === undefined) {
         return false
     }
+    let settled = false
     let stdout = ''
-    lw.compile.process.stdout?.on('data', (msg: Buffer | string) => {
+    proc.stdout?.on('data', (msg: Buffer | string) => {
+        if (settled) {
+            return
+        }
         stdout += msg
         logger.logCompiler(msg.toString())
     })
 
     let stderr = ''
-    lw.compile.process.stderr?.on('data', (msg: Buffer | string) => {
+    proc.stderr?.on('data', (msg: Buffer | string) => {
+        if (settled) {
+            return
+        }
         stderr += msg
         logger.logCompiler(msg.toString())
     })
 
     const result: boolean = await new Promise(resolve => {
-        if (lw.compile.process === undefined) {
-            resolve(false)
-            return
-        }
-        lw.compile.process.on('error', err => {
+        proc.on('error', err => {
+            if (settled) {
+                return
+            }
+            settled = true
             handleProcessError(step, env, stderr, err)
             resolve(false)
         })
 
-        lw.compile.process.on('exit', (code, signal) => {
+        // close follows the final stdout/stderr data; exit may precede it.
+        proc.on('close', (code, signal) => {
+            if (settled) {
+                return
+            }
+            settled = true
             const isSkipped = lw.parser.parse.log(stdout, step.rootFile)
             if (!step.isExternal) {
                 step.isSkipped = isSkipped

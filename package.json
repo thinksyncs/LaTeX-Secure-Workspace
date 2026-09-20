@@ -3,7 +3,7 @@
   "displayName": "LaTeX Workspace Security",
   "description": "Secure LaTeX tools for VS Code with project-local completions, manual build, diagnostics, and a local PDF tab viewer with SyncTeX.",
   "icon": "icons/icon.png",
-  "version": "11.5.1",
+  "version": "11.5.2",
   "publisher": "ToppyMicroServices",
   "license": "MIT",
   "homepage": "https://github.com/thinksyncs/LaTeX-Secure-Workspace",
@@ -3045,7 +3045,7 @@
     "test:docker": "node ./dev/testDockerBuild.mjs",
     "test:fuzz": "node --test ./test/fuzz/*.test.js",
     "test:integration": "node ./dev/runTestCi.mjs",
-    "test:node": "node --test ./test/node/fixture-selection.test.js ./test/node/test-command-boundaries.test.js ./test/node/windows-build.test.js ./test/node/product-surface.test.js ./test/fuzz/graphics-diagnostics-utils.test.js ./test/fuzz/parser.fast-check.test.js",
+    "test:node": "node --test ./test/node/fixture-selection.test.js ./test/node/test-command-boundaries.test.js ./test/node/windows-build.test.js ./test/node/product-surface.test.js ./test/node/reliability-state.test.js ./test/fuzz/graphics-diagnostics-utils.test.js ./test/fuzz/parser.fast-check.test.js",
     "watch-src": "tsc -watch -p tsconfig.json",
     "update-grammar": "node ./dev/update-grammar.mjs"
   },

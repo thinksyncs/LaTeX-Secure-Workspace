@@ -18,6 +18,8 @@ suite('Product surface test suite', () => {
     })
 
     teardown(async () => {
+        // Mocha can time out before a test's finally block is reached.
+        sinon.restore()
         await test.reset()
     })
 

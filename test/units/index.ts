@@ -2,6 +2,7 @@ import * as path from 'path'
 import Mocha from 'mocha'
 import { glob } from 'glob'
 import { hooks } from './utils'
+import { reportTestResult } from '../result'
 
 export function run(): Promise<void> {
     // Create the mocha test
@@ -21,7 +22,7 @@ export function run(): Promise<void> {
 
     ;(globalThis as any).mocha = mocha
 
-    return new Promise((resolve, reject) => {
+    return reportTestResult(new Promise<void>((resolve, reject) => {
         glob.sync('**/**.test.js', { cwd: __dirname })
             .filter(f => process.env['LATEXWORKSHOP_UNIT'] ? process.env['LATEXWORKSHOP_UNIT'].split(',').find(candidate => f.includes(candidate)) !== undefined : true)
             .sort()
@@ -39,5 +40,5 @@ export function run(): Promise<void> {
             console.error(error)
             return reject(error)
         })
-    })
+    }))
 }
