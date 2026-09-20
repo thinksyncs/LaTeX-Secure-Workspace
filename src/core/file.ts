@@ -5,6 +5,7 @@ import * as path from 'path'
 import { confirmWorkspaceCommandExecution, getSecureConfigurationValueSync, warnWorkspaceCommandSetting } from '../utils/security'
 import * as utils from '../utils/utils'
 import { lw } from '../lw'
+import { spawnBuildTool } from '../compile/tool-runner'
 
 const logger = lw.log('File')
 const SECURITY_BUILD_DIR = '.lw-security'
@@ -606,7 +607,7 @@ async function kpsewhich(target: string, isBib: boolean = false): Promise<string
                 return undefined
             }
 
-            const proc = lw.external.spawn(command, args, { cwd })
+            const proc = spawnBuildTool(command, args, { cwd })
             proc.stdout?.setEncoding('utf8')
             proc.stderr?.setEncoding('utf8')
 

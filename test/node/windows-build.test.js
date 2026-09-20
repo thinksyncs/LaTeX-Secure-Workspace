@@ -62,6 +62,19 @@ test('Windows fixed recipe binds downstream tools and clears missing optional re
     assert.equal(invocation.env.LW_SECURE_MAKEINDEX, undefined)
 })
 
+test('Windows rejects drive-root-relative paths before changing cwd', { skip: process.platform !== 'win32' }, t => {
+    const { project, approved } = fixture(t)
+    fs.writeFileSync(path.join(approved, 'latexmk.exe'), '')
+    assert.match(approved, /^[a-z]:/i)
+    const driveRelative = approved.slice(2)
+    const env = windowsBuildEnvironment({ PATH: `${driveRelative};${approved}` }, [project])
+    assert.equal(env.PATH, approved)
+    for (const command of [path.join(driveRelative, 'latexmk.exe'), 'C:latexmk.exe']) {
+        assert.throws(() => resolveWindowsBuildTool(command, env, [project]), /fully qualified/)
+    }
+    assert.throws(() => resolveWindowsBuildTool('latexmk', { PATH: driveRelative }, [project]), /Cannot find/)
+})
+
 test('Windows native execution pins the approved executable despite a project decoy', { skip: process.platform !== 'win32' }, t => {
     const { root, project, approved } = fixture(t)
     const trusted = path.join(approved, 'latexmk.exe')

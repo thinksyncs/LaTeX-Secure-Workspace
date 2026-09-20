@@ -6,6 +6,14 @@ function inside(root: string, file: string): boolean {
     return relative === '' || (!path.isAbsolute(relative) && relative !== '..' && !relative.startsWith(`..${path.sep}`))
 }
 
+function fullyQualified(file: string): boolean {
+    if (!path.isAbsolute(file)) {
+        return false
+    }
+    // win32.isAbsolute also accepts \tools, whose drive changes with cwd.
+    return process.platform !== 'win32' || /^[a-z]:[\\/]/i.test(file) || /^[\\/]{2}[^\\/]+[\\/][^\\/]+(?:[\\/]|$)/.test(file)
+}
+
 /** Resolve search directories before entering a document-controlled cwd. */
 export function windowsBuildEnvironment(base: NodeJS.ProcessEnv, roots: readonly string[]): NodeJS.ProcessEnv {
     const env = { ...base }
@@ -14,7 +22,7 @@ export function windowsBuildEnvironment(base: NodeJS.ProcessEnv, roots: readonly
     keys.forEach(key => { delete env[key] })
     const realRoots = roots.map(root => fs.realpathSync(root))
     env.PATH = search.split(';').map(entry => entry.replace(/^"(.*)"$/, '$1')).filter(entry => {
-        if (!path.isAbsolute(entry)) {
+        if (!fullyQualified(entry)) {
             return false
         }
         try {
@@ -31,9 +39,9 @@ export function windowsBuildEnvironment(base: NodeJS.ProcessEnv, roots: readonly
 
 export function resolveWindowsBuildTool(command: string, env: NodeJS.ProcessEnv, roots: readonly string[]): string {
     const realRoots = roots.map(root => fs.realpathSync(root))
-    const directories = path.isAbsolute(command) ? [''] : (env.PATH ?? '').split(';').filter(Boolean)
-    if (!path.isAbsolute(command) && /[\\/:]/.test(command)) {
-        throw new Error(`Use an absolute installed tool path, not a relative command: ${command}`)
+    const directories = fullyQualified(command) ? [''] : (env.PATH ?? '').split(';').filter(fullyQualified)
+    if (!fullyQualified(command) && /[\\/:]/.test(command)) {
+        throw new Error(`Use a fully qualified absolute installed tool path, not a relative command: ${command}`)
     }
     const extensions = path.extname(command) ? [''] : ['.exe', '.com', '.cmd', '.bat']
     for (const directory of directories) {
@@ -42,7 +50,7 @@ export function resolveWindowsBuildTool(command: string, env: NodeJS.ProcessEnv,
             try {
                 const real = fs.realpathSync(candidate)
                 if (fs.statSync(real).isFile() && !realRoots.some(root => inside(root, real))) {
-                    return candidate
+                    return path.resolve(candidate)
                 }
             } catch {
                 // Try the next approved directory; never fall back to cwd.

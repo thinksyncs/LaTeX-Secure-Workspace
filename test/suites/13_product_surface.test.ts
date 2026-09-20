@@ -70,6 +70,26 @@ suite('Product surface test suite', () => {
         // A registered tab is not proof of visible pixels or a Docker first run.
     })
 
+    test.run('bibliography lookup ignores a project-local Windows helper', async (fixture: string) => {
+        if (process.platform !== 'win32') {
+            return
+        }
+        await test.load(fixture, [{src: path.resolve(__dirname, '../../../samples/sample/t.tex'), dst: 't.tex'}], {skipCache: true})
+        const marker = path.join(fixture, 'untrusted-kpsewhich.txt')
+        const decoy = path.join(fixture, 'kpsewhich.cmd')
+        fs.writeFileSync(decoy, '@echo off\r\n> "' + marker + '" echo untrusted\r\nexit /b 1\r\n')
+        try {
+            // Missing bibliography lookup is reachable without a local build.
+            assert.deepStrictEqual(await lw.file.getBibPath('lw-security-missing-reference.bib', fixture), [])
+            assert.strictEqual(fs.existsSync(marker), false)
+            const installedClass = await lw.file.kpsewhich('report.cls')
+            assert.ok(installedClass && fs.existsSync(installedClass), 'Installed class lookup must still work')
+            assert.strictEqual(fs.existsSync(marker), false)
+        } finally {
+            fs.unlinkSync(decoy)
+        }
+    })
+
     test.run('fresh settings reach the first local PDF through the registered build command', async (fixture: string) => {
         const config = vscode.workspace.getConfiguration('latex-workshop')
         const keys = ['security.allowLocalPdfLaTeX', 'docker.enabled']
