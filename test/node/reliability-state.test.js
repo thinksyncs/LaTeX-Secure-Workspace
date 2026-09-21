@@ -31,7 +31,7 @@ function load(file, stubs, expose = '') {
     }).outputText
     const mod = { exports: {} }
     vm.runInNewContext(output + (expose ? `\nmodule.exports.testOnly = {${expose}};` : ''), {
-        module: mod, exports: mod.exports,
+        module: mod, exports: mod.exports, __dirname: path.dirname(filename),
         require: name => Object.hasOwn(stubs, name) ? stubs[name] : require(name),
         process, Buffer, console, Date, setTimeout, clearTimeout, setInterval, clearInterval
     }, { filename })
@@ -616,4 +616,20 @@ test('late close after a build error cannot clear the next process', async () =>
     old.emit('exit', 0, null)
     old.emit('close', 0, null)
     assert.equal(lw.compile.process, next)
+})
+
+test('failed integration hosts release profiles before the top-level exit', async () => {
+    let removed = 0, earlyExits = 0
+    const hostError = new Error('controlled host failure')
+    const {testOnly} = load('test/runTest.ts', {
+        process: {platform: process.platform, env: {
+            LATEXWORKSHOP_FOREGROUND_TESTS: '1', LATEXWORKSHOP_VSCODE_TEST_PATH: '/test/code'
+        }, exit: () => { earlyExits++; throw new Error('premature exit') }},
+        tmp: {dirSync: () => ({name: '/test/profile', removeCallback: () => { removed++ }})},
+        '@vscode/test-electron': {runTests: async () => { throw hostError }},
+        './fixture-selection': {}, './result': {}
+    }, 'runTestSuites')
+    await assert.rejects(testOnly.runTestSuites('unittest'), error => error === hostError)
+    assert.equal(earlyExits, 0)
+    assert.equal(removed, 2)
 })

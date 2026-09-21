@@ -202,7 +202,8 @@ async function runTestSuites(fixture: TestFixture) {
     } catch (error) {
         console.error(error)
         console.error('Failed to run tests')
-        process.exit(1)
+        // Let finally release the test profiles before main reports failure.
+        throw error
     } finally {
         restoreEnv(envSnapshot)
         userDataDir.removeCallback()
