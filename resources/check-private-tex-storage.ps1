@@ -1,5 +1,8 @@
 param([Parameter(Mandatory = $true)][string]$Directory)
 $ErrorActionPreference = 'Stop'
+# PowerShell 7 callers can pass a PSModulePath containing incompatible modules
+# to Windows PowerShell 5.1. Load this host's built-in security module explicitly.
+Import-Module (Join-Path $PSHOME 'Modules\Microsoft.PowerShell.Security\Microsoft.PowerShell.Security.psd1') -ErrorAction Stop
 # Read-only check. Never grant permissions, take ownership or request elevation.
 $item = Get-Item -LiteralPath $Directory -Force
 if (-not $item.PSIsContainer) { throw 'Storage must be an existing directory.' }

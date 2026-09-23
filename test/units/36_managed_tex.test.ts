@@ -244,12 +244,16 @@ describe('36_managed_tex:', () => {
         let install: sinon.SinonStub
         let remote: sinon.SinonStub
         let pick: sinon.SinonStub
+        let privateRequired: sinon.SinonStub
         beforeEach(() => {
             mock.init(lw)
             sinon.stub(vscode.workspace, 'isTrusted').value(true)
             sinon.stub(vscode.workspace, 'workspaceFolders').value([{ uri: vscode.Uri.file(temporary), name: 'test', index: 0 }])
             remote = sinon.stub(vscode.env, 'remoteName').value(undefined)
             managed.configureManagedTexStorage(path.join(temporary, 'storage'))
+            // Consent tests select their own storage branch. Windows CI's temp
+            // directory may be an 8.3 alias; real path handling has a native CI job.
+            privateRequired = sinon.stub(managed, 'needsPrivateTexStorage').returns(false)
             sinon.stub(managed, 'getCurrentTinyTexAsset').returns(getTinyTexAsset('darwin', 'x64'))
             install = sinon.stub(managed, 'installManagedTex').resolves('/managed/bin')
             const selection = { label: 'Lightweight TeX', profile: 'lightweight' }
@@ -327,7 +331,7 @@ describe('36_managed_tex:', () => {
             sinon.stub(vscode.window, 'showOpenDialog').resolves([vscode.Uri.file(temporary)])
             const prompt = sinon.stub(vscode.window, 'showInformationMessage').resolves('Verify and Install Offline' as unknown as vscode.MessageItem)
             assert.strictEqual(await requestManagedTexInstall('import'), true)
-            assert.strictEqual(install.firstCall.args[1].offlineDirectory, temporary)
+            assert.pathStrictEqual(install.firstCall.args[1].offlineDirectory as string, temporary)
             assert.ok(String((prompt.firstCall.args[1] as vscode.MessageOptions).detail).includes('No download fallback'))
         })
 
@@ -366,7 +370,7 @@ describe('36_managed_tex:', () => {
         })
 
         it('should validate private storage and persist only after approved installation', async () => {
-            sinon.stub(managed, 'needsPrivateTexStorage').returns(true)
+            privateRequired.returns(true)
             const validate = sinon.stub(managed, 'validatePrivateTexStorage').resolves()
             const remember = sinon.stub(managed, 'rememberManagedTexStorage').resolves()
             sinon.stub(vscode.window, 'showOpenDialog').resolves([vscode.Uri.file(temporary)])
@@ -377,11 +381,12 @@ describe('36_managed_tex:', () => {
             assert.ok(validate.calledOnce)
             assert.ok(install.calledAfter(validate))
             assert.ok(remember.calledAfter(install))
-            assert.ok(remember.calledOnceWithExactly(temporary))
+            assert.ok(remember.calledOnce)
+            assert.pathStrictEqual(remember.firstCall.args[0] as string, temporary)
         })
 
         it('should reject a private folder without installing or persisting it', async () => {
-            sinon.stub(managed, 'needsPrivateTexStorage').returns(true)
+            privateRequired.returns(true)
             sinon.stub(managed, 'validatePrivateTexStorage').rejects(new Error('Not private'))
             const remember = sinon.stub(managed, 'rememberManagedTexStorage').resolves()
             sinon.stub(vscode.window, 'showOpenDialog').resolves([vscode.Uri.file(temporary)])
@@ -394,7 +399,7 @@ describe('36_managed_tex:', () => {
         })
 
         it('should not save private storage on cancelled consent or failed installation', async () => {
-            sinon.stub(managed, 'needsPrivateTexStorage').returns(true)
+            privateRequired.returns(true)
             sinon.stub(managed, 'validatePrivateTexStorage').resolves()
             const remember = sinon.stub(managed, 'rememberManagedTexStorage').resolves()
             const folder = sinon.stub(vscode.window, 'showOpenDialog').resolves(undefined)
