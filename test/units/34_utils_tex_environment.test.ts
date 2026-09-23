@@ -116,6 +116,13 @@ describe('34_utils_tex_environment:', () => {
         assert.doesNotMatch(message, /Install or repair TeX Live/)
     })
 
+    it('should explain the observed Windows short-name rejection without moving files', () => {
+        const message = getLatexBuildFailureMessage("Latexmk: Filename 'C:/Users/TEX~1/doc/t.tex' contains character not allowed for TeX file.")
+        assert.ok(message?.includes('ASCII project path'))
+        assert.ok(message?.includes('Changing the TeX installation folder alone does not fix this'))
+        assert.strictEqual(getLatexBuildFailureMessage('Another unrelated build error'), undefined)
+    })
+
     it('should turn a missing TeX package into actionable guidance', () => {
         const message = getLatexBuildFailureMessage("! LaTeX Error: File `adjustbox.sty' not found.")
 

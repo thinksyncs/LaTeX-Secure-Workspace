@@ -38,7 +38,8 @@ if ($Worker) {
     if ($LASTEXITCODE -ne 0) { throw "Managed TeX smoke failed: $LASTEXITCODE" }
     $root = (Get-Content -LiteralPath $env:GITHUB_OUTPUT | Where-Object { $_ -like 'evidence=*' } | Select-Object -Last 1).Substring(9)
     Copy-Item -LiteralPath (Join-Path $root 'qa-report.json') -Destination $Evidence
-    Copy-Item -LiteralPath (Join-Path $root 'project with spaces\.lw-security\t.pdf') -Destination $Evidence
+    $report = Get-Content -Raw -LiteralPath (Join-Path $root 'qa-report.json') | ConvertFrom-Json
+    Copy-Item -LiteralPath (Join-Path $report.project '.lw-security\t.pdf') -Destination $Evidence
     exit 0
 }
 

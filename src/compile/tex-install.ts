@@ -57,7 +57,7 @@ async function installWithConsent(mode: 'download' | 'import' | 'prepare'): Prom
     if (mode !== 'prepare' && needsPrivateTexStorage(storage)) {
         const choose = await vscode.window.showInformationMessage('TinyTeX needs an ASCII installation path on Windows.', {
             modal: true,
-            detail: 'Choose an existing private folder owned by your Windows account. Only your account, SYSTEM and Administrators may have access, and inherited permissions must be disabled. Ask IT to provision one if needed. No shared fallback, permission changes or elevation are performed. The selection is saved locally only after a successful installation.'
+            detail: 'Choose an existing private folder owned by your Windows account. Only your account, SYSTEM and Administrators may have access, and inherited permissions must be disabled. Ask IT to provision one if needed. No shared fallback, permission changes or elevation are performed. The selection is saved locally only after a successful installation. The bundled Windows runner also needs an ASCII project path on some system locales; choosing this installation folder does not move your project.'
         }, 'Choose Private Folder')
         if (choose !== 'Choose Private Folder' || !allowed()) { return false }
         const folders = await vscode.window.showOpenDialog({ title: 'Choose private ASCII TeX storage',
