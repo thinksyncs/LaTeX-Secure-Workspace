@@ -55,6 +55,18 @@ test('Docker manual matches the pinned CI image and README keeps the local sampl
     assert.ok(read('docs/manual/README.md').includes('../../README.md#get-started'))
 })
 
+test('retained settings distinguish editor lookups from secure execution', () => {
+    for (const key of retained) {
+        const property = properties[key]
+        assert.match(property.markdownDescription, /Editor|editor/, key)
+        assert.match(property.markdownDescription, /[Ss]ecure build|secure recipes/, key)
+        assert.equal(property.markdownDeprecationMessage, undefined, key)
+    }
+    for (const key of ['latex.outDir', 'latex.auxDir']) {
+        assert.ok(properties['latex-workshop.' + key].markdownDescription.includes('`.lw-security`'))
+    }
+})
+
 test('visible command branding retains the extension and command identifiers', () => {
     assert.equal(`${manifest.publisher}.${manifest.name}`, 'ToppyMicroServices.tex-workspace-secure')
     for (const command of manifest.contributes.commands) {
@@ -85,4 +97,9 @@ test('local setup is discoverable and its guide is included in the package input
     assert.ok(read('resources/sample-japanese.tex').includes('CJKutf8'))
     assert.ok(read('resources/sample-japanese.tex').includes('ゴシック'))
     assert.ok(read('.vscodeignore').split(/\r?\n/).includes('artifacts/'), 'Local validation evidence must not ship in the VSIX')
+    assert.equal(read('resources/sample-english.tex').trim(), read('samples/sample/t.tex').trim())
+    for (const suffix of ['create-sample', 'prepare-tex-offline', 'import-tex-offline']) {
+        assert.ok(manifest.contributes.commands.some(item => item.command === 'latex-workshop.' + suffix))
+        assert.ok(read('src/app.ts').includes(`registerCommand('latex-workshop.${suffix}'`))
+    }
 })

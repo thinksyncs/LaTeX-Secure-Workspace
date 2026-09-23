@@ -15,7 +15,16 @@ assert.ok(['lightweight', 'japanese'].includes(profile))
 // Windows os.tmpdir() may use an 8.3 alias (RUNNER~1), which latexmk rejects.
 // Use the real long path, as VS Code's globalStorageUri does.
 const root = await fs.realpath(await fs.mkdtemp(path.join(os.tmpdir(), 'lw-managed-tex-')))
-const storage = path.join(root, 'profile storage')
+const storage = process.env.LW_TEST_PRIVATE_STORAGE ?? path.join(root, 'profile storage')
+const japaneseUser = process.env.LW_TEST_JAPANESE_USER === '1'
+if (japaneseUser) {
+    assert.equal(process.platform, 'win32')
+    assert.match(os.userInfo().username, /[^\x20-\x7e]/)
+    assert.match(process.env.USERPROFILE, /[^\x20-\x7e]/)
+    assert.match(root, /[^\x20-\x7e]/)
+    assert.ok(managed.isWindowsAsciiStorage(storage))
+    await managed.validatePrivateTexStorage(storage, path.resolve('resources/check-private-tex-storage.ps1'))
+}
 // Test with no existing TeX or third-party Perl on PATH. This changes only this
 // disposable test process, never the normal VS Code profile or OS environment.
 const systemRoot = process.env.SystemRoot ?? 'C:\\Windows'
@@ -33,7 +42,7 @@ if (process.platform === 'win32') {
     assert.equal(await fs.stat(unsupported).then(() => true, () => false), false)
 }
 let lastMessage = ''
-const bin = await managed.installManagedTex(storage, {
+const installOptions = {
     profile,
     signal: AbortSignal.timeout(12 * 60 * 1000),
     progress(message) {
@@ -42,7 +51,21 @@ const bin = await managed.installManagedTex(storage, {
             lastMessage = message
         }
     }
+}
+const offlineDirectory = await managed.prepareManagedTexBundle(root, installOptions)
+const originalFetch = Object.getOwnPropertyDescriptor(globalThis, 'fetch')
+assert.ok(originalFetch)
+let offlineFetchAttempts = 0
+Object.defineProperty(globalThis, 'fetch', { ...originalFetch,
+    value: async () => { offlineFetchAttempts++; throw new Error('Offline import must not download') }
 })
+let bin
+try {
+    bin = await managed.installManagedTex(storage, {...installOptions, offlineDirectory})
+} finally {
+    Object.defineProperty(globalThis, 'fetch', originalFetch)
+}
+assert.equal(offlineFetchAttempts, 0)
 assert.equal(managed.getManagedTexBin(storage, profile), bin)
 assert.equal(await managed.installManagedTex(storage, {
     profile, signal: AbortSignal.timeout(1000), progress() { throw new Error('Existing installation must be reused without downloading') }
@@ -51,7 +74,7 @@ assert.equal(process.env.PATH, initialPath, 'Installation must not change the pr
 const project = path.join(root, 'project with spaces')
 const output = path.join(project, '.lw-security')
 await fs.mkdir(output, { recursive: true })
-await fs.copyFile(profile === 'japanese' ? 'resources/sample-japanese.tex' : 'samples/sample/t.tex', path.join(project, 't.tex'))
+await fs.copyFile(profile === 'japanese' ? 'resources/sample-japanese.tex' : 'resources/sample-english.tex', path.join(project, 't.tex'))
 const recipe = JSON.parse(await fs.readFile('src/compile/fixedSecureRecipeArguments.json', 'utf8'))
 const args = [...recipe.commonArgsBeforeEngine, ...recipe.engineArgs.pdflatex,
     ...recipe.commonArgsAfterEngine.map(arg => arg.replace('%DOCFILE%', output).replace('%DOC%', path.join(project, 't.tex')))]
@@ -92,6 +115,8 @@ const evidence = { status: 'passed', root, profile, platform: process.platform, 
     bin, pdfSha256: createHash('sha256').update(pdf).digest('hex'),
     text, fonts, executableBoundary,
     installReusedWithoutDownload: true, processPathUnchanged: true,
+    offlineImportVerified: true, offlineFetchAttempts, japaneseUser,
+    ...(japaneseUser ? { username: os.userInfo().username, userProfile: process.env.USERPROFILE, privateStorageValidated: true } : {}),
     scope: 'Disposable extension-style storage; no normal VS Code profile or system TeX installation changed.' }
 await fs.writeFile(path.join(root, 'qa-report.json'), JSON.stringify(evidence, null, 2) + '\n')
 if (process.env.GITHUB_OUTPUT) {

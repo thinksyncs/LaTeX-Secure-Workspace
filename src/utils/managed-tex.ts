@@ -9,6 +9,10 @@ import { JAPANESE_TEX_PACKAGES, JAPANESE_TEX_SOURCE, managedTexDirectory, type M
 const run = promisify(execFile)
 const markerName = '.latex-workspace-install.json'
 let storagePath: string | undefined
+const storageKey = 'managedTex.privateStorage'
+type StorageState = { get<T>(key: string): T | undefined, update(key: string, value: string): PromiseLike<void> }
+let storageState: StorageState | undefined
+let privateStorageConfigured = false
 
 export function resolveManagedTexStorage(
     uri: { scheme: string, authority: string, fsPath: string }, remoteName?: string
@@ -19,10 +23,41 @@ export function resolveManagedTexStorage(
         ? uri.fsPath : undefined
 }
 
-export function configureManagedTexStorage(root: string | undefined): void {
+export function configureManagedTexStorage(root: string | undefined, state?: StorageState, platform = process.platform): void {
     // Merely remember extension-owned storage. Activation performs no IO,
     // network requests, installation or executable probes.
+    storageState = state
+    const saved = state?.get<string>(storageKey)
+    privateStorageConfigured = Boolean(root && platform === 'win32' && typeof saved === 'string' && isWindowsAsciiStorage(saved))
+    storagePath = privateStorageConfigured ? saved : root
+}
+
+export function usesPrivateTexStorage(): boolean { return privateStorageConfigured }
+
+export function isWindowsAsciiStorage(root: string): boolean {
+    return /^[a-z]:\\/i.test(root) && root.length > 3 && !/[^\x20-\x7e]|[~]/.test(root)
+        && !root.slice(3).split(/[\\/]/).some(part => part === '..' || part === '.')
+}
+
+export function needsPrivateTexStorage(root: string): boolean {
+    return process.platform === 'win32' && !isWindowsAsciiStorage(root)
+}
+
+export async function rememberManagedTexStorage(root: string): Promise<void> {
+    if (!storageState) { throw new Error('Private storage persistence is unavailable.') }
+    await storageState.update(storageKey, root)
     storagePath = root
+    privateStorageConfigured = true
+}
+
+export async function validatePrivateTexStorage(root: string, script: string): Promise<void> {
+    if (process.platform !== 'win32' || !isWindowsAsciiStorage(root)) {
+        throw new Error('Choose an existing private local folder with an absolute ASCII path, without short-path aliases.')
+    }
+    const systemRoot = process.env.SystemRoot ?? 'C:\\Windows'
+    await run(path.join(systemRoot, 'System32', 'WindowsPowerShell', 'v1.0', 'powershell.exe'),
+        ['-NoProfile', '-NonInteractive', '-File', script, '-Directory', root],
+        { windowsHide: true, timeout: 15000, maxBuffer: 64 * 1024 })
 }
 
 export function getManagedTexStorage(): string | undefined {
@@ -143,10 +178,11 @@ async function downloadPinnedAsset(
         if (!isAllowedDownloadUrl(url)) {
             throw new Error('TinyTeX download redirected outside the approved HTTPS hosts.')
         }
-        response = await fetcher(url, { redirect: 'manual', signal })
-        if ([301, 302, 303, 307, 308].includes(response.status)) {
-            const location = response.headers.get('location')
-            await response.body?.cancel()
+        const current: Response = await fetcher(url, { redirect: 'manual', signal })
+        response = current
+        if ([301, 302, 303, 307, 308].includes(current.status)) {
+            const location = current.headers.get('location')
+            await current.body?.cancel()
             if (!location) {
                 throw new Error('TinyTeX download redirect has no location.')
             }
@@ -200,6 +236,72 @@ async function validateExtractedTree(root: string, directory = root): Promise<vo
     }
 }
 
+export async function copyPinnedAsset(
+    source: string, destination: string, asset: { bytes: number, sha256: string }, signal: AbortSignal
+): Promise<void> {
+    signal.throwIfAborted()
+    const input = await fs.promises.open(source, 'r')
+    try {
+        const stat = await input.stat()
+        if (!stat.isFile() || stat.size !== asset.bytes) {
+            throw new Error('Offline archive failed its size check.')
+        }
+        const output = await fs.promises.open(destination, 'wx', 0o600)
+        try {
+            const digest = createHash('sha256')
+            let bytes = 0
+            const buffer = Buffer.alloc(64 * 1024)
+            while (true) {
+                signal.throwIfAborted()
+                const { bytesRead } = await input.read(buffer, 0, buffer.length, null)
+                if (bytesRead === 0) { break }
+                const chunk = buffer.subarray(0, bytesRead)
+                bytes += chunk.length
+                if (bytes > asset.bytes) { throw new Error('Offline archive exceeds the expected size.') }
+                digest.update(chunk)
+                await output.writeFile(chunk)
+            }
+            signal.throwIfAborted()
+            if (bytes !== asset.bytes || digest.digest('hex') !== asset.sha256) {
+                throw new Error('Offline archive failed its size or SHA-256 check. Nothing was installed.')
+            }
+        } finally {
+            await output.close()
+        }
+    } finally {
+        await input.close()
+    }
+}
+
+export async function prepareManagedTexBundle(
+    parent: string, options: { signal: AbortSignal, progress: (message: string) => void, profile: ManagedTexProfile }
+): Promise<string> {
+    const asset = getCurrentTinyTexAsset()
+    if (!asset || !path.isAbsolute(parent)) { throw new Error('Unsupported target for offline TeX preparation.') }
+    options.signal.throwIfAborted()
+    const bundle = await fs.promises.mkdtemp(path.join(parent, 'tex-offline-'))
+    try {
+        await downloadTinyTex(asset, path.join(bundle, asset.name), options.signal, options.progress)
+        if (options.profile === 'japanese') {
+            for (const pack of JAPANESE_TEX_PACKAGES) {
+                options.progress(`Downloading Japanese support: ${pack.name}`)
+                await downloadPinnedAsset(pack, JAPANESE_TEX_SOURCE + pack.name, path.join(bundle, pack.name), options.signal, () => {})
+            }
+        }
+        options.signal.throwIfAborted()
+        await fs.promises.writeFile(path.join(bundle, 'bundle.json'), JSON.stringify({
+            version: TINYTEX_VERSION, platform: process.platform, arch: process.arch, profile: options.profile,
+            asset, packages: options.profile === 'japanese' ? JAPANESE_TEX_PACKAGES : [],
+            source: tinyTexDownloadUrl(asset), japaneseSource: JAPANESE_TEX_SOURCE,
+            licenses: 'TinyTeX/TeX Live and Japanese font licenses are retained inside the unmodified archives. Import uses extension-pinned hashes, not this receipt.'
+        }, null, 2) + '\n', { flag: 'wx', mode: 0o600 })
+        return bundle
+    } catch (error) {
+        await fs.promises.rm(bundle, { recursive: true, force: true })
+        throw error
+    }
+}
+
 async function entryExists(target: string): Promise<boolean> {
     try {
         await fs.promises.lstat(target)
@@ -225,7 +327,7 @@ export function getSystemTar(platform: NodeJS.Platform = process.platform, exist
 
 export async function installManagedTex(
     root: string,
-    options: { signal: AbortSignal, progress: (message: string) => void, profile?: ManagedTexProfile }
+    options: { signal: AbortSignal, progress: (message: string) => void, profile?: ManagedTexProfile, offlineDirectory?: string }
 ): Promise<string> {
     const profile = options.profile ?? 'lightweight'
     const directory = managedTexDirectory(profile)
@@ -264,7 +366,11 @@ export async function installManagedTex(
             await run('/usr/bin/perl', ['-MFile::Find', '-e', '1'], { ...execOptions, cwd: staging })
         }
         const archive = path.join(staging, asset.name)
-        await downloadTinyTex(asset, archive, options.signal, options.progress)
+        if (options.offlineDirectory !== undefined) {
+            await copyPinnedAsset(path.join(options.offlineDirectory, asset.name), archive, asset, options.signal)
+        } else {
+            await downloadTinyTex(asset, archive, options.signal, options.progress)
+        }
         options.signal.throwIfAborted()
         options.progress('SHA-256 verified; extracting TinyTeX')
         if (process.platform === 'win32') {
@@ -289,9 +395,13 @@ export async function installManagedTex(
             await fs.promises.mkdir(local, { recursive: true })
             const tar = getSystemTar()
             for (const pack of JAPANESE_TEX_PACKAGES) {
-                options.progress(`Downloading Japanese support: ${pack.name}`)
+                options.progress(`${options.offlineDirectory !== undefined ? 'Verifying offline' : 'Downloading'} Japanese support: ${pack.name}`)
                 const file = path.join(staging, pack.name)
-                await downloadPinnedAsset(pack, JAPANESE_TEX_SOURCE + pack.name, file, options.signal, () => {})
+                if (options.offlineDirectory !== undefined) {
+                    await copyPinnedAsset(path.join(options.offlineDirectory, pack.name), file, pack, options.signal)
+                } else {
+                    await downloadPinnedAsset(pack, JAPANESE_TEX_SOURCE + pack.name, file, options.signal, () => {})
+                }
                 const { stdout } = await run(tar, ['-tf', file], { ...execOptions, cwd: staging })
                 validateJapaneseArchiveListing(stdout)
                 await run(tar, ['-xf', file, '--no-same-owner', '-C', local], { ...execOptions, cwd: staging })

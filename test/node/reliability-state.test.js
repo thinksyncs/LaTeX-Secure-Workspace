@@ -633,3 +633,44 @@ test('failed integration hosts release profiles before the top-level exit', asyn
     assert.equal(earlyExits, 0)
     assert.equal(removed, 2)
 })
+
+for (const rejectEdit of [false, true]) {
+    test(`equation toggle awaits the edit ${rejectEdit ? 'failure' : 'completion'}`, async () => {
+        const started = deferred(), edit = deferred()
+        class Position {
+            constructor(line, character) { this.line = line; this.character = character }
+            translate(line, character) { return new Position(this.line + line, this.character + character) }
+        }
+        class WorkspaceEdit {
+            size = 0
+            replace() { this.size++ }
+        }
+        const originalSelection = {active: new Position(0, 3)}
+        const active = {document: {languageId: 'latex', uri: uri(main)}, selection: originalSelection}
+        const {pair, testOnly} = load('src/locate/pair.ts', {
+            vscode: {window: {activeTextEditor: active}, workspace: {
+                applyEdit: () => { started.resolve(); return edit.promise }
+            }, WorkspaceEdit, Range: class {}, Selection: class {}},
+            '../lw': {lw: {log: () => logger}}, '../utils/parser': {}
+        }, 'setPairs: pairs => { locateSurroundingPair = async () => pairs }')
+        testOnly.setPairs([{type: 1, start: '\\[', end: '\\]', startPosition: new Position(0, 0), endPosition: new Position(0, 8)}])
+        let finished = false
+        const operation = pair.name('equationToggle').finally(() => { finished = true })
+        await started.promise
+        await new Promise(resolve => setImmediate(resolve))
+        try {
+            assert.equal(finished, false, 'the command must not finish while its edit is pending')
+            assert.equal(active.selection, originalSelection)
+        } finally {
+            if (rejectEdit) {
+                edit.reject(new Error('controlled edit rejection'))
+                await assert.rejects(operation, /controlled edit rejection/)
+            } else {
+                edit.resolve(true)
+                await operation
+            }
+        }
+        assert.equal(finished, true)
+        if (!rejectEdit) { assert.notEqual(active.selection, originalSelection) }
+    })
+}

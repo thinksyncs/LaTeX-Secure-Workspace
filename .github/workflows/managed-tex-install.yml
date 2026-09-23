@@ -6,6 +6,32 @@ permissions:
   contents: read
 
 jobs:
+  japanese-windows-user:
+    runs-on: windows-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+      - uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6
+        with:
+          node-version: '20'
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: npm run compile
+      - name: Build offline as a real Japanese-named non-admin user
+        id: smoke
+        shell: pwsh
+        run: ./dev/testWindowsJapaneseUser.ps1
+      - name: Save Japanese-account evidence
+        if: always() && steps.smoke.outputs.evidence != ''
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7
+        with:
+          name: managed-tex-windows-japanese-user
+          path: |
+            ${{ steps.smoke.outputs.evidence }}/*.json
+            ${{ steps.smoke.outputs.evidence }}/*.pdf
+            ${{ steps.smoke.outputs.evidence }}/*.log
+          if-no-files-found: error
+          retention-days: 14
   install:
     strategy:
       fail-fast: false
@@ -25,7 +51,7 @@ jobs:
       - name: Install PDF structure checkers on Linux
         if: runner.os == 'Linux'
         run: sudo apt-get update && sudo apt-get install --no-install-recommends -y qpdf ghostscript
-      - name: Install pinned TinyTeX and build the first PDF
+      - name: Prepare pinned bundle, import without fetch, and build the first PDF
         id: smoke
         run: node dev/testManagedTex.mjs ${{ matrix.profile }}
       - name: Reject PDF structure warnings

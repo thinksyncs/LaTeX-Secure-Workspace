@@ -36,13 +36,17 @@ The installer downloads pinned [TinyTeX-1 v2026.09](https://github.com/rstudio/t
 
 Japanese support is downloaded from the [CTAN TeX Live mirror](https://ctan.net/systems/texlive/tlnet/archive/), with each archive's size and SHA-256 pinned. If the mirror replaces an archive, installation stops until a reviewed extension update pins the new bytes. The supplied sample uses pdfLaTeX/CJK. Existing LuaLaTeX documents (such as `ltjsarticle`) still require the Docker workflow; selecting Japanese fonts does not change this execution boundary.
 
-Supported targets: macOS Intel/Apple Silicon, Windows x64, Linux glibc x64/arm64, and Alpine Linux x64. Unix needs system Perl at `/usr/bin/perl` and tar (with xz support); Windows uses the verified self-extracting archive and its built-in `System32\tar.exe` for Japanese packages. Windows installation paths containing non-ASCII characters and remote VS Code hosts are not supported by this installer; use an approved existing TeX installation there. Native Windows ARM is not covered.
+Supported targets: macOS Intel/Apple Silicon, Windows x64, Linux glibc x64/arm64, and Alpine Linux x64. Unix needs system Perl at `/usr/bin/perl` and tar (with xz support); Windows uses the verified self-extracting archive and its built-in `System32\tar.exe` for Japanese packages. Remote VS Code hosts and native Windows ARM are not covered.
+
+On Windows, TinyTeX's installation path must use ASCII characters. If your profile path contains Japanese or other non-ASCII characters, setup offers an explicit private-folder selection. Use an existing ASCII folder owned by your account, with inherited permissions disabled and access limited to your account, SYSTEM and Administrators. Ask IT to provision it if needed, or use an approved system TeX. The extension checks permissions without changing them; it never chooses shared storage or asks for elevation. The approved path is saved in this machine's extension state only after installation succeeds, not in workspace settings or Settings Sync. Installation still requires the separate confirmation shown next. Disabling `security.useManagedTeX` returns to system TeX without deleting either copy.
 
 To remove a managed copy, close VS Code and remove only its `tinytex` or `tinytex-japanese` directory at the exact destination shown in the installation confirmation. Do not delete the parent global-storage directory.
 
 For blocked downloads or missing system tools, use **Installation Guide** for the manual route, then **Check Again**. A crash may leave `tinytex-install.lock` in the same extension storage: remove only that empty lock directory after closing all VS Code windows and confirming no installation is running. Incomplete existing `tinytex` directories are not overwritten automatically. A partial download in private staging is removed on a handled failure or cancellation.
 
 ## 3. Build a small document
+
+Run **Create first-PDF sample (English / Japanese)** to create a sample in a chosen workspace folder. Existing files are never overwritten. This does not install tools or build the PDF; run **Build LaTeX project** yourself after reviewing the sample. **Show secure build status** reports the current engine, profile and missing tools.
 
 Save this as `t.tex` in your project folder:
 
@@ -58,6 +62,14 @@ With `t.tex` active, run **LaTeX Workspace Security: Build LaTeX project**. The 
 For Japanese, select the Japanese profile and save the [Japanese sample](./sample-japanese.tex) into your project. Build it with the same command. It includes both Mincho and Gothic text and needs no separately installed OS fonts.
 
 If no PDF appears, run **Show secure build status** for tool details or open the extension's output log. A missing `.sty` or `.cls` means a TeX package is unavailable; fix that package installation and build again.
+
+## 4. Offline preparation and import
+
+On an approved connected computer with the same OS/architecture, run **Prepare an offline TeX bundle**, select a profile and destination, then confirm **Download Bundle**. A new folder contains the exact pinned TinyTeX archive, Japanese archives when selected, and a version/hash/source receipt. Licenses remain inside the unmodified archives. Preparation installs nothing and changes no settings.
+
+Transfer the complete folder through your organization's approved channel. On the disconnected computer, run **Import an offline TeX bundle**, select the same profile and folder, and confirm **Verify and Install Offline**. The extension checks its own pinned sizes and SHA-256 hashes, not caller-provided hashes or the receipt. Missing, modified or wrong-platform archives fail without a download fallback. Local build permission remains a separate choice.
+
+Existing complete installations are reused; incomplete destinations are not overwritten. There are no automatic updates. A new pinned release requires a reviewed extension update and a newly prepared bundle. To roll back to an organization's existing TeX, disable `security.useManagedTeX`; the importer cannot install arbitrary or modified distributions. Source availability is a prerequisite for preparing a new bundle; retain the approved archives and licenses for offline use. Local TeX is still not a network or filesystem sandbox.
 
 ## What you are allowing
 

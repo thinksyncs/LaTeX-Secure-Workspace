@@ -52,6 +52,27 @@ suite('Product surface test suite', () => {
         }
     })
 
+    test.run('sample command cancels safely and creates an English document for manual build', async (fixture: string) => {
+        fs.mkdirSync(fixture, {recursive: true})
+        const folderPath = fs.mkdtempSync(path.join(fixture, 'sample-'))
+        const target = path.join(folderPath, 'first-pdf-english.tex')
+        assert.strictEqual(fs.existsSync(target), false)
+        const pick = sinon.stub(vscode.window, 'showQuickPick').resolves(undefined)
+        const folder = sinon.stub(vscode.window, 'showOpenDialog').resolves([vscode.Uri.file(folderPath)])
+        sinon.stub(vscode.window, 'showInformationMessage').resolves(undefined)
+        await vscode.commands.executeCommand('latex-workshop.create-sample')
+        assert.strictEqual(fs.existsSync(target), false)
+        assert.ok(folder.notCalled)
+        const englishSample = {label: 'English', language: 'english'}
+        pick.resolves(englishSample)
+        await vscode.commands.executeCommand('latex-workshop.create-sample')
+        assert.strictEqual(fs.readFileSync(target, 'utf8'), fs.readFileSync(path.join(lw.extensionRoot, 'resources/sample-english.tex'), 'utf8'))
+        const pdf = path.join(folderPath, '.lw-security', 'first-pdf-english.pdf')
+        assert.strictEqual(fs.existsSync(pdf), false, 'Sample creation must not build automatically')
+        await test.build(folderPath, 'first-pdf-english.tex')
+        assert.strictEqual(fs.readFileSync(pdf).subarray(0, 5).toString(), '%PDF-')
+    })
+
     test.run('existing onboarding sample builds and opens a PDF tab', async (fixture: string) => {
         const sample = path.resolve(__dirname, '../../../samples/sample/t.tex')
         await test.load(fixture, [{src: sample, dst: 't.tex'}], {skipCache: true})
