@@ -637,6 +637,24 @@
         "enablement": "!virtualWorkspace && isWorkspaceTrusted"
       },
       {
+        "command": "latex-workshop.create-sample",
+        "title": "%command.create-sample%",
+        "category": "LaTeX Workspace Security",
+        "enablement": "!virtualWorkspace && isWorkspaceTrusted"
+      },
+      {
+        "command": "latex-workshop.prepare-tex-offline",
+        "title": "%command.prepare-tex-offline%",
+        "category": "LaTeX Workspace Security",
+        "enablement": "!virtualWorkspace && isWorkspaceTrusted"
+      },
+      {
+        "command": "latex-workshop.import-tex-offline",
+        "title": "%command.import-tex-offline%",
+        "category": "LaTeX Workspace Security",
+        "enablement": "!virtualWorkspace && isWorkspaceTrusted"
+      },
+      {
         "command": "latex-workshop.build-recipe",
         "title": "%command.buildRecipe%",
         "category": "LaTeX Workspace Security",
@@ -1338,7 +1356,7 @@
           "scope": "resource",
           "type": "boolean",
           "default": true,
-          "markdownDescription": "Compatibility setting retained from upstream. In this secure build, secure build and viewer flows ignore root-file and build-control magic comments entirely, including `% !TEX root`, `% !TEX program`, `% !TEX options`, `% !BIB program`, and `% !LW recipe`."
+          "markdownDescription": "Compatibility setting retained from upstream. Editor root discovery can follow `% !TEX root` when enabled. Secure build, PDF viewing and SyncTeX use their own root policy and ignore root and build-control magic comments."
         },
         "latex-workshop.latex.build.fromWorkspaceFolder": {
           "markdownDeprecationMessage": "Retained for compatibility; this setting does not control the supported workflow. Manual builds in this secure build always run from the directory containing the resolved root file.",
@@ -1351,13 +1369,13 @@
           "scope": "resource",
           "type": "string",
           "default": "%DIR%",
-          "markdownDescription": "Compatibility setting retained from upstream. This secure build always writes and resolves build outputs in the resolved root file directory, so this setting has no effect on build, clean, reveal-output, or internal PDF viewing behavior."
+          "markdownDescription": "Compatibility setting retained from upstream. Editor file lookup uses this output directory, including lookup of existing recorder (.fls) files. Secure builds, cleanup and PDF viewing always use `.lw-security` beside the resolved root document; this setting does not move those outputs."
         },
         "latex-workshop.latex.auxDir": {
           "scope": "resource",
           "type": "string",
           "default": "%OUTDIR%",
-          "markdownDescription": "Compatibility setting retained from upstream. This secure build always writes and resolves auxiliary files in the resolved root file directory, so this setting has no effect on build, clean, or internal file lookup behavior."
+          "markdownDescription": "Compatibility setting retained from upstream. Editor reference completion and auxiliary-file lookup use this directory. Secure builds and cleanup always use `.lw-security` beside the resolved root document; this setting does not move those outputs."
         },
         "latex-workshop.latex.extraExts": {
           "scope": "resource",
@@ -1372,7 +1390,7 @@
           "scope": "resource",
           "type": "string",
           "default": "",
-          "markdownDescription": "Compatibility setting retained from upstream. Fixed secure recipes do not pass `-jobname`, so secure build output, viewing, and SyncTeX ignore this setting and use the root document filename."
+          "markdownDescription": "Compatibility setting retained from upstream. Editor lookup of existing recorder (.fls) and legacy PDF paths uses this name. Fixed secure recipes do not pass `-jobname`; secure build output, viewing and SyncTeX use the root document filename."
         },
         "latex-workshop.latex.build.rootfileInStatus": {
           "scope": "resource",
@@ -1455,7 +1473,7 @@
             "**/*.rnw",
             "**/*.Rnw"
           ],
-          "markdownDescription": "Compatibility setting retained from upstream. Secure build commands use a fixed root search policy equivalent to the default TeX workspace scan and ignore custom include patterns."
+          "markdownDescription": "Compatibility setting retained from upstream. Editor root discovery searches these workspace include patterns. Secure build commands use a separate fixed root search policy and ignore custom include patterns."
         },
         "latex-workshop.latex.search.rootFiles.exclude": {
           "scope": "resource",
@@ -1464,7 +1482,7 @@
             "type": "string"
           },
           "default": [],
-          "markdownDescription": "Compatibility setting retained from upstream. Secure build commands ignore custom root search exclusions and use a fixed internal root detection policy."
+          "markdownDescription": "Compatibility setting retained from upstream. Editor root discovery excludes these workspace patterns. Secure build commands use a separate fixed root search policy and ignore custom exclusions."
         },
         "latex-workshop.latex.rootFile.useSubFile": {
           "markdownDeprecationMessage": "Retained for compatibility; this setting does not control the supported workflow. This secure build always uses the resolved main root file for build and clean operations and does not switch execution to a subfile.",
@@ -1490,7 +1508,7 @@
             "\\starttext",
             "\\startTEXpage"
           ],
-          "markdownDescription": "Compatibility setting retained from upstream. Secure build commands use a fixed internal root indicator policy that accepts standard LaTeX and ConTeXt document-start markers and ignores this override."
+          "markdownDescription": "Compatibility setting retained from upstream. Editor root discovery uses this document-start indicator. Secure build commands use a separate fixed policy accepting standard LaTeX and ConTeXt document-start markers; they ignore this override."
         },
         "latex-workshop.latex.watch.delay": {
           "scope": "window",
@@ -3054,7 +3072,7 @@
     "@unified-latex/unified-latex-util-parse": "1.8.1",
     "@unified-latex/unified-latex-util-to-string": "1.8.1",
     "cross-spawn": "^7.0.6",
-    "glob": "^11.1.0",
+    "glob": "^13.0.6",
     "iconv-lite": "^0.6.3",
     "latex-utensils": "^6.2.0",
     "mathjax-full": "^3.2.2",

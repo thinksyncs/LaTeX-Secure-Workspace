@@ -4,6 +4,7 @@ import { lw } from './lw'
 import { log } from './utils/logger'
 import { ensureMacTeXBinOnPath } from './utils/tex-path'
 import { setupLocalBuild } from './compile/local-setup'
+import { createFirstPdfSample } from './compile/first-pdf'
 import { requestManagedTexInstall } from './compile/tex-install'
 import { configureManagedTexStorage, resolveManagedTexStorage } from './utils/managed-tex'
 
@@ -47,7 +48,7 @@ const commander = require('./core/commands') as typeof import('./core/commands')
 lw.commands = commander
 
 export function activate(extensionContext: vscode.ExtensionContext) {
-    configureManagedTexStorage(resolveManagedTexStorage(extensionContext.globalStorageUri, vscode.env.remoteName))
+    configureManagedTexStorage(resolveManagedTexStorage(extensionContext.globalStorageUri, vscode.env.remoteName), extensionContext.globalState)
     void vscode.commands.executeCommand('setContext', 'latex-workshop:enabled', true)
 
     logger.log(`Extension root: ${lw.extensionRoot}`)
@@ -172,6 +173,9 @@ function registerLatexWorkshopCommands(extensionContext: vscode.ExtensionContext
         vscode.commands.registerCommand('latex-workshop.saveWithoutBuilding', () => lw.commands.saveActive()),
         vscode.commands.registerCommand('latex-workshop.build', () => lw.commands.build()),
         vscode.commands.registerCommand('latex-workshop.setup-local', () => setupLocalBuild()),
+        vscode.commands.registerCommand('latex-workshop.create-sample', () => createFirstPdfSample()),
+        vscode.commands.registerCommand('latex-workshop.prepare-tex-offline', () => requestManagedTexInstall('prepare')),
+        vscode.commands.registerCommand('latex-workshop.import-tex-offline', () => requestManagedTexInstall('import')),
         vscode.commands.registerCommand('latex-workshop.install-tex', async () => {
             if (await requestManagedTexInstall()) {
                 await setupLocalBuild()

@@ -447,7 +447,7 @@ async function name(action: 'selection'|'cursor'|'equationToggle') {
         return
     }
 
-    void vscode.workspace.applyEdit(edit).then(success => {
+    await vscode.workspace.applyEdit(edit).then(success => {
         if (success || edit.size === 0) {
             switch (action) {
                 case 'cursor':

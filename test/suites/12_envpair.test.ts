@@ -102,7 +102,6 @@ suite('EnvPair test suite', () => {
         const curPos = new vscode.Position(7, 3)
         activeTextEditor.selection = new vscode.Selection(curPos, curPos)
         await lw.locate.pair.name('equationToggle')
-        await test.sleep(250)
         const line = activeTextEditor.document.lineAt(7).text
         assert.strictEqual(line, '\\begin{equation*} 1 + 2 \\end{equation*}')
     })
@@ -114,7 +113,6 @@ suite('EnvPair test suite', () => {
         const curPos = new vscode.Position(10, 4)
         activeTextEditor.selection = new vscode.Selection(curPos, curPos)
         await lw.locate.pair.name('equationToggle')
-        await test.sleep(250)
         const text = activeTextEditor.document.getText(new vscode.Range(new vscode.Position(9, 0), new vscode.Position(11, 2)))
         assert.strictEqual(text, '\\[\n  1 + 2\n\\]')
     })

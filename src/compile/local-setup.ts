@@ -8,6 +8,7 @@ import { getManagedTexEnvironment } from '../utils/managed-tex'
 import { requestManagedTexInstall } from './tex-install'
 import type { ManagedTexProfile } from '../utils/japanese-tex-manifest'
 import { runBuildTool } from './tool-runner'
+import { createFirstPdfSample } from './first-pdf'
 
 const logger = lw.log('Local setup')
 
@@ -120,9 +121,11 @@ export async function setupLocalBuild(): Promise<void> {
         return
     }
     const selection = await vscode.window.showInformationMessage(
-        'Local pdfLaTeX is ready. Save a .tex file in your workspace, then run Build LaTeX project. The PDF opens in a VS Code tab.', 'Open First-PDF Guide'
+        'Local pdfLaTeX is ready. Save a .tex file in your workspace, then run Build LaTeX project. The PDF opens in a VS Code tab.', 'Create First-PDF Sample', 'Open First-PDF Guide'
     )
     if (selection === 'Open First-PDF Guide') {
         await vscode.commands.executeCommand('markdown.showPreview', vscode.Uri.file(path.join(lw.extensionRoot, 'resources', 'local-setup.md')))
+    } else if (selection === 'Create First-PDF Sample') {
+        await createFirstPdfSample()
     }
 }

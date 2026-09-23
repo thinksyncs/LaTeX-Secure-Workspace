@@ -15,7 +15,16 @@ assert.ok(['lightweight', 'japanese'].includes(profile))
 // Windows os.tmpdir() may use an 8.3 alias (RUNNER~1), which latexmk rejects.
 // Use the real long path, as VS Code's globalStorageUri does.
 const root = await fs.realpath(await fs.mkdtemp(path.join(os.tmpdir(), 'lw-managed-tex-')))
-const storage = path.join(root, 'profile storage')
+const storage = process.env.LW_TEST_PRIVATE_STORAGE ?? path.join(root, 'profile storage')
+const japaneseUser = process.env.LW_TEST_JAPANESE_USER === '1'
+if (japaneseUser) {
+    assert.equal(process.platform, 'win32')
+    assert.match(os.userInfo().username, /[^\x20-\x7e]/)
+    assert.match(process.env.USERPROFILE, /[^\x20-\x7e]/)
+    assert.match(root, /[^\x20-\x7e]/)
+    assert.ok(managed.isWindowsAsciiStorage(storage))
+    await managed.validatePrivateTexStorage(storage, path.resolve('resources/check-private-tex-storage.ps1'))
+}
 // Test with no existing TeX or third-party Perl on PATH. This changes only this
 // disposable test process, never the normal VS Code profile or OS environment.
 const systemRoot = process.env.SystemRoot ?? 'C:\\Windows'
@@ -33,7 +42,7 @@ if (process.platform === 'win32') {
     assert.equal(await fs.stat(unsupported).then(() => true, () => false), false)
 }
 let lastMessage = ''
-const bin = await managed.installManagedTex(storage, {
+const installOptions = {
     profile,
     signal: AbortSignal.timeout(12 * 60 * 1000),
     progress(message) {
@@ -42,16 +51,34 @@ const bin = await managed.installManagedTex(storage, {
             lastMessage = message
         }
     }
+}
+const offlineDirectory = await managed.prepareManagedTexBundle(root, installOptions)
+const originalFetch = Object.getOwnPropertyDescriptor(globalThis, 'fetch')
+assert.ok(originalFetch)
+let offlineFetchAttempts = 0
+Object.defineProperty(globalThis, 'fetch', { ...originalFetch,
+    value: async () => { offlineFetchAttempts++; throw new Error('Offline import must not download') }
 })
+let bin
+try {
+    bin = await managed.installManagedTex(storage, {...installOptions, offlineDirectory})
+} finally {
+    Object.defineProperty(globalThis, 'fetch', originalFetch)
+}
+assert.equal(offlineFetchAttempts, 0)
 assert.equal(managed.getManagedTexBin(storage, profile), bin)
 assert.equal(await managed.installManagedTex(storage, {
     profile, signal: AbortSignal.timeout(1000), progress() { throw new Error('Existing installation must be reused without downloading') }
 }), bin)
 assert.equal(process.env.PATH, initialPath, 'Installation must not change the process or OS PATH')
-const project = path.join(root, 'project with spaces')
+// The pinned Windows Perl/latexmk runner can reject a Unicode project path
+// under a Western system code page. Keep that probe visible, not silently fixed
+// by a short-path alias; validate the supported ASCII project separately.
+const projectRoot = japaneseUser ? path.dirname(storage) : root
+const project = path.join(projectRoot, 'project with spaces')
 const output = path.join(project, '.lw-security')
 await fs.mkdir(output, { recursive: true })
-await fs.copyFile(profile === 'japanese' ? 'resources/sample-japanese.tex' : 'samples/sample/t.tex', path.join(project, 't.tex'))
+await fs.copyFile(profile === 'japanese' ? 'resources/sample-japanese.tex' : 'resources/sample-english.tex', path.join(project, 't.tex'))
 const recipe = JSON.parse(await fs.readFile('src/compile/fixedSecureRecipeArguments.json', 'utf8'))
 const args = [...recipe.commonArgsBeforeEngine, ...recipe.engineArgs.pdflatex,
     ...recipe.commonArgsAfterEngine.map(arg => arg.replace('%DOCFILE%', output).replace('%DOC%', path.join(project, 't.tex')))]
@@ -60,6 +87,24 @@ const executable = path.join(bin, process.platform === 'win32' ? 'latexmk.exe' :
 const invocation = process.platform === 'win32'
     ? windowsBuild.prepareWindowsBuild(executable, args, env, [project], path.resolve('resources/secure-latexmkrc'))
     : { command: executable, args, env }
+let unicodeProjectProbe
+if (japaneseUser) {
+    const unicodeProject = path.join(root, 'project with spaces')
+    const unicodeOutput = path.join(unicodeProject, '.lw-security')
+    await fs.mkdir(unicodeOutput, { recursive: true })
+    await fs.copyFile('resources/sample-japanese.tex', path.join(unicodeProject, 't.tex'))
+    const unicodeArgs = args.map(arg => arg.replaceAll(project, unicodeProject))
+    const unicodeInvocation = windowsBuild.prepareWindowsBuild(executable, unicodeArgs, env, [unicodeProject], path.resolve('resources/secure-latexmkrc'))
+    try {
+        await run(unicodeInvocation.command, unicodeInvocation.args, { cwd: unicodeProject, env: unicodeInvocation.env,
+            windowsVerbatimArguments: unicodeInvocation.windowsVerbatimArguments, timeout: 120000, maxBuffer: 4 * 1024 * 1024 })
+        assert.equal((await fs.readFile(path.join(unicodeOutput, 't.pdf'))).subarray(0, 5).toString(), '%PDF-')
+        unicodeProjectProbe = { supported: true }
+    } catch (error) {
+        assert.match(String(error.stderr), /contains character not allowed for TeX file/)
+        unicodeProjectProbe = { supported: false, reason: 'Pinned Windows latexmk rejects the Unicode project path on this runner; use an ASCII project folder.' }
+    }
+}
 const result = await run(invocation.command, invocation.args, { cwd: project, env: invocation.env,
     windowsVerbatimArguments: invocation.windowsVerbatimArguments, timeout: 120000, maxBuffer: 4 * 1024 * 1024 })
 assert.ok(result.stdout.includes('Latexmk'))
@@ -87,11 +132,13 @@ if (profile === 'japanese') {
     assert.ok(text.includes('abcd'))
 }
 await document.destroy()
-const executableBoundary = process.platform === 'win32' ? await checkWindowsBuild(bin, root) : undefined
+const executableBoundary = process.platform === 'win32' ? await checkWindowsBuild(bin, projectRoot) : undefined
 const evidence = { status: 'passed', root, profile, platform: process.platform, arch: process.arch,
     bin, pdfSha256: createHash('sha256').update(pdf).digest('hex'),
     text, fonts, executableBoundary,
     installReusedWithoutDownload: true, processPathUnchanged: true,
+    offlineImportVerified: true, offlineFetchAttempts, japaneseUser, project, unicodeProjectProbe,
+    ...(japaneseUser ? { username: os.userInfo().username, userProfile: process.env.USERPROFILE, privateStorageValidated: true } : {}),
     scope: 'Disposable extension-style storage; no normal VS Code profile or system TeX installation changed.' }
 await fs.writeFile(path.join(root, 'qa-report.json'), JSON.stringify(evidence, null, 2) + '\n')
 if (process.env.GITHUB_OUTPUT) {

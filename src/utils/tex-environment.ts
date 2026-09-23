@@ -122,6 +122,9 @@ export function getMissingBuildToolsMessage(
 }
 
 export function getLatexBuildFailureMessage(output: string): string | undefined {
+    if (/Latexmk: Filename [^\r\n]+ contains character not allowed for TeX file/.test(output)) {
+        return 'Latexmk rejected the project filename or path. On Windows, the bundled runner can convert non-ASCII paths to unsupported short names. Use an approved ASCII project path without special characters, or a TeX toolchain that supports your path. Changing the TeX installation folder alone does not fix this; no files were moved.'
+    }
     const missingResource = output.match(/LaTeX Error:\s*File\s+[`']([^`'\r\n]+\.(?:sty|cls|bst|bbx|cbx|def|cfg))[`']\s+not found/i)
     if (!missingResource) {
         return undefined
