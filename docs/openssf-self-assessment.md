@@ -2,7 +2,7 @@
 
 Project: [14764](https://www.bestpractices.dev/en/projects/14764).
 
-This is a draft self-assessment, not an independent certification or a claim that the extension is free of vulnerabilities. On 2026-09-23 the public entry existed, its basic metadata was blank, and Passing progress was 0%. Prepared answers are not evidence that the website has saved them.
+This is a draft self-assessment, not an independent certification or a claim that the extension is free of vulnerabilities. On 2026-09-24 the public badge showed "in progress 99%". README embeds the live badge so its displayed status can update. Prepared answers are not evidence that the website has saved them.
 
 ## Evidence and import
 
@@ -50,4 +50,4 @@ On 2026-09-23 the GitHub APIs returned no open CodeQL, Dependabot or secret-scan
 
 Build/test runs for Linux, macOS and Windows, CodeQL, npm Audit, Fuzzing and Docker secure builds passed on the inspected revision. However, [Managed TeX installation run 35817047877](https://github.com/thinksyncs/LaTeX-Secure-Workspace/actions/runs/35817047877) failed in the Japanese-named non-admin account: the PowerShell private-storage check was killed with SIGTERM and no diagnostic output. This is tracked in Beads as `LaTeX-Secure-Workspace-p40`; it does not establish an ACL defect. Do not describe this revision as having all CI green.
 
-OpenSSF follow-up remains `LaTeX-Secure-Workspace-a7u`. Public form review/save, pending attestations and a verified README status remain outstanding. No Marketplace release is part of this documentation change.
+OpenSSF follow-up remains `LaTeX-Secure-Workspace-a7u`. The live README badge has been added; review of pending evidence and completion of the self-assessment remain outstanding. No Marketplace release is part of this documentation change.
