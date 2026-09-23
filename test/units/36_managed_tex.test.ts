@@ -426,6 +426,34 @@ describe('36_managed_tex:', () => {
             assert.ok(install.notCalled)
         })
 
+        it('should let the user replace an unavailable saved private destination', async () => {
+            sinon.stub(managed, 'usesPrivateTexStorage').returns(true)
+            const validate = sinon.stub(managed, 'validatePrivateTexStorage').resolves()
+            validate.onFirstCall().rejects(new Error('Previous folder was deleted'))
+            const remember = sinon.stub(managed, 'rememberManagedTexStorage').resolves()
+            sinon.stub(vscode.window, 'showOpenDialog').resolves([vscode.Uri.file(temporary)])
+            const prompt = sinon.stub(vscode.window, 'showInformationMessage')
+            prompt.onFirstCall().resolves('Choose Private Folder' as unknown as vscode.MessageItem)
+            prompt.onSecondCall().resolves('Download and Install' as unknown as vscode.MessageItem)
+            assert.strictEqual(await requestManagedTexInstall(), true)
+            assert.ok(validate.calledTwice)
+            assert.pathStrictEqual(validate.firstCall.args[0] as string, path.join(temporary, 'storage'))
+            assert.pathStrictEqual(validate.secondCall.args[0] as string, temporary)
+            assert.ok(remember.calledOnce && remember.calledAfter(install))
+            assert.pathStrictEqual(remember.firstCall.args[0] as string, temporary)
+        })
+
+        it('should preserve the old approval when replacement selection is cancelled', async () => {
+            sinon.stub(managed, 'usesPrivateTexStorage').returns(true)
+            sinon.stub(managed, 'validatePrivateTexStorage').rejects(new Error('Permissions changed'))
+            const remember = sinon.stub(managed, 'rememberManagedTexStorage').resolves()
+            sinon.stub(vscode.window, 'showInformationMessage').resolves('Choose Private Folder' as unknown as vscode.MessageItem)
+            sinon.stub(vscode.window, 'showOpenDialog').resolves(undefined)
+            assert.strictEqual(await requestManagedTexInstall(), false)
+            assert.ok(install.notCalled && remember.notCalled)
+            assert.pathStrictEqual(managed.getManagedTexStorage(), path.join(temporary, 'storage'))
+        })
+
         it('should leave a failed installation retryable', async () => {
             sinon.stub(vscode.window, 'showInformationMessage').resolves('Download and Install' as unknown as vscode.MessageItem)
             install.onFirstCall().rejects(new Error('Checksum mismatch'))

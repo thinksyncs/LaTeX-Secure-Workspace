@@ -54,8 +54,23 @@ async function installWithConsent(mode: 'download' | 'import' | 'prepare'): Prom
     }
     const profile: ManagedTexProfile = selected.profile
     let privateStorage = false
-    if (mode !== 'prepare' && needsPrivateTexStorage(storage)) {
-        const choose = await vscode.window.showInformationMessage('TinyTeX needs an ASCII installation path on Windows.', {
+    let choosePrivateStorage = needsPrivateTexStorage(storage)
+    let invalidSavedStorage = false
+    if (mode !== 'prepare' && usesPrivateTexStorage()) {
+        try {
+            await validatePrivateTexStorage(storage, path.join(lw.extensionRoot, 'resources', 'check-private-tex-storage.ps1'))
+        } catch {
+            // Keep the old approval until a replacement is explicitly selected
+            // and installed. A deleted folder or changed ACL must be recoverable.
+            choosePrivateStorage = true
+            invalidSavedStorage = true
+        }
+        if (!allowed()) { return false }
+    }
+    if (mode !== 'prepare' && choosePrivateStorage) {
+        const choose = await vscode.window.showInformationMessage(invalidSavedStorage
+            ? 'The saved private TeX folder is unavailable or no longer meets its ownership and permission requirements.'
+            : 'TinyTeX needs an ASCII installation path on Windows.', {
             modal: true,
             detail: 'Choose an existing private folder owned by your Windows account. Only your account, SYSTEM and Administrators may have access, and inherited permissions must be disabled. Ask IT to provision one if needed. No shared fallback, permission changes or elevation are performed. The selection is saved locally only after a successful installation. The bundled Windows runner also needs an ASCII project path on some system locales; choosing this installation folder does not move your project.'
         }, 'Choose Private Folder')
