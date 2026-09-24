@@ -32,7 +32,7 @@ test('compatibility inventory covers every setting and preserves active editor s
     assert.equal(properties['latex-workshop.security.allowLocalPdfLaTeX'].default, false)
 })
 
-test('Docker manual matches the pinned CI image and README keeps the local sample', () => {
+test('Docker manual matches the pinned CI image and README links to local setup', () => {
     const readme = read('README.md')
     const manual = read('docs/manual/README.md')
     const workflow = read('.github/workflows/docker-secure-builds.yml')
@@ -48,10 +48,7 @@ test('Docker manual matches the pinned CI image and README keeps the local sampl
     assert.ok(manual.includes(`docker pull ${image}`))
     assert.ok(readme.includes('./docs/manual/README.md#optional-docker-setup'))
     assert.ok(readme.includes('Use Local TeX'))
-    const sampleMatch = readme.match(/```latex\n([\s\S]*?)```/)
-    assert.ok(sampleMatch, 'README must include a LaTeX onboarding sample')
-    const sample = sampleMatch[1].replace(/^ {3}/gm, '').trim()
-    assert.equal(sample, read('samples/sample/t.tex').trim())
+    assert.ok(readme.includes('./resources/local-setup.md'))
     assert.ok(read('docs/manual/README.md').includes('../../README.md#get-started'))
 })
 
@@ -102,4 +99,25 @@ test('local setup is discoverable and its guide is included in the package input
         assert.ok(manifest.contributes.commands.some(item => item.command === 'latex-workshop.' + suffix))
         assert.ok(read('src/app.ts').includes(`registerCommand('latex-workshop.${suffix}'`))
     }
+})
+
+test('English and Japanese READMEs expose matching first-PDF commands and links', () => {
+    const labels = JSON.parse(read('package.nls.json'))
+    for (const [file, other] of [['README.md', 'README.ja.md'], ['README.ja.md', 'README.md']]) {
+        const text = read(file)
+        assert.ok(text.includes('./' + other), file + ': language link')
+        for (const key of ['command.create-sample', 'command.build', 'command.install-tex']) {
+            assert.ok(text.includes(labels[key]), file + ': ' + key)
+        }
+        for (const term of ['Use Local TeX', 'Install Lightweight TeX', 'CJK', 'IPAex', 'ASCII', '.lw-security']) {
+            assert.ok(text.includes(term), file + ': ' + term)
+        }
+        assert.ok(text.includes('https://www.bestpractices.dev/projects/14764/badge'))
+        assert.ok(text.includes('./docs/manual/README.md#optional-docker-setup'))
+        for (const match of text.matchAll(/\]\((\.\/[^)]+)\)/g)) {
+            const target = match[1].split('#')[0]
+            assert.ok(fs.existsSync(path.join(root, target)), file + ': ' + target)
+        }
+    }
+    assert.equal(read('resources/sample-english.tex').trim(), read('samples/sample/t.tex').trim())
 })

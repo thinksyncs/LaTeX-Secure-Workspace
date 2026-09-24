@@ -1,10 +1,10 @@
 # LaTeX Workspace Security
 
-[![OpenSSF Best Practices](https://www.bestpractices.dev/projects/14764/badge)](https://www.bestpractices.dev/projects/14764)
+[![OpenSSF Best Practices](https://www.bestpractices.dev/projects/14764/badge)](https://www.bestpractices.dev/projects/14764) · [日本語](./README.ja.md)
 
 **Write LaTeX. Build on your terms. No Docker required for your first PDF.**
 
-Edit papers and technical reports in VS Code, build with your installed TeX tools, and preview PDFs without leaving the editor. No hosted compiler, document-upload service, or extension telemetry.
+Edit papers and technical reports in VS Code, use your existing TeX or approve a lightweight installation, and preview PDFs without leaving the editor. No hosted compiler, document-upload service, or extension telemetry.
 
 [Install from Marketplace](https://marketplace.visualstudio.com/items?itemName=ToppyMicroServices.tex-workspace-secure) · [Setup guide](./resources/local-setup.md) · [Manual](./docs/manual/README.md)
 
@@ -18,19 +18,13 @@ This independent LaTeX Workshop fork trades custom toolchains and automatic comp
 
 ## Get started
 
-1. Install the extension. Keep your existing TeX, or let setup install a lightweight copy after your approval.
-2. Open a local folder you trust and save this as `t.tex`:
+1. Install the extension and open a local folder you trust.
+2. From the Command Palette, run **Create first-PDF sample (English / Japanese)** and choose a language and a folder inside your workspace. Review the sample; creating it does not start a build or download.
+3. With the sample open, run **LaTeX Workspace Security: Build LaTeX project** and choose **Use Local TeX** when prompted. Setup checks the tools, then builds and opens the PDF in `.lw-security`.
 
-   ```latex
-   \documentclass[12pt]{article}
-   \begin{document}
-     abcd
-   \end{document}
-   ```
+Missing tools? Choose **Install Lightweight TeX**, select a profile, then approve the download. Setup installs TinyTeX and continues the build. For the Japanese sample, use **Japanese TeX — 日本語** (CJK and IPAex fonts), or an existing TeX installation with those packages. Switch profiles with **Install or select TeX (Lightweight / Japanese)**. No admin rights or OS PATH edits are requested.
 
-3. Run **LaTeX Workspace Security: Build LaTeX project** and choose **Use Local TeX**. Setup checks the tools, then builds and opens `.lw-security/t.pdf`.
-
-Missing tools? Choose **Install Lightweight TeX**, select the lightweight or Japanese-font profile, then approve the download. Setup installs TinyTeX and continues the build. No admin rights or OS PATH edits are requested. See the [setup guide](./resources/local-setup.md).
+On Windows, managed TeX requires an ASCII installation path. The pinned build tools also have a known limitation with Japanese project paths. See the [setup guide](./resources/local-setup.md) for supported platforms, private-folder setup and troubleshooting.
 
 Local TeX runs as your OS account, outside a sandbox. Use trusted documents; your consent applies to all trusted workspaces and can be revoked in User Settings. For isolation or LuaLaTeX, follow the [Docker setup](./docs/manual/README.md#optional-docker-setup).
 
