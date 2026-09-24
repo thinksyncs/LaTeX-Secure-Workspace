@@ -18,6 +18,7 @@ types/
 .devcontainer/
 .github/
 .beads/
+.bestpractices.json
 AGENTS.md
 .gitignore
 eslint.config.mjs

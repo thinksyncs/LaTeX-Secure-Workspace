@@ -1,5 +1,7 @@
 # LaTeX Workspace Security
 
+[![OpenSSF Best Practices](https://www.bestpractices.dev/projects/14764/badge)](https://www.bestpractices.dev/projects/14764)
+
 **Write LaTeX. Build on your terms. No Docker required for your first PDF.**
 
 Edit papers and technical reports in VS Code, build with your installed TeX tools, and preview PDFs without leaving the editor. No hosted compiler, document-upload service, or extension telemetry.
