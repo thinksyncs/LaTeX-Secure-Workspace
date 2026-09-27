@@ -56,7 +56,7 @@ export async function validatePrivateTexStorage(root: string, script: string): P
     }
     const systemRoot = process.env.SystemRoot ?? 'C:\\Windows'
     await run(path.join(systemRoot, 'System32', 'WindowsPowerShell', 'v1.0', 'powershell.exe'),
-        ['-NoProfile', '-NonInteractive', '-File', script, '-Directory', root],
+        ['-NoProfile', '-NonInteractive', '-File', script, '-Directory', root, '-Diagnostics'],
         { windowsHide: true, timeout: 15000, maxBuffer: 64 * 1024 })
 }
 
