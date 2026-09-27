@@ -20,3 +20,8 @@ $makeindex = 'internal lw_secure_makeindex %O -o %D %S';
 die "Approved kpsewhich is unavailable.\n" unless $ENV{'LW_SECURE_KPSEWHICH'};
 # Unlike build commands, latexmk opens kpsewhich as a pipe. Bind its name too.
 $kpsewhich = '"' . $ENV{'LW_SECURE_KPSEWHICH'} . '" %S';
+
+# Keep bibliography lookup relative to the document directory on Windows.
+# latexmk's directory-switch workaround adds absolute Unicode paths which the
+# bundled BibTeX cannot open on Western code pages. Keep TeX's I/O checks intact.
+if ($^O eq 'MSWin32') { $bibtex_fudge = 0; }
