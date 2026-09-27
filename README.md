@@ -24,7 +24,7 @@ This independent LaTeX Workshop fork trades custom toolchains and automatic comp
 
 Missing tools? Choose **Install Lightweight TeX**, select a profile, then approve the download. Setup installs TinyTeX and continues the build. For the Japanese sample, use **Japanese TeX — 日本語** (CJK and IPAex fonts), or an existing TeX installation with those packages. Switch profiles with **Install or select TeX (Lightweight / Japanese)**. No admin rights or OS PATH edits are requested.
 
-On Windows, managed TeX requires an ASCII installation path. The pinned build tools also have a known limitation with Japanese project paths. See the [setup guide](./resources/local-setup.md) for supported platforms, private-folder setup and troubleshooting.
+On Windows, managed TeX requires an ASCII installation path. Builds under Japanese user-profile directories are covered by Windows CI. See the [setup guide](./resources/local-setup.md) for supported platforms, private-folder setup and troubleshooting.
 
 Local TeX runs as your OS account, outside a sandbox. Use trusted documents; your consent applies to all trusted workspaces and can be revoked in User Settings. For isolation or LuaLaTeX, follow the [Docker setup](./docs/manual/README.md#optional-docker-setup).
 

@@ -24,7 +24,7 @@ LaTeX Workshopから独立したフォークです。自由なツールチェー
 
 ツールがない場合は **Install Lightweight TeX** からプロファイルを選び、ダウンロードを承認します。TinyTeXの導入後、ビルドを続行します。日本語サンプルには **Japanese TeX — 日本語**（CJKとIPAexフォント）、または同じパッケージを備えた既存のTeXが必要です。プロファイルは **Install or select TeX (Lightweight / Japanese)** で切り替えられます。管理者権限の要求やOSのPATH変更は行いません。
 
-Windowsでは、管理対象TeXのインストール先にASCII文字のパスが必要です。固定バージョンのビルドツールには、日本語を含むプロジェクトパスの既知の制約もあります。対応環境、専用フォルダーの設定、トラブル対処は[セットアップガイド（英語）](./resources/local-setup.md)をご覧ください。
+Windowsでは、管理対象TeXのインストール先にASCII文字のパスが必要です。日本語ユーザーフォルダー内からのビルドはWindows CIで検証しています。対応環境、専用フォルダーの設定、トラブル対処は[セットアップガイド（英語）](./resources/local-setup.md)をご覧ください。
 
 ローカルTeXはOSアカウントの権限で動作し、サンドボックスではありません。信頼できる文書を使用してください。実行の同意はすべての信頼済みワークスペースに適用され、ユーザー設定で取り消せます。隔離やLuaLaTeXが必要な場合は[Dockerの設定（英語）](./docs/manual/README.md#optional-docker-setup)をご覧ください。
 
