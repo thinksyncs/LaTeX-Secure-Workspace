@@ -17,13 +17,27 @@ assert.ok(['lightweight', 'japanese'].includes(profile))
 const root = await fs.realpath(await fs.mkdtemp(path.join(os.tmpdir(), 'lw-managed-tex-')))
 const storage = process.env.LW_TEST_PRIVATE_STORAGE ?? path.join(root, 'profile storage')
 const japaneseUser = process.env.LW_TEST_JAPANESE_USER === '1'
+let privateStorageTiming
 if (japaneseUser) {
     assert.equal(process.platform, 'win32')
     assert.match(os.userInfo().username, /[^\x20-\x7e]/)
     assert.match(process.env.USERPROFILE, /[^\x20-\x7e]/)
     assert.match(root, /[^\x20-\x7e]/)
     assert.ok(managed.isWindowsAsciiStorage(storage))
-    await managed.validatePrivateTexStorage(storage, path.resolve('resources/check-private-tex-storage.ps1'))
+    const validationStarted = performance.now()
+    try {
+        await managed.validatePrivateTexStorage(storage, path.resolve('resources/check-private-tex-storage.ps1'))
+        privateStorageTiming = { validationMs: Math.round(performance.now() - validationStarted) }
+    } catch (error) {
+        console.error(JSON.stringify({ event: 'private-storage-validation-failed', elapsedMs: Math.round(performance.now() - validationStarted), killed: error.killed, signal: error.signal, code: error.code }))
+        throw error
+    }
+    const startupStarted = performance.now()
+    const startup = await run(path.join(process.env.SystemRoot ?? 'C:\\Windows', 'System32', 'WindowsPowerShell', 'v1.0', 'powershell.exe'),
+        ['-NoProfile', '-NonInteractive', '-Command', "Write-Output 'ready'"], { windowsHide: true, timeout: 15000, maxBuffer: 65536 })
+    assert.equal(startup.stdout.trim(), 'ready')
+    privateStorageTiming.warmStartupMs = Math.round(performance.now() - startupStarted)
+    console.log(JSON.stringify({ event: 'private-storage-timing', ...privateStorageTiming, order: 'validation-before-warm-startup' }))
 }
 // Test with no existing TeX or third-party Perl on PATH. This changes only this
 // disposable test process, never the normal VS Code profile or OS environment.
@@ -103,6 +117,18 @@ if (japaneseUser) {
     } catch (error) {
         assert.match(String(error.stderr), /contains character not allowed for TeX file/)
         unicodeProjectProbe = { supported: false, reason: 'Pinned Windows latexmk rejects the Unicode project path on this runner; use an ASCII project folder.' }
+        // Diagnostic only: do not move files, create aliases or change the OS locale.
+        const relativeArgs = unicodeArgs.map(arg => arg.replaceAll(unicodeProject, '.'))
+        const relativeInvocation = windowsBuild.prepareWindowsBuild(executable, relativeArgs, env, [unicodeProject], path.resolve('resources/secure-latexmkrc'))
+        try {
+            await run(relativeInvocation.command, relativeInvocation.args, { cwd: unicodeProject, env: relativeInvocation.env,
+                windowsVerbatimArguments: relativeInvocation.windowsVerbatimArguments, timeout: 120000, maxBuffer: 4 * 1024 * 1024 })
+            assert.equal((await fs.readFile(path.join(unicodeOutput, 't.pdf'))).subarray(0, 5).toString(), '%PDF-')
+            unicodeProjectProbe.relativeArguments = { supported: true }
+        } catch (relativeError) {
+            unicodeProjectProbe.relativeArguments = { supported: false, code: relativeError.code, stderr: String(relativeError.stderr ?? '').slice(-2000) }
+        }
+        console.log(JSON.stringify({ event: 'unicode-project-probe', ...unicodeProjectProbe }))
     }
 }
 const result = await run(invocation.command, invocation.args, { cwd: project, env: invocation.env,
@@ -137,7 +163,7 @@ const evidence = { status: 'passed', root, profile, platform: process.platform, 
     bin, pdfSha256: createHash('sha256').update(pdf).digest('hex'),
     text, fonts, executableBoundary,
     installReusedWithoutDownload: true, processPathUnchanged: true,
-    offlineImportVerified: true, offlineFetchAttempts, japaneseUser, project, unicodeProjectProbe,
+    offlineImportVerified: true, offlineFetchAttempts, japaneseUser, project, unicodeProjectProbe, privateStorageTiming,
     ...(japaneseUser ? { username: os.userInfo().username, userProfile: process.env.USERPROFILE, privateStorageValidated: true } : {}),
     scope: 'Disposable extension-style storage; no normal VS Code profile or system TeX installation changed.' }
 await fs.writeFile(path.join(root, 'qa-report.json'), JSON.stringify(evidence, null, 2) + '\n')

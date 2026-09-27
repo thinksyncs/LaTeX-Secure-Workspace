@@ -112,7 +112,9 @@ test('English and Japanese READMEs expose matching first-PDF commands and links'
         for (const term of ['Use Local TeX', 'Install Lightweight TeX', 'CJK', 'IPAex', 'ASCII', '.lw-security']) {
             assert.ok(text.includes(term), file + ': ' + term)
         }
-        assert.ok(text.includes('https://www.bestpractices.dev/projects/14764/badge'))
+        const badge = text.match(/!\[OpenSSF Best Practices\]\(([^)]+)\)/)
+        assert.ok(badge, file + ': badge image')
+        assert.equal(badge[1], 'https://www.bestpractices.dev/projects/14764/badge')
         assert.ok(text.includes('./docs/manual/README.md#optional-docker-setup'))
         for (const match of text.matchAll(/\]\((\.\/[^)]+)\)/g)) {
             const target = match[1].split('#')[0]
