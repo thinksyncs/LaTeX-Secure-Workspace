@@ -158,5 +158,10 @@ export function prepareWindowsBuild(
         }
     }
     const recipeArgs = cwd === undefined ? args : windowsRecipeArguments(args, cwd)
-    return windowsToolInvocation(driver, ['-norc', '-r', policyFile, ...recipeArgs], env, roots)
+    // The extension also normally lives under the Unicode user profile. Keep
+    // the same explicit policy file, relative to cwd when on the same volume.
+    const relativePolicy = cwd === undefined ? undefined : path.win32.relative(cwd, policyFile)
+    const policyArg = relativePolicy && !path.win32.isAbsolute(relativePolicy)
+        ? './' + relativePolicy.replaceAll('\\', '/') : policyFile
+    return windowsToolInvocation(driver, ['-norc', '-r', policyArg, ...recipeArgs], env, roots)
 }
