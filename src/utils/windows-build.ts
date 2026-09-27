@@ -104,10 +104,34 @@ export function windowsToolInvocation(command: string, args: readonly string[], 
     return { command: shell, args: ['/d', '/v:off', '/s', '/c', `"${line}"`], env, windowsVerbatimArguments: true }
 }
 
+/** Keep the fixed recipe's document paths relative to its actual working directory.
+ * Windows Perl can mangle a Unicode ancestor in an absolute argument even when
+ * the OS has already entered that directory correctly. Tool paths stay absolute.
+ */
+export function windowsRecipeArguments(args: readonly string[], cwd: string): string[] {
+    const relative = (file: string) => {
+        if (!/^(?:[a-z]:[\\/]|[\\/]{2}[^\\/]+[\\/][^\\/]+)/i.test(file)) {
+            return file
+        }
+        const value = path.win32.relative(cwd, file)
+        if (path.win32.isAbsolute(value) || value === '..' || value.startsWith('..\\')) {
+            return file
+        }
+        return './' + value.replaceAll('\\', '/')
+    }
+    return args.map((arg, index) => {
+        const output = /^(?:-outdir=|-auxdir=)/.exec(arg)
+        if (output) {
+            return output[0] + relative(arg.slice(output[0].length))
+        }
+        return index === args.length - 1 && !arg.startsWith('-') ? relative(arg) : arg
+    })
+}
+
 /** Bind both the host launcher and the fixed local recipe's child tools. */
 export function prepareWindowsBuild(
     command: string, args: readonly string[], base: NodeJS.ProcessEnv, roots: readonly string[], policyFile: string,
-    dockerRuntime?: string
+    dockerRuntime?: string, cwd?: string
 ) {
     const env = windowsBuildEnvironment(base, roots)
     // Extension startup also exports Docker defaults globally. Only the
@@ -133,5 +157,6 @@ export function prepareWindowsBuild(
             }
         }
     }
-    return windowsToolInvocation(driver, ['-norc', '-r', policyFile, ...args], env, roots)
+    const recipeArgs = cwd === undefined ? args : windowsRecipeArguments(args, cwd)
+    return windowsToolInvocation(driver, ['-norc', '-r', policyFile, ...recipeArgs], env, roots)
 }

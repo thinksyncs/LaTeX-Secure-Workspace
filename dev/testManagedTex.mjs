@@ -85,10 +85,8 @@ assert.equal(await managed.installManagedTex(storage, {
     profile, signal: AbortSignal.timeout(1000), progress() { throw new Error('Existing installation must be reused without downloading') }
 }), bin)
 assert.equal(process.env.PATH, initialPath, 'Installation must not change the process or OS PATH')
-// The pinned Windows Perl/latexmk runner can reject a Unicode project path
-// under a Western system code page. Keep that probe visible, not silently fixed
-// by a short-path alias; validate the supported ASCII project separately.
-const projectRoot = japaneseUser ? path.dirname(storage) : root
+// Use the actual profile directory, including its Unicode ancestors on Windows.
+const projectRoot = root
 const project = path.join(projectRoot, 'project with spaces')
 const output = path.join(project, '.lw-security')
 await fs.mkdir(output, { recursive: true })
@@ -99,38 +97,8 @@ const args = [...recipe.commonArgsBeforeEngine, ...recipe.engineArgs.pdflatex,
 const env = managed.texEnvironment(bin)
 const executable = path.join(bin, process.platform === 'win32' ? 'latexmk.exe' : 'latexmk')
 const invocation = process.platform === 'win32'
-    ? windowsBuild.prepareWindowsBuild(executable, args, env, [project], path.resolve('resources/secure-latexmkrc'))
+    ? windowsBuild.prepareWindowsBuild(executable, args, env, [project], path.resolve('resources/secure-latexmkrc'), undefined, project)
     : { command: executable, args, env }
-let unicodeProjectProbe
-if (japaneseUser) {
-    const unicodeProject = path.join(root, 'project with spaces')
-    const unicodeOutput = path.join(unicodeProject, '.lw-security')
-    await fs.mkdir(unicodeOutput, { recursive: true })
-    await fs.copyFile('resources/sample-japanese.tex', path.join(unicodeProject, 't.tex'))
-    const unicodeArgs = args.map(arg => arg.replaceAll(project, unicodeProject))
-    const unicodeInvocation = windowsBuild.prepareWindowsBuild(executable, unicodeArgs, env, [unicodeProject], path.resolve('resources/secure-latexmkrc'))
-    try {
-        await run(unicodeInvocation.command, unicodeInvocation.args, { cwd: unicodeProject, env: unicodeInvocation.env,
-            windowsVerbatimArguments: unicodeInvocation.windowsVerbatimArguments, timeout: 120000, maxBuffer: 4 * 1024 * 1024 })
-        assert.equal((await fs.readFile(path.join(unicodeOutput, 't.pdf'))).subarray(0, 5).toString(), '%PDF-')
-        unicodeProjectProbe = { supported: true }
-    } catch (error) {
-        assert.match(String(error.stderr), /contains character not allowed for TeX file/)
-        unicodeProjectProbe = { supported: false, reason: 'Pinned Windows latexmk rejects the Unicode project path on this runner; use an ASCII project folder.' }
-        // Diagnostic only: do not move files, create aliases or change the OS locale.
-        const relativeArgs = unicodeArgs.map(arg => arg.replaceAll(unicodeProject, '.'))
-        const relativeInvocation = windowsBuild.prepareWindowsBuild(executable, relativeArgs, env, [unicodeProject], path.resolve('resources/secure-latexmkrc'))
-        try {
-            await run(relativeInvocation.command, relativeInvocation.args, { cwd: unicodeProject, env: relativeInvocation.env,
-                windowsVerbatimArguments: relativeInvocation.windowsVerbatimArguments, timeout: 120000, maxBuffer: 4 * 1024 * 1024 })
-            assert.equal((await fs.readFile(path.join(unicodeOutput, 't.pdf'))).subarray(0, 5).toString(), '%PDF-')
-            unicodeProjectProbe.relativeArguments = { supported: true }
-        } catch (relativeError) {
-            unicodeProjectProbe.relativeArguments = { supported: false, code: relativeError.code, stderr: String(relativeError.stderr ?? '').slice(-2000) }
-        }
-        console.log(JSON.stringify({ event: 'unicode-project-probe', ...unicodeProjectProbe }))
-    }
-}
 const result = await run(invocation.command, invocation.args, { cwd: project, env: invocation.env,
     windowsVerbatimArguments: invocation.windowsVerbatimArguments, timeout: 120000, maxBuffer: 4 * 1024 * 1024 })
 assert.ok(result.stdout.includes('Latexmk'))
@@ -163,7 +131,8 @@ const evidence = { status: 'passed', root, profile, platform: process.platform, 
     bin, pdfSha256: createHash('sha256').update(pdf).digest('hex'),
     text, fonts, executableBoundary,
     installReusedWithoutDownload: true, processPathUnchanged: true,
-    offlineImportVerified: true, offlineFetchAttempts, japaneseUser, project, unicodeProjectProbe, privateStorageTiming,
+    offlineImportVerified: true, offlineFetchAttempts, japaneseUser, project, privateStorageTiming,
+    unicodeProjectVerified: japaneseUser,
     ...(japaneseUser ? { username: os.userInfo().username, userProfile: process.env.USERPROFILE, privateStorageValidated: true } : {}),
     scope: 'Disposable extension-style storage; no normal VS Code profile or system TeX installation changed.' }
 await fs.writeFile(path.join(root, 'qa-report.json'), JSON.stringify(evidence, null, 2) + '\n')

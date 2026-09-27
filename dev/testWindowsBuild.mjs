@@ -56,7 +56,7 @@ ${hasMakeindex ? String.raw`\printindex` : ''}
         ...recipe.commonArgsAfterEngine.map(arg => arg.replace('%DOCFILE%', output).replace('%DOC%', path.join(project, 't.tex')))]
     const policy = path.join(repo, 'resources/secure-latexmkrc')
     const invocation = process.platform === 'win32'
-        ? windowsBuild.prepareWindowsBuild('latexmk', args, env, [project], policy)
+        ? windowsBuild.prepareWindowsBuild('latexmk', args, env, [project], policy, undefined, project)
         : { command: path.join(bin, 'latexmk'), args: ['-norc', '-r', policy, ...args], env }
     let result
     try {
