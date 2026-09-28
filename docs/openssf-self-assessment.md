@@ -2,7 +2,9 @@
 
 Project: [14764](https://www.bestpractices.dev/en/projects/14764).
 
-This is a draft self-assessment, not an independent certification or a claim that the extension is free of vulnerabilities. On 2026-09-24 the public badge showed "in progress 99%". README embeds the live badge so its displayed status can update. Prepared answers are not evidence that the website has saved them.
+Project 14764 achieved **Passing** on 2026-09-28 at 13:56:35 UTC after the final answer was submitted with maintainer approval. The public project page and badge SVG were independently read back without authentication. README embeds the live badge. This is a project self-assessment, not an independent certification or a claim that the extension is free of vulnerabilities.
+
+The sections below preserve the initial proposal review and its evidence limits. They are not a list of unanswered website criteria; the saved answers are available on the public project page.
 
 ## Evidence and import
 
@@ -19,7 +21,7 @@ Basic metadata:
 - License: MIT (third-party notices remain in NOTICE).
 - Implementation languages: TypeScript, JavaScript, Python, PowerShell, Shell.
 
-## Pending evidence
+## Initial proposal evidence gaps (2026-09-23)
 
 - `release_notes_vulns`: No published repository advisories were returned on 2026-09-23. That does not establish that every externally assigned identifier is covered by release notes.
 - `report_responses`: The public issue tracker returned no issues. Responses on other channels have not been checked; no response-rate claim is made.
@@ -50,4 +52,4 @@ On 2026-09-23 the GitHub APIs returned no open CodeQL, Dependabot or secret-scan
 
 Build/test runs for Linux, macOS and Windows, CodeQL, npm Audit, Fuzzing and Docker secure builds passed on the inspected revision. However, [Managed TeX installation run 35817047877](https://github.com/thinksyncs/LaTeX-Secure-Workspace/actions/runs/35817047877) failed in the Japanese-named non-admin account: the PowerShell private-storage check was killed with SIGTERM and no diagnostic output. This is tracked in Beads as `LaTeX-Secure-Workspace-p40`; it does not establish an ACL defect. Do not describe this revision as having all CI green.
 
-OpenSSF follow-up remains `LaTeX-Secure-Workspace-a7u`. The live README badge has been added; review of pending evidence and completion of the self-assessment remain outstanding. No Marketplace release is part of this documentation change.
+OpenSSF registration and questionnaire submission are complete, and Beads `LaTeX-Secure-Workspace-a7u` is closed. The initial review limits above and separate task `LaTeX-Secure-Workspace-p40` are not resolved by the badge. No Marketplace release is part of this documentation change.
