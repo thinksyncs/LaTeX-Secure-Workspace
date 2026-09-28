@@ -18,7 +18,7 @@ const mod = new Module(filename, module)
 mod.filename = filename
 mod.paths = Module._nodeModulePaths(path.dirname(filename))
 mod._compile(compiled, filename)
-const { windowsBuildEnvironment, resolveWindowsBuildTool, windowsToolInvocation, prepareWindowsBuild } = mod.exports
+const { windowsBuildEnvironment, resolveWindowsBuildTool, windowsToolInvocation, prepareWindowsBuild, windowsRecipeArguments } = mod.exports
 
 function fixture(t) {
     const root = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'lw-executable-boundary-')))
@@ -175,4 +175,38 @@ test('Windows Docker launch selects an absolute runtime and preserves wrapper ar
     assert.ok(actual.args.includes('--network=none'))
     assert.ok(actual.args.includes(`${project}:/latex-workshop/src:ro`))
     assert.deepEqual(actual.args.slice(-4), ['example/texlive@sha256:test', 'latexmk', '-pdf', 'main file.tex'])
+})
+
+test('Windows recipe paths omit Unicode ancestors without changing tools or outside paths', () => {
+    const cwd = 'C:/Users/TeX検証/project with spaces'
+    const args = ['-norc', '-r', 'C:/extension/policy', '-pdf',
+        '-outdir=' + cwd + '/.lw-security', '-auxdir=' + cwd + '/.lw-security', cwd + '/t.tex']
+    assert.deepEqual(windowsRecipeArguments(args, cwd), ['-norc', '-r', 'C:/extension/policy', '-pdf',
+        '-outdir=./.lw-security', '-auxdir=./.lw-security', './t.tex'])
+    assert.equal(args.at(-1), cwd + '/t.tex', 'Do not mutate queued recipe arguments')
+    for (const file of ['C:/other/t.tex', 'D:/project/t.tex', 'C:/Users/TeX検証/project with spaces-other/t.tex',
+        '../t.tex', 't.tex', 'C:t.tex', '/t.tex']) {
+        assert.deepEqual(windowsRecipeArguments(['-pdf', file], cwd), ['-pdf', file])
+    }
+    assert.deepEqual(windowsRecipeArguments(['-outdir=C:/outside', '-auxdir=D:/output', '-pdf'], cwd),
+        ['-outdir=C:/outside', '-auxdir=D:/output', '-pdf'])
+    assert.deepEqual(windowsRecipeArguments(['C:/Users/TeX検証/project with spaces/日本語.tex'], cwd), ['./日本語.tex'])
+    assert.deepEqual(windowsRecipeArguments(['//server/share/日本語/main.tex'], '//server/share/日本語'), ['./main.tex'])
+})
+
+test('Windows local recipe resolves the same extension policy from its cwd', t => {
+    const { root, project, approved } = fixture(t)
+    for (const tool of ['latexmk', 'pdflatex', 'kpsewhich']) fs.writeFileSync(path.join(approved, tool + '.exe'), '')
+    const policy = path.join(root, 'extension files', 'secure-latexmkrc')
+    const invocation = prepareWindowsBuild('latexmk', ['-pdf', path.join(project, 't.tex')],
+        { PATH: approved }, [project], policy, undefined, project)
+    assert.equal(path.win32.resolve(project, invocation.args[2]), path.win32.resolve(policy))
+    assert.deepEqual(invocation.args.slice(0, 2), ['-norc', '-r'])
+    assert.equal(invocation.command, path.join(approved, 'latexmk.exe'))
+    if (process.platform === 'win32') {
+        assert.equal(invocation.args.at(-1), './t.tex')
+        const otherDrive = project.startsWith('Z:') ? 'Y:/extension/policy' : 'Z:/extension/policy'
+        const other = prepareWindowsBuild('latexmk', ['-pdf', 't.tex'], { PATH: approved }, [project], otherDrive, undefined, project)
+        assert.equal(other.args[2], otherDrive)
+    }
 })
