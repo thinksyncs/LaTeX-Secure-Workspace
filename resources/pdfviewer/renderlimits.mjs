@@ -8,13 +8,15 @@ export const PDF_VIEWER_LIMITS = Object.freeze({
     isOffscreenCanvasSupported: false,
     maxCanvasDimension: 3072,
     maxCanvasPixels: 1_500_000,
+    maxCachedCanvasBytes: 120_000_000,
     maxImageSize: 1_500_000,
     maxOutputScale: 1.25,
     maxRenderRetries: 2,
-    maxRenderedPages: 5,
+    maxRenderedPages: 20,
     minOutputScale: 0.1,
     minPlaceholderCanvasSize: 1,
     pageCleanupBatchSize: 4,
+    prefetchPageRadius: 4,
     renderMarginMultiplier: 1,
     renderRetryDelayMs: 150,
     useWasm: false,
@@ -102,7 +104,7 @@ export function pickPageNumbersToRender(pageMetrics, viewportTop, viewportHeight
     const nearestIndex = pageMetrics.findIndex(metric => metric.pageNumber === nearestPageNumber)
     const priority = page => page.visible ? 0 : page.pageNumber === pendingPageNumber ? 1 : 2
     const selected = candidates.filter((page, index) => page.near
-        || page.pageNumber === pendingPageNumber || Math.abs(index - nearestIndex) <= 2)
+        || page.pageNumber === pendingPageNumber || Math.abs(index - nearestIndex) <= limits.prefetchPageRadius)
         .sort((left, right) => priority(left) - priority(right) || left.distance - right.distance)
         .slice(0, limits.maxRenderedPages)
 

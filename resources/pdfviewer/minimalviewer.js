@@ -48,6 +48,8 @@ let searchIndexPromise = undefined
 let searchMatches = []
 let selectedSearchMatch = -1
 const pageEntries = new Map()
+// Oldest first; includes a reservation for the one page currently rendering.
+const renderedPageCache = new Map()
 const reverseSyncTeXKeybinding = config.appearance?.keybindings?.synctex ?? 'ctrl-click'
 
 window.addEventListener('message', (event) => {
@@ -396,7 +398,7 @@ function updateCurrentPageFromScroll() {
     }
 }
 
-async function renderPage(entry, epoch, requestVersion) {
+async function renderPage(entry, epoch, requestVersion, protectedPageNumbers = new Set()) {
     if (!currentPdf || entry.isRendered || entry.isRendering || epoch !== renderEpoch
         || !canAttemptPageRender(entry.renderFailures)) {
         return
@@ -411,9 +413,14 @@ async function renderPage(entry, epoch, requestVersion) {
             return
         }
         const outputScale = getOutputScale(entry.viewport)
+        const width = Math.max(1, Math.ceil(entry.viewport.width * outputScale))
+        const height = Math.max(1, Math.ceil(entry.viewport.height * outputScale))
+        if (!reservePageCanvas(entry, width * height * 4, protectedPageNumbers)) {
+            return
+        }
         entry.canvas.classList.remove('pageCanvasPlaceholder')
-        entry.canvas.width = Math.max(1, Math.ceil(entry.viewport.width * outputScale))
-        entry.canvas.height = Math.max(1, Math.ceil(entry.viewport.height * outputScale))
+        entry.canvas.width = width
+        entry.canvas.height = height
         entry.canvas.style.width = `${Math.ceil(entry.viewport.width)}px`
         entry.canvas.style.height = `${Math.ceil(entry.viewport.height)}px`
 
@@ -458,6 +465,9 @@ async function renderPage(entry, epoch, requestVersion) {
     } finally {
         entry.renderTask = undefined
         entry.isRendering = false
+        if (!entry.isRendered && renderedPageCache.get(entry.pageNumber)?.entry === entry) {
+            discardPageCanvas(entry)
+        }
         page?.cleanup?.()
     }
 }
@@ -633,11 +643,8 @@ async function updateVisiblePages(epoch, requestVersion) {
     }
 
     const targetPageNumbers = getPagesNearViewport()
-    for (const [pageNumber, entry] of pageEntries) {
-        if (!targetPageNumbers.has(pageNumber)) {
-            releaseRenderedPage(entry)
-        }
-    }
+    touchCachedPages(targetPageNumbers)
+    const protectedPageNumbers = new Set()
 
     for (const pageNumber of targetPageNumbers) {
         if (epoch !== renderEpoch || requestVersion !== renderRequestVersion) {
@@ -647,10 +654,59 @@ async function updateVisiblePages(epoch, requestVersion) {
         if (!entry) {
             continue
         }
-        await renderPage(entry, epoch, requestVersion)
+        // Never evict a higher-priority target to make room for later prefetch.
+        protectedPageNumbers.add(pageNumber)
+        await renderPage(entry, epoch, requestVersion, protectedPageNumbers)
     }
 
+    if (epoch !== renderEpoch || requestVersion !== renderRequestVersion) {
+        return
+    }
+    touchCachedPages(targetPageNumbers)
     queueDocumentCleanup(epoch)
+}
+
+function touchCachedPages(pageNumbers) {
+    // The first target is highest priority, so make it the most recently used.
+    for (const pageNumber of [...pageNumbers].reverse()) {
+        const cached = renderedPageCache.get(pageNumber)
+        if (cached) {
+            renderedPageCache.delete(pageNumber)
+            renderedPageCache.set(pageNumber, cached)
+        }
+    }
+}
+
+function reservePageCanvas(entry, bytes, protectedPageNumbers) {
+    if (!Number.isSafeInteger(bytes) || bytes <= 0 || bytes > PDF_VIEWER_LIMITS.maxCachedCanvasBytes) {
+        return false
+    }
+    let usedBytes = [...renderedPageCache.values()].reduce((sum, cached) => sum + cached.bytes, 0)
+    for (const [pageNumber, cached] of renderedPageCache) {
+        if (renderedPageCache.size < PDF_VIEWER_LIMITS.maxRenderedPages
+            && usedBytes + bytes <= PDF_VIEWER_LIMITS.maxCachedCanvasBytes) {
+            break
+        }
+        if (protectedPageNumbers.has(pageNumber)) {
+            continue
+        }
+        usedBytes -= cached.bytes
+        releaseRenderedPage(cached.entry)
+    }
+    if (renderedPageCache.size >= PDF_VIEWER_LIMITS.maxRenderedPages
+        || usedBytes + bytes > PDF_VIEWER_LIMITS.maxCachedCanvasBytes) {
+        return false
+    }
+    // Reserve before allocating, so even in-flight canvases stay within budget.
+    renderedPageCache.set(entry.pageNumber, { entry, bytes })
+    return true
+}
+
+function discardPageCanvas(entry) {
+    if (renderedPageCache.get(entry.pageNumber)?.entry === entry) {
+        renderedPageCache.delete(entry.pageNumber)
+    }
+    resetCanvasToPlaceholder(entry.canvas, entry.viewport)
 }
 
 function getPagesNearViewport() {
@@ -675,7 +731,7 @@ function releaseRenderedPage(entry) {
     entry.renderTask = undefined
     entry.isRendered = false
     entry.isRendering = false
-    resetCanvasToPlaceholder(entry.canvas, entry.viewport)
+    discardPageCanvas(entry)
     resetRenderFailure(entry)
 }
 
@@ -690,6 +746,7 @@ function clearPageEntries() {
         releaseRenderedPage(entry)
     }
     pageEntries.clear()
+    renderedPageCache.clear()
 }
 
 function queueDocumentCleanup(epoch = renderEpoch) {
