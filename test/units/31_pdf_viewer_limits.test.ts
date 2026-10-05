@@ -95,12 +95,12 @@ describe(testFileSuiteName(__filename), () => {
         assert.strictEqual(renderLimits.PDF_VIEWER_LIMITS.maxCanvasPixels, 1_500_000)
         assert.strictEqual(renderLimits.PDF_VIEWER_LIMITS.maxImageSize, 1_500_000)
         assert.strictEqual(renderLimits.PDF_VIEWER_LIMITS.maxRenderRetries, 2)
-        assert.strictEqual(renderLimits.PDF_VIEWER_LIMITS.maxRenderedPages, 3)
+        assert.strictEqual(renderLimits.PDF_VIEWER_LIMITS.maxRenderedPages, 5)
         assert.strictEqual(renderLimits.PDF_VIEWER_LIMITS.maxOutputScale, 1.25)
         assert.strictEqual(renderLimits.PDF_VIEWER_LIMITS.minOutputScale, 0.1)
         assert.strictEqual(renderLimits.PDF_VIEWER_LIMITS.minPlaceholderCanvasSize, 1)
         assert.strictEqual(renderLimits.PDF_VIEWER_LIMITS.pageCleanupBatchSize, 4)
-        assert.strictEqual(renderLimits.PDF_VIEWER_LIMITS.renderMarginMultiplier, 0.5)
+        assert.strictEqual(renderLimits.PDF_VIEWER_LIMITS.renderMarginMultiplier, 1)
         assert.strictEqual(renderLimits.PDF_VIEWER_LIMITS.renderRetryDelayMs, 150)
     })
 
@@ -143,7 +143,7 @@ describe(testFileSuiteName(__filename), () => {
             { pageNumber: 4, pageTop: 2760, pageBottom: 3660 },
         ], 950, 800, 4).sort((left, right) => left - right)
 
-        assert.deepStrictEqual([...pages], [1, 2, 4])
+        assert.deepStrictEqual([...pages], [1, 2, 3, 4])
     })
 
     it('should keep adjacent visible pages rendered while scrolling', () => {
@@ -156,17 +156,17 @@ describe(testFileSuiteName(__filename), () => {
         assert.deepStrictEqual([...pages], [1, 2, 3])
     })
 
-    it('should preload the next page at the start of a document', () => {
+    it('should preload the next two pages at the start of a document', () => {
         const pages = renderLimits.pickPageNumbersToRender([
             { pageNumber: 1, pageTop: 0, pageBottom: 1400 },
             { pageNumber: 2, pageTop: 1420, pageBottom: 2820 },
             { pageNumber: 3, pageTop: 2840, pageBottom: 4240 },
         ], 0, 700).sort((left, right) => left - right)
 
-        assert.deepStrictEqual([...pages], [1, 2])
+        assert.deepStrictEqual([...pages], [1, 2, 3])
     })
 
-    it('should keep the previous, current, and next pages ready at a page boundary', () => {
+    it('should keep two neighboring pages ready at a page boundary', () => {
         const pages = renderLimits.pickPageNumbersToRender([
             { pageNumber: 1, pageTop: 0, pageBottom: 600 },
             { pageNumber: 2, pageTop: 620, pageBottom: 1220 },
@@ -174,7 +174,7 @@ describe(testFileSuiteName(__filename), () => {
             { pageNumber: 4, pageTop: 1860, pageBottom: 2460 },
         ], 700, 700).sort((left, right) => left - right)
 
-        assert.deepStrictEqual([...pages], [1, 2, 3])
+        assert.deepStrictEqual([...pages], [1, 2, 3, 4])
     })
 
     it('should serialize overlapping page-render updates', async () => {
