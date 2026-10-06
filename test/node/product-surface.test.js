@@ -102,8 +102,8 @@ test('local setup is discoverable and its guide is included in the package input
 })
 
 test('English and Japanese READMEs expose matching first-PDF commands and links', () => {
-    const labels = JSON.parse(read('package.nls.json'))
     for (const [file, other] of [['README.md', 'README.ja.md'], ['README.ja.md', 'README.md']]) {
+        const labels = JSON.parse(read(file === 'README.ja.md' ? 'package.nls.ja.json' : 'package.nls.json'))
         const text = read(file)
         assert.ok(text.includes('./' + other), file + ': language link')
         for (const key of ['command.create-sample', 'command.build', 'command.install-tex']) {

@@ -19,10 +19,10 @@ LaTeX Workshopから独立したフォークです。自由なツールチェー
 ## 最初のPDFまで
 
 1. 拡張機能をインストールし、信頼できるローカルフォルダーを開きます。
-2. コマンドパレットで **Create first-PDF sample (English / Japanese)** を実行し、言語とワークスペース内の保存先を選びます。サンプルの内容を確認してください。作成だけではビルドやダウンロードは始まりません。
-3. サンプルを開いた状態で **LaTeX Workspace Security: Build LaTeX project** を実行し、確認画面が出たら **Use Local TeX** を選びます。ツールの確認後にビルドされ、`.lw-security` 内のPDFが開きます。
+2. コマンドパレットで **最初のPDFサンプルを作成（英語 / 日本語）** を実行し、言語とワークスペース内の保存先を選びます。サンプルの内容を確認してください。作成だけではビルドやダウンロードは始まりません。
+3. サンプルを開いた状態で **LaTeX Workspace Security: LaTeXプロジェクトをビルド** を実行し、確認画面が出たら **Use Local TeX** を選びます。ツールの確認後にビルドされ、`.lw-security` 内のPDFが開きます。
 
-ツールがない場合は **Install Lightweight TeX** からプロファイルを選び、ダウンロードを承認します。TinyTeXの導入後、ビルドを続行します。日本語サンプルには **Japanese TeX — 日本語**（CJKとIPAexフォント）、または同じパッケージを備えた既存のTeXが必要です。プロファイルは **Install or select TeX (Lightweight / Japanese)** で切り替えられます。管理者権限の要求やOSのPATH変更は行いません。
+ツールがない場合は **Install Lightweight TeX** からプロファイルを選び、ダウンロードを承認します。TinyTeXの導入後、ビルドを続行します。日本語サンプルには **Japanese TeX — 日本語**（CJKとIPAexフォント）、または同じパッケージを備えた既存のTeXが必要です。プロファイルは **TeXを導入・選択（軽量版 / 日本語版）** で切り替えられます。管理者権限の要求やOSのPATH変更は行いません。
 
 Windowsでは、管理対象TeXのインストール先にASCII文字のパスが必要です。日本語ユーザーフォルダー内からのビルドはWindows CIで検証しています。対応環境、専用フォルダーの設定、トラブル対処は[セットアップガイド（英語）](./resources/local-setup.md)をご覧ください。
 
