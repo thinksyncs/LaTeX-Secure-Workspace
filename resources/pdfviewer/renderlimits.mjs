@@ -8,14 +8,16 @@ export const PDF_VIEWER_LIMITS = Object.freeze({
     isOffscreenCanvasSupported: false,
     maxCanvasDimension: 3072,
     maxCanvasPixels: 1_500_000,
+    maxCachedCanvasBytes: 120_000_000,
     maxImageSize: 1_500_000,
     maxOutputScale: 1.25,
     maxRenderRetries: 2,
-    maxRenderedPages: 3,
+    maxRenderedPages: 20,
     minOutputScale: 0.1,
     minPlaceholderCanvasSize: 1,
     pageCleanupBatchSize: 4,
-    renderMarginMultiplier: 0.5,
+    prefetchPageRadius: 4,
+    renderMarginMultiplier: 1,
     renderRetryDelayMs: 150,
     useWasm: false,
 })
@@ -76,7 +78,7 @@ export function pickPageNumbersToRender(pageMetrics, viewportTop, viewportHeight
     const viewportBottom = safeTop + safeHeight
     const viewportCenter = safeTop + safeHeight / 2
     const margin = safeHeight * limits.renderMarginMultiplier
-    const visiblePages = []
+    const candidates = []
     let nearestPageNumber
     let nearestDistance = Number.POSITIVE_INFINITY
 
@@ -86,12 +88,12 @@ export function pickPageNumbersToRender(pageMetrics, viewportTop, viewportHeight
         const pageCenter = (pageTop + pageBottom) / 2
         const distance = Math.abs(pageCenter - viewportCenter)
 
-        if (pageBottom >= safeTop - margin && pageTop <= viewportBottom + margin) {
-            visiblePages.push({
-                distance,
-                pageNumber: pageMetric.pageNumber,
-            })
-        }
+        candidates.push({
+            distance,
+            pageNumber: pageMetric.pageNumber,
+            visible: pageBottom >= safeTop && pageTop <= viewportBottom,
+            near: pageBottom >= safeTop - margin && pageTop <= viewportBottom + margin,
+        })
 
         if (distance < nearestDistance) {
             nearestDistance = distance
@@ -99,53 +101,18 @@ export function pickPageNumbersToRender(pageMetrics, viewportTop, viewportHeight
         }
     }
 
-    visiblePages.sort((left, right) => left.distance - right.distance)
-    const pageNumbers = new Set(
-        visiblePages.slice(0, limits.maxRenderedPages).map(page => page.pageNumber)
-    )
+    const nearestIndex = pageMetrics.findIndex(metric => metric.pageNumber === nearestPageNumber)
+    const priority = page => page.visible ? 0 : page.pageNumber === pendingPageNumber ? 1 : 2
+    const selected = candidates.filter((page, index) => page.near
+        || page.pageNumber === pendingPageNumber || Math.abs(index - nearestIndex) <= limits.prefetchPageRadius)
+        .sort((left, right) => priority(left) - priority(right) || left.distance - right.distance)
+        .slice(0, limits.maxRenderedPages)
 
-    if (pendingPageNumber !== undefined) {
-        pageNumbers.add(pendingPageNumber)
+    // Reserve a slot for a valid pending SyncTeX destination, even at low zoom.
+    const pending = candidates.find(page => page.pageNumber === pendingPageNumber)
+    if (pending && !selected.some(page => page.pageNumber === pendingPageNumber)) {
+        selected[selected.length - 1] = pending
+        selected.sort((left, right) => priority(left) - priority(right) || left.distance - right.distance)
     }
-    if (nearestPageNumber !== undefined) {
-        pageNumbers.add(nearestPageNumber)
-        const nearestPageIndex = pageMetrics.findIndex(metric => metric.pageNumber === nearestPageNumber)
-        for (const adjacentIndex of [nearestPageIndex - 1, nearestPageIndex + 1]) {
-            const adjacentPageNumber = pageMetrics[adjacentIndex]?.pageNumber
-            if (adjacentPageNumber !== undefined) {
-                pageNumbers.add(adjacentPageNumber)
-            }
-        }
-    }
-
-    while (pageNumbers.size > limits.maxRenderedPages) {
-        let farthestPageNumber
-        let farthestDistance = Number.NEGATIVE_INFINITY
-
-        for (const pageNumber of pageNumbers) {
-            if (pageNumber === pendingPageNumber) {
-                continue
-            }
-
-            const pageMetric = pageMetrics.find(metric => metric.pageNumber === pageNumber)
-            if (!pageMetric) {
-                continue
-            }
-
-            const pageTop = Number(pageMetric.pageTop) || 0
-            const pageBottom = Math.max(pageTop, Number(pageMetric.pageBottom) || pageTop)
-            const distance = Math.abs((pageTop + pageBottom) / 2 - viewportCenter)
-            if (distance > farthestDistance) {
-                farthestDistance = distance
-                farthestPageNumber = pageNumber
-            }
-        }
-
-        if (farthestPageNumber === undefined) {
-            break
-        }
-        pageNumbers.delete(farthestPageNumber)
-    }
-
-    return [...pageNumbers]
+    return selected.map(page => page.pageNumber)
 }

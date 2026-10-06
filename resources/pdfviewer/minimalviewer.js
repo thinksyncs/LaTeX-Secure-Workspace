@@ -3,7 +3,6 @@ import {
     PDF_VIEWER_LIMITS,
     canAttemptPageRender,
     computeOutputScale,
-    enqueueSerialRender,
     getRenderRetryDelay,
     pickPageNumbersToRender,
 } from './renderlimits.mjs'
@@ -36,7 +35,8 @@ const state = {
 let pdfjsLibPromise
 let renderEpoch = 0
 let currentPdf = undefined
-let visibleRender = Promise.resolve()
+let visibleRenderRunning = false
+let renderRequestVersion = 0
 let renderQueueTimer = undefined
 let resizeTimer = undefined
 let stateTimer = undefined
@@ -48,6 +48,8 @@ let searchIndexPromise = undefined
 let searchMatches = []
 let selectedSearchMatch = -1
 const pageEntries = new Map()
+// Oldest first; includes a reservation for the one page currently rendering.
+const renderedPageCache = new Map()
 const reverseSyncTeXKeybinding = config.appearance?.keybindings?.synctex ?? 'ctrl-click'
 
 window.addEventListener('message', (event) => {
@@ -209,6 +211,7 @@ async function renderDocument({ preserveScroll }) {
     const previousScrollTop = viewerContainer.scrollTop
     const previousScrollLeft = viewerContainer.scrollLeft
     clearTimeout(renderQueueTimer)
+    renderQueueTimer = undefined
     clearTimeout(documentCleanupTimer)
     clearPageEntries()
     pagesRoot.replaceChildren()
@@ -395,7 +398,7 @@ function updateCurrentPageFromScroll() {
     }
 }
 
-async function renderPage(entry, epoch) {
+async function renderPage(entry, epoch, requestVersion, protectedPageNumbers = new Set()) {
     if (!currentPdf || entry.isRendered || entry.isRendering || epoch !== renderEpoch
         || !canAttemptPageRender(entry.renderFailures)) {
         return
@@ -406,10 +409,18 @@ async function renderPage(entry, epoch) {
 
     try {
         page = await currentPdf.getPage(entry.pageNumber)
+        if (epoch !== renderEpoch || requestVersion !== renderRequestVersion) {
+            return
+        }
         const outputScale = getOutputScale(entry.viewport)
+        const width = Math.max(1, Math.ceil(entry.viewport.width * outputScale))
+        const height = Math.max(1, Math.ceil(entry.viewport.height * outputScale))
+        if (!reservePageCanvas(entry, width * height * 4, protectedPageNumbers)) {
+            return
+        }
         entry.canvas.classList.remove('pageCanvasPlaceholder')
-        entry.canvas.width = Math.max(1, Math.ceil(entry.viewport.width * outputScale))
-        entry.canvas.height = Math.max(1, Math.ceil(entry.viewport.height * outputScale))
+        entry.canvas.width = width
+        entry.canvas.height = height
         entry.canvas.style.width = `${Math.ceil(entry.viewport.width)}px`
         entry.canvas.style.height = `${Math.ceil(entry.viewport.height)}px`
 
@@ -417,6 +428,9 @@ async function renderPage(entry, epoch) {
         if (!context) {
             throw new Error(`Unable to acquire a 2D canvas context for page ${entry.pageNumber}.`)
         }
+        // An opaque canvas becomes black after resizing, before PDF.js paints.
+        context.fillStyle = '#ffffff'
+        context.fillRect(0, 0, entry.canvas.width, entry.canvas.height)
         context.scale(outputScale, outputScale)
 
         entry.renderTask = page.render({
@@ -451,6 +465,9 @@ async function renderPage(entry, epoch) {
     } finally {
         entry.renderTask = undefined
         entry.isRendering = false
+        if (!entry.isRendered && renderedPageCache.get(entry.pageNumber)?.entry === entry) {
+            discardPageCanvas(entry)
+        }
         page?.cleanup?.()
     }
 }
@@ -597,38 +614,99 @@ function getOutputScale(viewport) {
 }
 
 function queueVisiblePageRender() {
-    clearTimeout(renderQueueTimer)
-    const epoch = renderEpoch
-    renderQueueTimer = setTimeout(() => {
-        visibleRender = enqueueSerialRender(visibleRender, () => updateVisiblePages(epoch))
-        void visibleRender.catch(reportError)
-    }, 50)
+    renderRequestVersion += 1
+    if (renderQueueTimer !== undefined || visibleRenderRunning) {
+        return
+    }
+    // Throttle, rather than debounce: continuous scrolling must still paint.
+    // Keep at most one running batch and one coalesced request for the latest view.
+    renderQueueTimer = setTimeout(async () => {
+        renderQueueTimer = undefined
+        visibleRenderRunning = true
+        const version = renderRequestVersion
+        try {
+            await updateVisiblePages(renderEpoch, version)
+        } catch (error) {
+            reportError(error)
+        } finally {
+            visibleRenderRunning = false
+            if (version !== renderRequestVersion) {
+                queueVisiblePageRender()
+            }
+        }
+    }, 32)
 }
 
-async function updateVisiblePages(epoch) {
+async function updateVisiblePages(epoch, requestVersion) {
     if (epoch !== renderEpoch || !currentPdf || pageEntries.size === 0) {
         return
     }
 
     const targetPageNumbers = getPagesNearViewport()
-    for (const [pageNumber, entry] of pageEntries) {
-        if (!targetPageNumbers.has(pageNumber)) {
-            releaseRenderedPage(entry)
-        }
-    }
+    touchCachedPages(targetPageNumbers)
+    const protectedPageNumbers = new Set()
 
     for (const pageNumber of targetPageNumbers) {
-        if (epoch !== renderEpoch) {
+        if (epoch !== renderEpoch || requestVersion !== renderRequestVersion) {
             return
         }
         const entry = pageEntries.get(pageNumber)
         if (!entry) {
             continue
         }
-        await renderPage(entry, epoch)
+        // Never evict a higher-priority target to make room for later prefetch.
+        protectedPageNumbers.add(pageNumber)
+        await renderPage(entry, epoch, requestVersion, protectedPageNumbers)
     }
 
+    if (epoch !== renderEpoch || requestVersion !== renderRequestVersion) {
+        return
+    }
+    touchCachedPages(targetPageNumbers)
     queueDocumentCleanup(epoch)
+}
+
+function touchCachedPages(pageNumbers) {
+    // The first target is highest priority, so make it the most recently used.
+    for (const pageNumber of [...pageNumbers].reverse()) {
+        const cached = renderedPageCache.get(pageNumber)
+        if (cached) {
+            renderedPageCache.delete(pageNumber)
+            renderedPageCache.set(pageNumber, cached)
+        }
+    }
+}
+
+function reservePageCanvas(entry, bytes, protectedPageNumbers) {
+    if (!Number.isSafeInteger(bytes) || bytes <= 0 || bytes > PDF_VIEWER_LIMITS.maxCachedCanvasBytes) {
+        return false
+    }
+    let usedBytes = [...renderedPageCache.values()].reduce((sum, cached) => sum + cached.bytes, 0)
+    for (const [pageNumber, cached] of renderedPageCache) {
+        if (renderedPageCache.size < PDF_VIEWER_LIMITS.maxRenderedPages
+            && usedBytes + bytes <= PDF_VIEWER_LIMITS.maxCachedCanvasBytes) {
+            break
+        }
+        if (protectedPageNumbers.has(pageNumber)) {
+            continue
+        }
+        usedBytes -= cached.bytes
+        releaseRenderedPage(cached.entry)
+    }
+    if (renderedPageCache.size >= PDF_VIEWER_LIMITS.maxRenderedPages
+        || usedBytes + bytes > PDF_VIEWER_LIMITS.maxCachedCanvasBytes) {
+        return false
+    }
+    // Reserve before allocating, so even in-flight canvases stay within budget.
+    renderedPageCache.set(entry.pageNumber, { entry, bytes })
+    return true
+}
+
+function discardPageCanvas(entry) {
+    if (renderedPageCache.get(entry.pageNumber)?.entry === entry) {
+        renderedPageCache.delete(entry.pageNumber)
+    }
+    resetCanvasToPlaceholder(entry.canvas, entry.viewport)
 }
 
 function getPagesNearViewport() {
@@ -653,7 +731,7 @@ function releaseRenderedPage(entry) {
     entry.renderTask = undefined
     entry.isRendered = false
     entry.isRendering = false
-    resetCanvasToPlaceholder(entry.canvas, entry.viewport)
+    discardPageCanvas(entry)
     resetRenderFailure(entry)
 }
 
@@ -668,6 +746,7 @@ function clearPageEntries() {
         releaseRenderedPage(entry)
     }
     pageEntries.clear()
+    renderedPageCache.clear()
 }
 
 function queueDocumentCleanup(epoch = renderEpoch) {
@@ -699,6 +778,12 @@ function resetCanvasToPlaceholder(canvas, viewport) {
     canvas.height = PDF_VIEWER_LIMITS.minPlaceholderCanvasSize
     canvas.style.width = `${Math.ceil(viewport.width)}px`
     canvas.style.height = `${Math.ceil(viewport.height)}px`
+    // CSS backgrounds cannot cover an opaque black canvas bitmap.
+    const context = canvas.getContext('2d', { alpha: false })
+    if (context) {
+        context.fillStyle = '#ffffff'
+        context.fillRect(0, 0, canvas.width, canvas.height)
+    }
 }
 
 function queueStatePost() {

@@ -3,7 +3,7 @@
   "displayName": "LaTeX Workspace Security",
   "description": "Secure LaTeX tools for VS Code with project-local completions, manual build, diagnostics, and a local PDF tab viewer with SyncTeX.",
   "icon": "icons/icon.png",
-  "version": "11.5.2",
+  "version": "11.5.3",
   "publisher": "ToppyMicroServices",
   "license": "MIT",
   "homepage": "https://github.com/thinksyncs/LaTeX-Secure-Workspace",
@@ -3063,7 +3063,7 @@
     "test:docker": "node ./dev/testDockerBuild.mjs",
     "test:fuzz": "node --test ./test/fuzz/*.test.js",
     "test:integration": "node ./dev/runTestCi.mjs",
-    "test:node": "node --test ./test/node/fixture-selection.test.js ./test/node/test-command-boundaries.test.js ./test/node/windows-build.test.js ./test/node/product-surface.test.js ./test/node/reliability-state.test.js ./test/fuzz/graphics-diagnostics-utils.test.js ./test/fuzz/parser.fast-check.test.js",
+    "test:node": "node --test ./test/node/fixture-selection.test.js ./test/node/test-command-boundaries.test.js ./test/node/windows-build.test.js ./test/node/product-surface.test.js ./test/node/reliability-state.test.js ./test/node/pdf-scroll-rendering.test.js ./test/node/glob-compatibility.test.js ./test/fuzz/graphics-diagnostics-utils.test.js ./test/fuzz/parser.fast-check.test.js",
     "watch-src": "tsc -watch -p tsconfig.json",
     "update-grammar": "node ./dev/update-grammar.mjs"
   },
@@ -3076,24 +3076,21 @@
     "iconv-lite": "^0.6.3",
     "latex-utensils": "^6.2.0",
     "mathjax-full": "^3.2.2",
-    "micromatch": "^4.0.8",
+    "picomatch": "^4.0.7",
     "pdfjs-dist": "5.4.394",
     "tmp": "^0.2.4",
     "workerpool": "^9.2.0",
     "ws": "^8.18.0"
   },
   "overrides": {
-    "@vscode/vsce": {
-      "markdown-it": "^14.2.0",
-      "yauzl": "^3.2.1"
-    },
+    "@vscode/vsce": "$@vscode/vsce",
     "@secretlint/config-loader": {
       "ajv": "^8.18.0"
     },
-    "brace-expansion": "5.0.9",
-    "undici": "^7.29.0",
+    "brace-expansion": "5.0.12",
+    "undici": "^7.29.1",
     "flatted": "^3.4.2",
-    "fast-uri": "^3.1.6",
+    "fast-uri": "^3.1.8",
     "js-yaml": "^4.3.2",
     "linkify-it": "^5.0.2",
     "speech-rule-engine": {
@@ -3101,9 +3098,6 @@
     },
     "@azure/msal-node": {
       "uuid": "^14.0.0"
-    },
-    "micromatch": {
-      "picomatch": "^2.3.2"
     },
     "@stylistic/eslint-plugin": {
       "picomatch": "^4.0.4"
@@ -3129,7 +3123,7 @@
     "@stylistic/eslint-plugin": "^2.12.1",
     "@types/cross-spawn": "^6.0.6",
     "@types/glob": "^8.1.0",
-    "@types/micromatch": "^4.0.9",
+    "@types/picomatch": "^4.0.3",
     "@types/mocha": "^10.0.10",
     "@types/node": "^20.17.11",
     "@types/node-fetch": "^2.6.12",
@@ -3141,7 +3135,7 @@
     "@typescript-eslint/parser": "^8.19.0",
     "@unified-latex/unified-latex-types": "1.8.0",
     "@vscode/test-electron": "^2.4.1",
-    "@vscode/vsce": "^3.7.1",
+    "@vscode/vsce": "^4.0.0",
     "c8": "^10.1.3",
     "esbuild": "^0.28.1",
     "eslint": "^9.39.4",
