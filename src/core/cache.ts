@@ -1,7 +1,7 @@
 import * as vscode from 'vscode'
 import os from 'os'
 import * as path from 'path'
-import micromatch from 'micromatch'
+import picomatch from 'picomatch'
 import { performance } from 'perf_hooks'
 
 import { lw } from '../lw'
@@ -89,7 +89,7 @@ function canCache(filePath: string): boolean {
  * This function checks if a given file path matches any of the ignore patterns
  * specified in the workspace configuration. It retrieves the list of patterns
  * to ignore from the 'latex.watch.files.ignore' configuration and uses the
- * `micromatch` library to check if the file path matches any of these patterns.
+ * `picomatch` library to check if the file path matches any of these patterns.
  * The file path format is adjusted based on the operating system to ensure
  * compatibility.
  *
@@ -100,7 +100,7 @@ function canCache(filePath: string): boolean {
 function isExcluded(filePath: string): boolean {
     const globsToIgnore = vscode.workspace.getConfiguration('latex-workshop').get('latex.watch.files.ignore') as string[]
     const format = (str: string): string => (os.platform() === 'win32' ? str.replace(/\\/g, '/') : str)
-    return micromatch.some(filePath, globsToIgnore, { format })
+    return globsToIgnore.some(glob => picomatch.isMatch(filePath, String(glob), { format, windows: os.platform() === 'win32' }))
 }
 
 /**

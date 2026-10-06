@@ -1,6 +1,6 @@
 import * as vscode from 'vscode'
 import os from 'os'
-import micromatch from 'micromatch'
+import picomatch from 'picomatch'
 import * as path from 'path'
 import { lw } from '../lw'
 import type { ProcessEnv, RecipeStep, Step } from '../types'
@@ -63,7 +63,7 @@ function isFileExcludedFromBuildOnSave(filePath: string): boolean {
     const configuration = vscode.workspace.getConfiguration('latex-workshop', lw.file.toUri(filePath))
     const globsToIgnore = configuration.get('latex.autoBuild.onSave.files.ignore') as string[]
     const format = (str: string): string => (os.platform() === 'win32' ? str.replace(/\\/g, '/') : str)
-    return micromatch.some(filePath, globsToIgnore, { format })
+    return globsToIgnore.some(glob => picomatch.isMatch(filePath, String(glob), { format, windows: os.platform() === 'win32' }))
 }
 
 let isBuilding = false

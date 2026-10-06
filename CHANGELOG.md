@@ -1,5 +1,19 @@
 # Change Log
 
+## [11.5.3] - 2026-10-06
+
+### User impact
+- Keep PDF rendering active during continuous scrolling. Paint waiting canvases white, preload four neighboring pages in each direction, and reuse up to 20 recently rendered pages within a 120 MB RGBA canvas budget.
+- Support the managed Japanese TeX profile under Japanese Windows user names, including the extension policy path. Add a Japanese README and align the first-PDF instructions.
+- Replace the direct micromatch dependency with picomatch and update audited packaging dependencies to remove the unpatched braces package.
+
+### Required action
+- Update the extension. Existing settings, execution consent, and the minimum VS Code version are unchanged. Contributors need Node.js 22 for the updated packaging tool.
+
+### Known limitations
+- The canvas budget does not cover total PDF.js or VS Code memory. Native macOS fast-scroll visual acceptance remains unverified; automated renderer tests do not replace it.
+- The historical Windows ACL timeout and native first-run visual checks remain separate follow-up work.
+
 ## [11.5.2] - 2026-09-21
 
 ### User impact

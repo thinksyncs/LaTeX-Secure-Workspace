@@ -1,7 +1,8 @@
 import * as vscode from 'vscode'
 import * as fs from 'fs'
 import * as path from 'path'
-import * as micromatch from 'micromatch'
+import os from 'os'
+import picomatch from 'picomatch'
 import { lw } from '../../lw'
 import type { CompletionProvider, CompletionArgs, FileCache } from '../../types'
 
@@ -39,7 +40,7 @@ abstract class InputAbstract implements CompletionProvider {
         const excludeGlob = (Object.keys(vscode.workspace.getConfiguration('files', null).get('exclude') || {})).concat(vscode.workspace.getConfiguration('latex-workshop', uri).get('intellisense.file.exclude') || [] ).concat(ignoreFiles)
         return files.filter(file => {
             const filePath = path.resolve(baseDir, file)
-            return !micromatch.isMatch(filePath, excludeGlob, {basename: true})
+            return !picomatch.isMatch(filePath, excludeGlob, {basename: true, windows: os.platform() === 'win32'})
         })
     }
 
