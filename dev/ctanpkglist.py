@@ -3,7 +3,7 @@ This script fetches the latest list of packages and their descriptions
 from CTAN at https://ctan.org/pkg and save the result as a json file.
 
 The result is used to generate usepackage and documentclass
-intellisense for LaTeX Workshop.
+intellisense for this extension.
 '''
 
 from pathlib import Path

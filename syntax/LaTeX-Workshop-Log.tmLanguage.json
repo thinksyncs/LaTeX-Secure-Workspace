@@ -1,5 +1,5 @@
 {
-    "name": "LaTeX Workshop log",
+    "name": "LaTeX Workspace Security log",
     "patterns": [
         {
             "begin": "^\\[([0-9\\.:]*)\\]\\[(\\w*)\\](?:\\[(\\w*)\\])?\\s?",

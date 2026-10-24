@@ -75,6 +75,57 @@ test('visible command branding retains the extension and command identifiers', (
     }
 })
 
+test('settings use the product name while retaining the compatibility namespace', () => {
+    assert.equal(manifest.contributes.configuration.title, manifest.displayName)
+    assert.equal(manifest.displayName, 'LaTeX Workspace Security')
+    assert.ok(Object.keys(properties).length > 0)
+    for (const key of Object.keys(properties)) {
+        assert.match(key, /^latex-workshop\./, key)
+    }
+    for (const key of ['bibtex-entries.first', 'bibtex-fields.order', 'bibtex-fields.sort.enabled']) {
+        assert.ok(properties[`latex-workshop.${key}`], key)
+    }
+})
+
+test('settings and localized UI text do not use upstream product branding', () => {
+    const checkText = (value, label) => {
+        if (typeof value !== 'string') {
+            return
+        }
+        // Upstream documentation links and compatibility IDs are intentional.
+        const prose = value.replace(/https?:\/\/\S+/g, '')
+            .replace(/\b(?:latex-workshop|latex-workshop-dev)\.[\w.-]+/g, '')
+        assert.doesNotMatch(prose, /\blatex[ -]workshop\b/i, label)
+    }
+    for (const [key, property] of Object.entries(properties)) {
+        for (const field of ['title', 'description', 'markdownDescription', 'deprecationMessage', 'markdownDeprecationMessage']) {
+            checkText(property[field], `${key}.${field}`)
+        }
+    }
+    for (const file of fs.readdirSync(root).filter(file => /^package\.nls(?:\..+)?\.json$/.test(file))) {
+        for (const [key, value] of Object.entries(JSON.parse(read(file)))) {
+            checkText(value, `${file}: ${key}`)
+        }
+    }
+})
+
+test('support and developer surfaces use the product name without renaming log identifiers', () => {
+    const bugReport = read('.github/ISSUE_TEMPLATE/bug-report.md')
+    assert.ok(bugReport.includes(`${manifest.displayName} Version:`))
+    assert.ok(bugReport.includes(`### ${manifest.displayName} Output*`))
+    const grammarContribution = manifest.contributes.grammars.find(item => item.language === 'latex_workshop_log')
+    assert.ok(grammarContribution)
+    assert.equal(grammarContribution.path, './syntax/LaTeX-Workshop-Log.tmLanguage.json')
+    assert.equal(grammarContribution.scopeName, 'text.latex_workshop.log')
+    const grammar = JSON.parse(read(grammarContribution.path))
+    assert.equal(grammar.name, `${manifest.displayName} log`)
+    assert.equal(grammar.scopeName, grammarContribution.scopeName)
+    for (const file of ['.github/ISSUE_TEMPLATE/bug-report.md', 'dev/README.md', 'dev/createSymbolSvgs.ts',
+        'dev/ctanpkglist.py', 'dev/pyintel/ctanpkg.py', 'dev/pyintel/uni.py']) {
+        assert.doesNotMatch(read(file).replace(/https?:\/\/\S+/g, ''), /\blatex[ -]workshop\b/i, file)
+    }
+})
+
 test('local setup is discoverable and its guide is included in the package inputs', () => {
     const command = manifest.contributes.commands.find(item => item.command === 'latex-workshop.setup-local')
     assert.ok(command)

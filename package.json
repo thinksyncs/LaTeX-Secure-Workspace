@@ -1047,7 +1047,7 @@
     },
     "configuration": {
       "type": "object",
-      "title": "LaTeX",
+      "title": "LaTeX Workspace Security",
       "properties": {
         "latex-workshop.latex.recipes": {
           "markdownDeprecationMessage": "Retained for compatibility; this setting does not control the supported workflow. Custom recipes are ignored in this secure build. **Build with recipe** exposes only the fixed `secure-latexmk` and `secure-lualatexmk` profiles. Both profiles use Docker isolation by default.",
@@ -1514,13 +1514,13 @@
           "scope": "window",
           "type": "number",
           "default": 250,
-          "markdownDescription": "Defines the time delay before confirming a non-binary file is indeed deleted. Increase this value if your toolchain involves external file changes with a delete-then-create pattern. LaTeX Workshop internally monitors file change events and initiates auto-builds, intellisense parsing, latex importing, and/or PDF viewing refresh. We use this config to control the file polling delay before confirming that the file deletion is not a delete-then-create."
+          "markdownDescription": "Delay in milliseconds before confirming that a file was deleted. Increase this value if an external tool saves files by deleting and recreating them. This setting does not enable automatic builds."
         },
         "latex-workshop.latex.watch.pdf.delay": {
           "scope": "window",
           "type": "number",
           "default": 250,
-          "markdownDescription": "Defines the time delay before confirming a PDF-like binary file is fully changed. Increase this value if you encounter repeated viewer refreshes and/or loss of PDF scrolling position. LaTeX Workshop internally monitors file change events and initiates auto-builds and/or PDF viewing refresh. When LaTeX is changing large files (particularly binary files like PDFs), multiple consecutive file change events may be emitted, potentially causing file corruption issues. We use this config to control the file polling delay before confirming that the file change has been stabilized. Note that non-binary files such as `.tex`, `.bib`, and `.cls` are not affected."
+          "markdownDescription": "Polling interval in milliseconds for checking whether a changed PDF or other binary file has stabilized before notifying listeners. Increase this value if you encounter repeated viewer refreshes or loss of PDF scrolling position. This setting does not affect non-binary files such as `.tex`, `.bib`, and `.cls`, and does not enable automatic builds."
         },
         "latex-workshop.latex.watch.files.ignore": {
           "scope": "window",
@@ -2160,7 +2160,7 @@
           "scope": "resource",
           "type": "number",
           "default": -1,
-          "markdownDescription": "Write the `TabSize` number from `.chktexrc`. The default value \"-1\" means that LaTeX Workshop will try to find `.chktexrc` and to read the value from it."
+          "markdownDescription": "Write the `TabSize` number from `.chktexrc`. The default value \"-1\" means that the extension will try to find `.chktexrc` and to read the value from it."
         },
         "latex-workshop.linting.delay": {
           "scope": "resource",
@@ -2451,7 +2451,7 @@
             "type": "string"
           },
           "default": [],
-          "markdownDescription": "List of extra directories to look for package completion files in addition to those provided by the extension. Files found in these directories have a higher priority over the default ones. LaTeX-Workshop bundles a limited number of package macro/env suggestions. Additional ones can be downloaded from https://download-directory.github.io/?url=https%3A%2F%2Fgithub.com%2FJames-Yu%2FLaTeX-Workshop%2Ftree%2Fmaster%2Fdev%2Fpackages . For custom packages, please visit https://github.com/James-Yu/LaTeX-Workshop/wiki/Intellisense#commands-starting-with- to learn how to generate these files. This setting is only relevant when `#latex-workshop.intellisense.package.env.enabled#` is true. You can use only 2 placeholders: `%WORKSPACE_FOLDER%`, `%RELATIVE_DIR%`. Please visit https://github.com/James-Yu/LaTeX-Workshop/wiki/Compile#placeholders for their definitions."
+          "markdownDescription": "List of extra directories to look for package completion files in addition to those provided by the extension. Files found in these directories have a higher priority over the default ones. This extension bundles a limited number of package macro/env suggestions. Additional ones can be downloaded from https://download-directory.github.io/?url=https%3A%2F%2Fgithub.com%2FJames-Yu%2FLaTeX-Workshop%2Ftree%2Fmaster%2Fdev%2Fpackages . For custom packages, please visit https://github.com/James-Yu/LaTeX-Workshop/wiki/Intellisense#commands-starting-with- to learn how to generate these files. This setting is only relevant when `#latex-workshop.intellisense.package.env.enabled#` is true. You can use only 2 placeholders: `%WORKSPACE_FOLDER%`, `%RELATIVE_DIR%`. Please visit https://github.com/James-Yu/LaTeX-Workshop/wiki/Compile#placeholders for their definitions."
         },
         "latex-workshop.intellisense.includegraphics.preview.enabled": {
           "scope": "window",
@@ -2520,7 +2520,7 @@
           "scope": "window",
           "type": "boolean",
           "default": true,
-          "markdownDescription": "Display LaTeX Workshop debug log in output panel. This property defines whether LaTeX Workshop will output its debug log to the log panel."
+          "markdownDescription": "Write diagnostic logs to the LaTeX Workspace Security Output channel."
         },
         "latex-workshop.message.convertFilenameEncoding": {
           "scope": "window",
