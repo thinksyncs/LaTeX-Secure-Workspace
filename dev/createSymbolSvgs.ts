@@ -75,7 +75,7 @@ function loadSnippets() {
         })
     })
     writeFileSync(snipetsFile, JSON.stringify(snippets, undefined, 4))
-    console.log('LaTeX-Workshop: Symbols rendered and cached')
+    console.log('LaTeX Workspace Security: Symbols rendered and cached')
 }
 
 loadSnippets()

@@ -1,36 +1,22 @@
-# Security Triage: serialize-javascript (dev-only)
+# Security Triage: serialize-javascript (development dependency)
 
 ## Summary
 
-- Advisory: GHSA-5c6j-r48x-rmvq
+- Advisories: GHSA-5c6j-r48x-rmvq and GHSA-m5mm-p8h7-m29v
 - Affected package: `serialize-javascript`
 - Current path: `mocha -> serialize-javascript`
 - Scope: `devDependencies` only
 
 ## Impact assessment
 
-- Runtime extension artifact (VSIX): **not affected** (package is not shipped).
-- Extension runtime in user environment: **not affected**.
-- Development/CI/local test environments: **affected surface exists**.
+- Mocha uses this package to serialize parallel-worker options. The repository's VS Code test runners use serial mode.
+- The extension bundler does not import Mocha, and packaging excludes tests and `node_modules`. Verify the final VSIX when releasing; dependency scope alone is not artifact evidence.
+- The reported HTML-embedding path has not been demonstrated in this repository. The dependency still needs to pass the full audit.
 
-## Current constraint
+## Update decision (2026-10-29)
 
-- Dependabot reports `security_update_not_possible`.
-- Upstream currently constrains to `serialize-javascript@^6.0.2` via `mocha`.
+- Keep Mocha 11 and raise its existing `serialize-javascript` override to `^7.1.3`, the patched range for the closing-script suffix issue.
+- Remove the obsolete Dependabot ignore rule. The earlier managed-risk acceptance no longer applies.
+- Exercise closing-script suffixes and ordinary serialized values in `test/node/dependency-security.test.js`. Run Node and VS Code integration tests, full and production audits, and VSIX packaging before release.
 
-## Decision
-
-- Accept as **managed residual risk** (non-blocking for runtime release).
-- Track in issue and re-evaluate periodically.
-
-## Re-evaluation triggers
-
-1. `mocha` dependency range changes.
-2. Quarterly dependency review.
-3. Lockfile refresh or test stack refactor.
-
-## Mitigations in place
-
-- CI guardrails for telemetry SDK introduction and shell execution expansion.
-- Guardrail to block `pull_request_target` introduction.
-- Least-privilege workflow permissions by default.
+Re-evaluate the override when Mocha's dependency range changes. Do not suppress new audit findings based on development-only scope.

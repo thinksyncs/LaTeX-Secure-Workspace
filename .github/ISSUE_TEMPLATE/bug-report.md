@@ -9,14 +9,14 @@ about: Create a bug report to help us resolve problems
 > _Please change the following `[ ]` to `[x]` for confirmation._
 - [ ] The issue has not been reported in this repository.
 - [ ] The issue remains after disabling all other extensions and restarting Visual Studio Code.
-- [ ] The [FAQ](https://github.com/James-Yu/LaTeX-Workshop/wiki/FAQ) cannot address the issue.
+- [ ] The [upstream FAQ](https://github.com/James-Yu/LaTeX-Workshop/wiki/FAQ) cannot address the issue.
 - [ ] The issue is not related to compiling a document, or the document can be successfully compiled in the OS terminal but not in Visual Studio Code with this extension.
 
 ## Environment*
 > _Please write exact version numbers instead of descriptors such as `latest`._
 - Operating System: [e.g. Windows 10]
 - Visual Studio Code Version: [e.g. 1.41.0]
-- LaTeX Workshop Version: [e.g. 8.5.0]
+- LaTeX Workspace Security Version: [e.g. 11.5.3]
 - TeX Distribution Version: [e.g. TeX Live 2019 / MiKTeX 2.9.7250]
 
 > _Please list the environment and version number if you are using VSCodium, Snap or Flatpack versions of Visual Studio Code, and/or Visual Studio Code Remote Containers/SSH/WSL._
@@ -39,7 +39,7 @@ about: Create a bug report to help us resolve problems
 - 
 
 ## Logs
-### LaTeX Workshop Output*
+### LaTeX Workspace Security Output*
 > _Please paste the whole log messages below, not parts of ones. The log should start with `New log placeholder %WS1% registered`._
 ```
 [Paste the log here. Do not remove the surrounding backquotes (`).]

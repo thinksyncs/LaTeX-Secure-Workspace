@@ -1,5 +1,17 @@
 # Change Log
 
+## [11.5.4] - 2026-10-29
+
+### User impact
+- Identify the extension as LaTeX Workspace Security in Settings, support templates and log metadata. Correct stale descriptions of automatic builds.
+- Update vulnerable publishing and test dependencies, add security regression tests, and remove the obsolete serializer risk acceptance.
+
+### Required action
+- Update the extension. Existing `latex-workshop.*` settings, command IDs, execution consent and minimum VS Code version are unchanged.
+
+### Known limitations
+- Individual Settings labels still use the legacy key prefix for compatibility. Local TeX remains outside a filesystem/network sandbox.
+
 ## [11.5.3] - 2026-10-06
 
 ### User impact

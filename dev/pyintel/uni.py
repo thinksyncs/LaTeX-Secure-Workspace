@@ -2,7 +2,7 @@
 This script parses uni-math symbols from
 http://milde.users.sourceforge.net/LUCR/Math/data/unimathsymbols.txt
 and save the result as a json file.
-The result is used to generate command intellisense for LaTeX Workshop.
+The result is used to generate command intellisense for this extension.
 '''
 
 import json
