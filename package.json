@@ -3069,7 +3069,7 @@
   },
   "dependencies": {
     "@unified-latex/unified-latex-util-arguments": "1.8.1",
-    "@unified-latex/unified-latex-util-parse": "1.8.1",
+    "@unified-latex/unified-latex-util-parse": "1.8.4",
     "@unified-latex/unified-latex-util-to-string": "1.8.1",
     "cross-spawn": "^7.0.6",
     "glob": "^13.0.6",
