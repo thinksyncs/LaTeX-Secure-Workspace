@@ -23,7 +23,7 @@ jobs:
         run: ./dev/testWindowsJapaneseUser.ps1
       - name: Save Japanese-account evidence
         if: always() && steps.smoke.outputs.evidence != ''
-        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: managed-tex-windows-japanese-user
           path: |
@@ -60,7 +60,7 @@ jobs:
           EVIDENCE: ${{ steps.smoke.outputs.evidence }}
         run: node dev/checkManagedTexPdf.mjs "$EVIDENCE"
       - name: Save PDF and verification evidence
-        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: managed-tex-${{ matrix.os }}-${{ matrix.profile }}
           path: |

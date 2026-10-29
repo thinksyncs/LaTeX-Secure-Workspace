@@ -131,13 +131,13 @@ jobs:
         vsix_path="$RUNNER_TEMP/vsix/${package_name}-${package_version}.vsix"
         npx vsce package --out "$vsix_path"
     - name: Archive VSIX artifact
-      uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7
+      uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
       with:
         name: vsix-macos
         path: ${{ runner.temp }}/vsix/*.vsix
     - name: Archive test logs
       if: always()
-      uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7
+      uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
       with:
         name: test-log
         path: test/log/**/*.log
