@@ -3080,7 +3080,7 @@
     "pdfjs-dist": "5.4.394",
     "tmp": "^0.2.4",
     "workerpool": "^9.2.0",
-    "ws": "^8.18.0"
+    "ws": "^8.22.0"
   },
   "overrides": {
     "@vscode/vsce": "$@vscode/vsce",
@@ -3130,7 +3130,7 @@
     "@types/sinon": "^17.0.3",
     "@types/tmp": "^0.2.6",
     "@types/vscode": "^1.96.0",
-    "@types/ws": "^8.5.13",
+    "@types/ws": "^8.18.2",
     "@typescript-eslint/eslint-plugin": "^8.19.0",
     "@typescript-eslint/parser": "^8.19.0",
     "@unified-latex/unified-latex-types": "1.8.0",
