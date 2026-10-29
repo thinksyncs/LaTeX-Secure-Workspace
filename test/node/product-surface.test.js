@@ -14,6 +14,15 @@ const retained = [
     'latex.search.rootFiles.include', 'latex.search.rootFiles.exclude', 'latex.rootFile.indicator'
 ].map(key => `latex-workshop.${key}`)
 
+test('Marketplace icon is a PNG of at least 128 pixels within the 1 MiB limit', () => {
+    const icon = fs.readFileSync(path.join(root, manifest.icon))
+    assert.ok(icon.length <= 1024 * 1024, `Marketplace icon is ${icon.length} bytes; limit is 1048576`)
+    assert.deepEqual(icon.subarray(0, 8), Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]))
+    assert.equal(icon.toString('ascii', 12, 16), 'IHDR')
+    assert.ok(icon.readUInt32BE(16) >= 128, 'Icon width must be at least 128 pixels')
+    assert.ok(icon.readUInt32BE(20) >= 128, 'Icon height must be at least 128 pixels')
+})
+
 test('compatibility inventory covers every setting and preserves active editor settings', () => {
     const inventory = read('docs/compatibility-settings.md')
     const entries = Object.entries(properties).filter(([, value]) =>
