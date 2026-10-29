@@ -1,5 +1,14 @@
 # Change Log
 
+## [11.5.5] - 2026-10-29
+
+### User impact
+- Deliver the Settings branding and dependency fixes from 11.5.4, whose Marketplace upload was rejected because the existing icon exceeded 1 MiB.
+- Use a losslessly compressed copy of the same icon and check its size before release. The original image remains in the repository.
+
+### Required action
+- Update the extension. Existing settings and execution consent are unchanged.
+
 ## [11.5.4] - 2026-10-29
 
 ### User impact
