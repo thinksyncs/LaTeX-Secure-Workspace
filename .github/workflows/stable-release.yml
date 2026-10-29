@@ -131,7 +131,7 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       run: gh release upload "$RELEASE_TAG" "${{ steps.package.outputs.vsix_path }}" "${{ steps.sbom.outputs.sbom_path }}" --clobber
     - name: Archive VSIX artifact
-      uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7
+      uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
       with:
         name: stable-vsix
         path: |
